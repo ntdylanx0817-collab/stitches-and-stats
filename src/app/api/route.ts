@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   return NextResponse.json({
-    name: "Savant XL API",
+    name: "Stitches and Stats API",
     endpoints: [
       "/api/schedule",
       "/api/game/[gamePk]",

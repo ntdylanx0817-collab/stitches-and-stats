@@ -12,7 +12,7 @@ export function Footer() {
               <Zap className="h-3 w-3 text-white" fill="white" />
             </div>
             <span>
-              <span className="font-semibold text-slate-300">Savant XL</span>
+              <span className="font-semibold text-slate-300">Stitches and Stats</span>
               {" — "}
               Real-time Statcast baseball analytics
             </span>

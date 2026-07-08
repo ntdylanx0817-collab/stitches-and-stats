@@ -1,8 +1,8 @@
-# Savant XL — Real-Time Statcast Baseball Analytics
+# Stitches and Stats — Real-Time Statcast Baseball Analytics
 
 An immersive, production-grade baseball analytics platform inspired by [MLB's Baseball Savant](https://baseballsavant.mlb.com/), redesigned with a modern, ultra-clean dark-mode aesthetic. Built with Next.js 16, TypeScript, and real-time WebSocket pitch tracking.
 
-![Savant XL](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
+![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -53,8 +53,8 @@ An immersive, production-grade baseball analytics platform inspired by [MLB's Ba
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/savant-xl.git
-cd savant-xl
+git clone https://github.com/YOUR_USERNAME/stitches-and-stats.git
+cd stitches-and-stats
 
 # Install dependencies
 bun install
@@ -98,7 +98,7 @@ The standalone build is output to `.next/standalone/` and can be deployed to any
 ## Project Structure
 
 ```
-savant-xl/
+stitches-and-stats/
 ├── src/
 │   ├── app/
 │   │   ├── api/                    # Next.js API routes

@@ -1,5 +1,11 @@
 // Core baseball analytics types
 
+// Re-export EnrichedPitch from mlb-api so all components can import from one place.
+// This was previously imported from "@/lib/types" but the type was only defined in
+// mlb-api.ts — with noImplicitAny: false, TypeScript silently treated it as `any`,
+// which hid the server/client shape mismatch that caused the React crash.
+export type { EnrichedPitch } from "./mlb-api";
+
 export interface MLBTeam {
   id: number;
   name: string;

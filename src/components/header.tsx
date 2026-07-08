@@ -26,7 +26,7 @@ export function Header() {
           <button
             onClick={() => setView("live")}
             className="group flex shrink-0 items-center gap-2.5"
-            aria-label="Savant XL home"
+            aria-label="Stitches and Stats home"
           >
             <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cobalt to-crimson shadow-lg shadow-cobalt/30 transition-transform group-hover:scale-105">
               <Zap className="h-5 w-5 text-white" fill="white" />

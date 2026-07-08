@@ -233,45 +233,45 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {isBatter
               ? ([
-                  ["AVG", stats.batting_avg, "default"],
-                  ["OBP", stats.on_base_percent, "default"],
-                  ["SLG", stats.slg_percent, "default"],
+                  ["AVG", fmtAvg(stats.batting_avg), "default"],
+                  ["OBP", fmtAvg(stats.on_base_percent), "default"],
+                  ["SLG", fmtAvg(stats.slg_percent), "default"],
                   ["OPS", calcOPS(stats.slg_percent, stats.on_base_percent), "default"],
-                  ["wOBA", stats.woba, "cobalt"],
-                  ["xwOBA", stats.xwoba, "mint"],
-                  ["xBA", stats.xba, "mint"],
-                  ["xSLG", stats.xslg, "mint"],
-                  ["HR", stats.home_run, "crimson"],
+                  ["wOBA", fmtAvg(stats.woba), "cobalt"],
+                  ["xwOBA", fmtAvg(stats.xwoba), "mint"],
+                  ["xBA", fmtAvg(stats.xba), "mint"],
+                  ["xSLG", fmtAvg(stats.xslg), "mint"],
+                  ["HR", fmtNum(stats.home_run), "crimson"],
                   ["RBI", "—", "default"],
                   ["SB", "—", "default"],
-                  ["PA", stats.pa, "default"],
-                  ["K%", `${stats.k_percent}%`, "default"],
-                  ["BB%", `${stats.bb_percent}%`, "default"],
-                  ["Barrel%", `${stats.barrel_brea}%`, "crimson"],
-                  ["Hard Hit%", `${stats.hard_hit_percent}%`, "amber"],
-                  ["Avg EV", `${stats.avg_hit_speed} mph`, "crimson"],
-                  ["Max EV", `${stats.max_hit_speed} mph`, "crimson"],
+                  ["PA", fmtNum(stats.pa), "default"],
+                  ["K%", fmtPct(stats.k_percent), "default"],
+                  ["BB%", fmtPct(stats.bb_percent), "default"],
+                  ["Barrel%", fmtPct(stats.barrel_brea), "crimson"],
+                  ["Hard Hit%", fmtPct(stats.hard_hit_percent), "amber"],
+                  ["Avg EV", fmtMph(stats.avg_hit_speed), "crimson"],
+                  ["Max EV", fmtMph(stats.max_hit_speed), "crimson"],
                 ] as const).map(([label, val, tone], i) => (
-                  <StatCard key={i} label={label} value={val ?? "—"} tone={tone as any} />
+                  <StatCard key={i} label={label} value={val} tone={tone as any} />
                 ))
               : ([
-                  ["ERA", stats.p_era, "default"],
-                  ["WHIP", stats.p_whip, "default"],
+                  ["ERA", fmtNum(stats.p_era, 2), "default"],
+                  ["WHIP", fmtNum(stats.p_whip, 2), "default"],
                   ["IP", "—", "default"],
-                  ["K", stats.p_k, "default"],
-                  ["BB", stats.p_bb, "default"],
-                  ["K%", `${stats.p_k_percent}%`, "mint"],
-                  ["BB%", `${stats.p_bb_percent}%`, "default"],
+                  ["K", fmtNum(stats.p_k), "default"],
+                  ["BB", fmtNum(stats.p_bb), "default"],
+                  ["K%", fmtPct(stats.p_k_percent), "mint"],
+                  ["BB%", fmtPct(stats.p_bb_percent), "default"],
                   ["K/9", "—", "default"],
-                  ["AVG", stats.p_avg, "default"],
-                  ["xwOBA", stats.p_xwoba, "mint"],
-                  ["xBA", stats.p_xba, "mint"],
-                  ["Whiff%", `${stats.p_whiff_percent}%`, "mint"],
-                  ["CSW%", `${stats.p_csw_percent}%`, "mint"],
-                  ["Barrel%", `${stats.p_barrel_brea}%`, "mint"],
-                  ["Hard Hit%", `${stats.p_hard_hit_percent}%`, "mint"],
+                  ["AVG", fmtAvg(stats.p_avg), "default"],
+                  ["xwOBA", fmtAvg(stats.p_xwoba), "mint"],
+                  ["xBA", fmtAvg(stats.p_xba), "mint"],
+                  ["Whiff%", fmtPct(stats.p_whiff_percent), "mint"],
+                  ["CSW%", fmtPct(stats.p_csw_percent), "mint"],
+                  ["Barrel%", fmtPct(stats.p_barrel_brea), "mint"],
+                  ["Hard Hit%", fmtPct(stats.p_hard_hit_percent), "mint"],
                 ] as const).map(([label, val, tone], i) => (
-                  <StatCard key={i} label={label} value={val ?? "—"} tone={tone as any} />
+                  <StatCard key={i} label={label} value={val} tone={tone as any} />
                 ))
             }
           </div>
@@ -281,12 +281,44 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
   );
 }
 
-function calcOPS(slg?: string, obp?: string): string | undefined {
-  if (!slg || !obp) return undefined;
-  const s = parseFloat(slg);
-  const o = parseFloat(obp);
-  if (isNaN(s) || isNaN(o)) return undefined;
+function calcOPS(slg?: string | number, obp?: string | number): string {
+  if (slg == null || obp == null) return "—";
+  const s = typeof slg === "number" ? slg : parseFloat(slg);
+  const o = typeof obp === "number" ? obp : parseFloat(obp);
+  if (isNaN(s) || isNaN(o)) return "—";
   return (s + o).toFixed(3).replace(/^0/, "");
+}
+
+/** Format a batting average / rate stat like .314 (strips leading 0) */
+function fmtAvg(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : parseFloat(String(v));
+  if (isNaN(n)) return "—";
+  return n.toFixed(3).replace(/^0/, "");
+}
+
+/** Format a plain number with optional decimals */
+function fmtNum(v: unknown, decimals: number = 0): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return n.toFixed(decimals);
+}
+
+/** Format a percentage value like 23.6% */
+function fmtPct(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return `${n.toFixed(1)}%`;
+}
+
+/** Format a speed value like 99.5 mph */
+function fmtMph(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return `${n.toFixed(1)} mph`;
 }
 
 function PercentileBar({

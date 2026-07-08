@@ -52,19 +52,23 @@ const SVG_PADDING = 36;
  * pX: -8.5/12 (left edge) to +8.5/12 (right edge)
  * pZ: 0 (ground) to ~4 ft (top of strike zone for tall batter)
  * We'll fit a 4ft tall × 4ft wide area centered on the zone.
+ * Guards against non-number inputs (strings, objects, NaN) to prevent SVG crashes.
  */
-function pitchToSVG(pX: number | undefined, pZ: number | undefined, szTop: number = 3.5, szBot: number = 1.5) {
+function pitchToSVG(pX: unknown, pZ: unknown, szTop: number = 3.5, szBot: number = 1.5) {
   if (pX == null || pZ == null) return null;
+  const x = typeof pX === "number" ? pX : Number(pX);
+  const z = typeof pZ === "number" ? pZ : Number(pZ);
+  if (isNaN(x) || isNaN(z)) return null;
   // Map pX (-2.5..2.5 ft) to SVG x
   const xRange = 4.0; // 4 ft wide visible area
   const xScale = (SVG_SIZE - SVG_PADDING * 2) / xRange;
-  const x = SVG_PADDING + ((pX + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
+  const svgX = SVG_PADDING + ((x + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
 
   // Map pZ (0..5 ft) to SVG y (inverted)
   const zMax = 5.0;
   const zScale = (SVG_SIZE - SVG_PADDING * 2) / zMax;
-  const y = SVG_SIZE - SVG_PADDING - pZ * zScale;
-  return { x, y };
+  const svgY = SVG_SIZE - SVG_PADDING - z * zScale;
+  return { x: svgX, y: svgY };
 }
 
 function zoneLineToSVG(szTop: number, szBot: number) {
@@ -87,9 +91,12 @@ export function StrikeZone({
   showLabels = true,
   maxPitches = 50,
 }: StrikeZoneProps) {
+  // Ensure szTop/szBot are valid numbers (savant sometimes returns strings)
+  const safeSzTop = typeof szTop === "number" && !isNaN(szTop) ? szTop : 3.5;
+  const safeSzBot = typeof szBot === "number" && !isNaN(szBot) ? szBot : 1.5;
   const recentPitches = useMemo(() => pitches.slice(-maxPitches), [pitches, maxPitches]);
 
-  const zone = zoneLineToSVG(szTop, szBot);
+  const zone = zoneLineToSVG(safeSzTop, safeSzBot);
   const zoneW = zone.rightX - zone.leftX;
   const zoneH = zone.topY - zone.botY;
 
@@ -327,11 +334,11 @@ export function StrikeZone({
             <text x={SVG_SIZE - SVG_PADDING} y={SVG_PADDING - 8} fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="var(--font-geist-mono)" textAnchor="end">
               {batterSide === "L" ? "LHB" : batterSide === "R" ? "RHB" : "Batter"}
             </text>
-            <text x={zone.leftX - 4} y={zone.topY - 4} fill="rgba(77,163,255,0.7)" fontSize="9" fontFamily="var(--font-geist-mono)" textAnchor="start">
-              {szTop.toFixed(2)}ft
+            <text x={zone.leftX - 4} y={zone.topY - 4} fill="rgba(77,163,255,0.7)" fontSize="9" fontFamily="monospace" textAnchor="start">
+              {safeSzTop.toFixed(2)}ft
             </text>
-            <text x={zone.leftX - 4} y={zone.botY + 11} fill="rgba(77,163,255,0.7)" fontSize="9" fontFamily="var(--font-geist-mono)" textAnchor="start">
-              {szBot.toFixed(2)}ft
+            <text x={zone.leftX - 4} y={zone.botY + 11} fill="rgba(77,163,255,0.7)" fontSize="9" fontFamily="monospace" textAnchor="start">
+              {safeSzBot.toFixed(2)}ft
             </text>
           </>
         )}

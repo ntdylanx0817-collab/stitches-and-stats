@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Savant XL — Real-Time Statcast Baseball Analytics",
+  title: "Stitches and Stats — Real-Time Statcast Baseball Analytics",
   description: "An immersive, real-time MLB Statcast analytics platform with live pitch tracking, player percentile rankings, and advanced sabermetric leaderboards.",
   keywords: ["MLB", "Statcast", "Sabermetrics", "Baseball Savant", "Pitch Tracking", "Exit Velocity", "xBA"],
-  authors: [{ name: "Savant XL" }],
+  authors: [{ name: "Stitches and Stats" }],
 };
 
 export default function RootLayout({

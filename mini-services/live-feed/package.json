@@ -1,5 +1,5 @@
 {
-  "name": "savant-live-feed",
+  "name": "stitches-live-feed",
   "version": "1.0.0",
   "private": true,
   "module": "index.ts",

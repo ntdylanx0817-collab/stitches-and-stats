@@ -229,8 +229,9 @@ async function pollLoop() {
         if (lastPitchEvent) {
           const inning = lastPlay.about.inning
           const halfInning = lastPlay.about.halfInning
-          const abNumber = lastPlay.atBatIndex + 1
+          const atBatIndex = lastPlay.atBatIndex
           const pitchNumber = lastPitchEvent.pitchNumber ?? 0
+          const abNumber = atBatIndex + 1
           const key = `${inning}-${halfInning}-${abNumber}-${pitchNumber}`
           const sp = savantSnapshot?.exit_velocity?.find(
             (p: any) => `${p.inning}-${p.half_inning}-${p.ab_number}-${p.pitch_number}` === key
@@ -239,6 +240,7 @@ async function pollLoop() {
             key,
             inning,
             halfInning,
+            atBatIndex,
             abNumber,
             pitchNumber,
             batter: lastPlay.matchup?.batter,
@@ -251,26 +253,26 @@ async function pollLoop() {
             isBall: lastPitchEvent.details?.isBall,
             isInPlay: lastPitchEvent.details?.isInPlay,
             coordinates: lastPitchEvent.pitchData?.coordinates,
-            startSpeed: sp?.start_speed ?? lastPitchEvent.pitchData?.startSpeed,
-            spinRate: sp?.spin_rate ?? lastPitchEvent.pitchData?.spinRate,
-            breakX: sp?.breakX ?? lastPitchEvent.pitchData?.breakX,
-            breakZ: sp?.breakZ ?? lastPitchEvent.pitchData?.breakZ,
-            extension: sp?.extension ?? lastPitchEvent.pitchData?.extension,
-            plateTime: sp?.plateTime ?? lastPitchEvent.pitchData?.plateTime,
-            szTop: sp?.sz_top ?? lastPitchEvent.pitchData?.strikeZoneTop,
-            szBot: sp?.sz_bot ?? lastPitchEvent.pitchData?.strikeZoneBottom,
-            pX: sp?.px ?? lastPitchEvent.pitchData?.coordinates?.pX,
-            pZ: sp?.pz ?? lastPitchEvent.pitchData?.coordinates?.pZ,
+            startSpeed: sp?.start_speed != null ? Number(sp.start_speed) : (lastPitchEvent.pitchData?.startSpeed ?? null),
+            spinRate: sp?.spin_rate != null ? Number(sp.spin_rate) : (lastPitchEvent.pitchData?.spinRate ?? null),
+            breakX: sp?.breakX != null ? Number(sp.breakX) : (lastPitchEvent.pitchData?.breakX ?? null),
+            breakZ: sp?.breakZ != null ? Number(sp.breakZ) : (lastPitchEvent.pitchData?.breakZ ?? null),
+            extension: sp?.extension != null ? Number(sp.extension) : (lastPitchEvent.pitchData?.extension ?? null),
+            plateTime: sp?.plateTime != null ? Number(sp.plateTime) : (lastPitchEvent.pitchData?.plateTime ?? null),
+            szTop: sp?.sz_top != null ? Number(sp.sz_top) : (lastPitchEvent.pitchData?.strikeZoneTop ?? null),
+            szBot: sp?.sz_bot != null ? Number(sp.sz_bot) : (lastPitchEvent.pitchData?.strikeZoneBottom ?? null),
+            pX: sp?.px != null ? Number(sp.px) : (lastPitchEvent.pitchData?.coordinates?.pX ?? null),
+            pZ: sp?.pz != null ? Number(sp.pz) : (lastPitchEvent.pitchData?.coordinates?.pZ ?? null),
             zone: sp?.zone ?? lastPitchEvent.pitchData?.zone,
             pitchType: sp?.pitch_type ?? lastPitchEvent.details?.type?.code,
             pitchName: sp?.pitch_name ?? lastPitchEvent.details?.type?.description,
-            exitVelocity: sp?.hit_speed != null ? parseFloat(sp.hit_speed) : null,
-            launchAngle: sp?.hit_angle != null ? parseFloat(sp.hit_angle) : null,
-            hitDistance: sp?.hit_distance != null ? parseFloat(sp.hit_distance) : null,
-            xBA: sp?.xba != null && sp.xba !== '' ? parseFloat(sp.xba) : null,
+            exitVelocity: sp?.hit_speed != null && sp.hit_speed !== '' ? parseFloat(String(sp.hit_speed)) : null,
+            launchAngle: sp?.hit_angle != null && sp.hit_angle !== '' ? parseFloat(String(sp.hit_angle)) : null,
+            hitDistance: sp?.hit_distance != null && sp.hit_distance !== '' ? parseFloat(String(sp.hit_distance)) : null,
+            xBA: sp?.xba != null && sp.xba !== '' ? parseFloat(String(sp.xba)) : null,
             isBarrel: sp?.is_barrel === 1,
             isSword: !!sp?.isSword,
-            batSpeed: sp?.batSpeed ?? null,
+            batSpeed: sp?.batSpeed != null ? Number(sp.batSpeed) : null,
             result: lastPlay.result?.event,
             resultDescription: lastPlay.result?.description,
             homeScore: lastPlay.result?.homeScore,
@@ -411,7 +413,7 @@ io.on('connection', (socket) => {
 })
 
 httpServer.listen(PORT, () => {
-  log(`Savant XL live-feed WebSocket service listening on port ${PORT}`)
+  log(`Stitches and Stats live-feed WebSocket service listening on port ${PORT}`)
   log(`Polling interval: ${POLL_INTERVAL_MS}ms`)
   // Start polling loop — keep a handle so we can clear it on shutdown
   const pollInterval = setInterval(pollLoop, POLL_INTERVAL_MS)

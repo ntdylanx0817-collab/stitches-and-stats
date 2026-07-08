@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Supervisor for the Savant XL live-feed WebSocket mini-service.
+# Supervisor for the Stitches and Stats live-feed WebSocket mini-service.
 # Restarts the service on crash with a 2-second back-off.
 
 SERVICE_DIR="/home/z/my-project/mini-services/live-feed"
@@ -16,7 +16,7 @@ if [ -f "$PIDFILE" ]; then
 fi
 echo $$ > "$PIDFILE"
 
-echo "[$(date -Iseconds)] Savant XL live-feed supervisor started (PID $$)"
+echo "[$(date -Iseconds)] Stitches and Stats live-feed supervisor started (PID $$)"
 
 while true; do
   echo "[$(date -Iseconds)] Starting live-feed service..."

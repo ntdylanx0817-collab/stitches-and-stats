@@ -167,14 +167,12 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     const offSnap = onSnapshot((snap) => {
       if (snap.gamePk !== gamePk) return;
       setSnapshot(snap);
-      // If we have a latest pitch and it's new, add to live pitches
-      if (snap.latestPitch) {
-        setLivePitches((prev) => {
-          const key = `${snap.latestPitch!.atBatIndex}-${snap.latestPitch!.pitchNumber}`;
-          if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
-          return [snap.latestPitch!, ...prev].slice(0, 60);
-        });
-      }
+      // NOTE: Do NOT push snap.latestPitch into livePitches here.
+      // The server's latestPitch is a raw object with nested fields (batter, pitcher,
+      // call, count are objects, not flattened strings/numbers). Pushing it raw
+      // causes "Objects are not valid as a React child" crashes in PitchLogEntry.
+      // The allPitches useMemo below already reconstructs every pitch from
+      // snapshot.allPlays + snapshot.savant with proper flattening.
     });
     // Also subscribe to the granular game:pitch event for snappier UI feedback
     // when a new pitch arrives mid-at-bat (the snapshot polls every 8s, but
@@ -248,7 +246,8 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot, onPitch]);
 
   // Fallback: if WS not connected, fetch via REST periodically.
-  // Polls every 5s for near-real-time updates when WS is unavailable.
+  // For Preview (not-yet-started) games, only fetch once — no point polling.
+  // For Live/Final games, poll every 5s for near-real-time updates.
   const { data: restData, isLoading: restLoading } = useQuery<{
     pitches: EnrichedPitch[];
     linescore: any;
@@ -262,7 +261,16 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       return res.json();
     },
     enabled: !connected || !snapshot,
-    refetchInterval: !connected || !snapshot ? 5_000 : false,
+    // TanStack Query passes the Query object; use query.state.data to avoid TDZ
+    refetchInterval: (query: any) => {
+      const data = query.state?.data;
+      const state = data?.status?.abstractGameState;
+      // Stop polling for Preview games (they haven't started)
+      if (state === "Preview") return false;
+      // Stop polling once WS is connected and we have a snapshot
+      if (connected && snapshot) return false;
+      return 5_000;
+    },
     retry: 2,
   });
 
@@ -382,14 +390,16 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
   // Pitch-type distribution
   const pitchTypeStats = useMemo(() => {
-    const map = new Map<string, { count: number; avgSpeed: number; total: number }>();
+    const map = new Map<string, { count: number; avgSpeed: number; total: number; speedCount: number }>();
     for (const p of mergedPitches) {
       if (!p.pitchType) continue;
-      const cur = map.get(p.pitchType) ?? { count: 0, avgSpeed: 0, total: 0 };
+      const cur = map.get(p.pitchType) ?? { count: 0, avgSpeed: 0, total: 0, speedCount: 0 };
       cur.count++;
-      if (p.startSpeed != null) {
-        cur.total += p.startSpeed;
-        cur.avgSpeed = cur.total / cur.count;
+      const speed = typeof p.startSpeed === "number" ? p.startSpeed : Number(p.startSpeed);
+      if (!isNaN(speed) && p.startSpeed != null) {
+        cur.total += speed;
+        cur.speedCount++;
+        cur.avgSpeed = cur.total / cur.speedCount;
       }
       map.set(p.pitchType, cur);
     }
@@ -402,36 +412,39 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const latestMetrics = useMemo(() => {
     if (!latestPitch) return [];
     const m: Array<{ label: string; value: string; tone?: string; icon?: any }> = [];
-    if (latestPitch.startSpeed != null) {
-      m.push({ label: "Pitch Velocity", value: `${latestPitch.startSpeed.toFixed(1)} mph`, tone: "cobalt", icon: Gauge });
-    }
-    if (latestPitch.exitVelocity != null) {
-      const isHard = latestPitch.exitVelocity >= 95;
+    const num = (v: unknown): number | null => {
+      if (v == null) return null;
+      const n = typeof v === "number" ? v : Number(v);
+      return isNaN(n) ? null : n;
+    };
+    const fmt = (v: unknown, digits: number): string | null => {
+      const n = num(v);
+      return n == null ? null : n.toFixed(digits);
+    };
+
+    const sp = fmt(latestPitch.startSpeed, 1);
+    if (sp != null) m.push({ label: "Pitch Velocity", value: `${sp} mph`, tone: "cobalt", icon: Gauge });
+
+    const ev = num(latestPitch.exitVelocity);
+    if (ev != null) {
       m.push({
         label: "Exit Velocity",
-        value: `${latestPitch.exitVelocity.toFixed(1)} mph`,
-        tone: isHard ? "crimson" : "default",
+        value: `${ev.toFixed(1)} mph`,
+        tone: ev >= 95 ? "crimson" : "default",
         icon: Zap,
       });
     }
-    if (latestPitch.launchAngle != null) {
-      m.push({ label: "Launch Angle", value: `${latestPitch.launchAngle.toFixed(0)}°`, tone: "amber", icon: TrendingUp });
-    }
-    if (latestPitch.hitDistance != null) {
-      m.push({ label: "Hit Distance", value: `${latestPitch.hitDistance.toFixed(0)} ft`, icon: ArrowUpRight });
-    }
-    if (latestPitch.spinRate != null) {
-      m.push({ label: "Spin Rate", value: `${latestPitch.spinRate.toFixed(0)} rpm`, icon: CircleDot });
-    }
-    if (latestPitch.xBA != null) {
-      m.push({ label: "xBA", value: latestPitch.xBA.toFixed(3).replace(/^0/, ""), tone: "mint", icon: Target });
-    }
-    if (latestPitch.batSpeed != null) {
-      m.push({ label: "Bat Speed", value: `${latestPitch.batSpeed.toFixed(1)} mph`, icon: Gauge });
-    }
-    if (latestPitch.zone != null) {
-      m.push({ label: "Zone", value: `${latestPitch.zone}`, tone: "cobalt", icon: Target });
-    }
+    const la = fmt(latestPitch.launchAngle, 0);
+    if (la != null) m.push({ label: "Launch Angle", value: `${la}°`, tone: "amber", icon: TrendingUp });
+    const hd = fmt(latestPitch.hitDistance, 0);
+    if (hd != null) m.push({ label: "Hit Distance", value: `${hd} ft`, icon: ArrowUpRight });
+    const sr = fmt(latestPitch.spinRate, 0);
+    if (sr != null) m.push({ label: "Spin Rate", value: `${sr} rpm`, icon: CircleDot });
+    const xba = fmt(latestPitch.xBA, 3);
+    if (xba != null) m.push({ label: "xBA", value: xba.replace(/^0/, ""), tone: "mint", icon: Target });
+    const bs = fmt(latestPitch.batSpeed, 1);
+    if (bs != null) m.push({ label: "Bat Speed", value: `${bs} mph`, icon: Gauge });
+    if (latestPitch.zone != null) m.push({ label: "Zone", value: `${latestPitch.zone}`, tone: "cobalt", icon: Target });
     return m;
   }, [latestPitch]);
 
@@ -621,7 +634,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                       {p.type}
                     </span>
                     <span className="text-slate-400 num">
-                      {p.count} · {pct.toFixed(0)}% · {p.avgSpeed > 0 ? `${p.avgSpeed.toFixed(0)}mph` : "—"}
+                      {p.count} · {isFinite(pct) ? pct.toFixed(0) : 0}% · {p.avgSpeed > 0 && isFinite(p.avgSpeed) ? `${p.avgSpeed.toFixed(0)}mph` : "—"}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-white/5">

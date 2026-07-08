@@ -31,6 +31,11 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        // Browser extensions (Grammarly, password managers, etc.) inject attributes
+        // like data-gr-ext-installed onto <body> before React hydrates, causing
+        // hydration mismatch warnings. suppressHydrationWarning silences these
+        // cosmetic mismatches — they don't affect functionality.
+        suppressHydrationWarning
       >
         <ErrorBoundary>
           <Providers>

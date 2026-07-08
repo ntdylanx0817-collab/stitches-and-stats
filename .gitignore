@@ -76,3 +76,5 @@ mini-services/live-feed/keepalive.log
 # database files (local SQLite)
 db/*.db
 db/*.db-journal
+# tool results (internal)
+/tool-results/

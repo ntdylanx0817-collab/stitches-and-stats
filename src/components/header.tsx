@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, User, Zap } from "lucide-react";
+import { Activity, BarChart3, User, Zap, Newspaper } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
@@ -11,6 +11,7 @@ const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
   { key: "live", label: "Live Feed", icon: Activity },
   { key: "players", label: "Players", icon: User },
   { key: "leaderboard", label: "Leaderboards", icon: BarChart3 },
+  { key: "news", label: "News", icon: Newspaper },
 ];
 
 export function Header() {

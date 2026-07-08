@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "players" | "leaderboard";
+export type ViewKey = "live" | "players" | "leaderboard" | "news";
 
 interface SelectedPlayer {
   id: number;

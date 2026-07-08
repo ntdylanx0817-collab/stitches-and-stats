@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { LiveFeedView } from "@/components/live-feed-view";
 import { PlayersView } from "@/components/players-view";
 import { LeaderboardsView } from "@/components/leaderboards-view";
+import { NewsView } from "@/components/news-view";
 import { useSavantStore } from "@/lib/store";
 import { Footer } from "@/components/footer";
 
@@ -26,6 +27,7 @@ export default function Home() {
             {view === "live" && <LiveFeedView />}
             {view === "players" && <PlayersView />}
             {view === "leaderboard" && <LeaderboardsView />}
+            {view === "news" && <NewsView />}
           </motion.div>
         </AnimatePresence>
       </main>

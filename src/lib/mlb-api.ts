@@ -35,7 +35,10 @@ export async function fetchSchedule(dateStr?: string): Promise<MLBSchedule> {
 
   return getOrSet(cacheKey, ttl, async () => {
     const url = `${STATS_API}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}&hydrate=team,linescore,probablePitcher,game(content(summary))`;
-    const res = await fetch(url, { next: { revalidate: 30 } });
+    const res = await fetch(url, {
+      next: { revalidate: 30 },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) throw new Error(`schedule fetch failed: ${res.status}`);
     return (await res.json()) as MLBSchedule;
   });
@@ -45,17 +48,13 @@ export async function fetchSchedule(dateStr?: string): Promise<MLBSchedule> {
 export async function fetchLiveFeed(gamePk: number): Promise<LiveGameFeed> {
   const cacheKey = `live:${gamePk}`;
   const cached = getCached<LiveGameFeed>(cacheKey);
-  // Determine ttl based on game state — short for live games
-  if (cached) {
-    const state = cached.gameData?.status?.abstractGameState ?? "Final";
-    const ttl = state === "Live" ? ONE_MINUTE : ONE_HOUR;
-    // If still valid, return cached
-    if (cached) return cached;
-    void ttl;
-  }
+  if (cached) return cached;
 
   const url = `${STATS_API}/v1.1/game/${gamePk}/feed/live`;
-  const res = await fetch(url, { next: { revalidate: 10 } });
+  const res = await fetch(url, {
+    next: { revalidate: 10 },
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`live feed fetch failed: ${res.status}`);
   const data = (await res.json()) as LiveGameFeed;
   const state = data.gameData?.status?.abstractGameState ?? "Final";
@@ -74,6 +73,7 @@ export async function fetchSavantGameFeed(gamePk: number): Promise<SavantGameFee
   return getOrSet(cacheKey, ONE_MINUTE, async () => {
     const url = `${SAVANT_API}/gf?game_pk=${gamePk}`;
     const res = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
       headers: {
         "Accept": "application/json",
         "Referer": "https://baseballsavant.mlb.com/",
@@ -283,6 +283,7 @@ export async function fetchLeaderboard(opts: {
     const selections = type === "batter" ? LEADERBOARD_SELECTIONS_BATTER : LEADERBOARD_SELECTIONS_PITCHER;
     const url = `${SAVANT_API}/leaderboard/custom?year=${year}&type=${type}&filter=${encodeURIComponent(position)}&min=${min}&selections=${encodeURIComponent(selections)}&team=${encodeURIComponent(team)}&gameType=${encodeURIComponent(gameType)}&html=true&csv=true`;
     const res = await fetch(url, {
+      signal: AbortSignal.timeout(15_000),
       headers: {
         "Accept": "text/csv, */*",
         "Referer": "https://baseballsavant.mlb.com/leaderboard/custom",
@@ -358,7 +359,10 @@ export async function searchPlayers(query: string, limit = 12): Promise<MLBPlaye
   const cacheKey = `players:${season}`;
   const all = await getOrSet(cacheKey, ONE_DAY, async () => {
     const url = `${STATS_API}/v1/sports/1/players?season=${season}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) throw new Error(`players fetch failed: ${res.status}`);
     const data = await res.json();
     return data.people as MLBPlayer[];
@@ -374,7 +378,10 @@ export async function fetchPlayer(playerId: number): Promise<MLBPlayer | null> {
   const cacheKey = `player:${playerId}`;
   return getOrSet(cacheKey, ONE_DAY, async () => {
     const url = `${STATS_API}/v1/people/${playerId}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return (data.people?.[0] as MLBPlayer) ?? null;

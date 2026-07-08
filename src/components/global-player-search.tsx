@@ -19,10 +19,6 @@ interface PlayerSearchResult {
   currentAge?: number;
 }
 
-const TEAM_ABBREV_COLORS: Record<string, string> = {
-  // simple accent per team for visual variety
-};
-
 export function GlobalPlayerSearch() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -105,7 +101,7 @@ export function GlobalPlayerSearch() {
       </div>
 
       <AnimatePresence>
-        {open && players.length > 0 && (
+        {open && q.length >= 2 && (players.length > 0 ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -153,7 +149,20 @@ export function GlobalPlayerSearch() {
               </span>
             </div>
           </motion.div>
-        )}
+        ) : !isLoading ? (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="glass-strong absolute z-50 mt-2 w-full overflow-hidden rounded-2xl p-4 text-center"
+          >
+            <div className="text-sm font-medium text-slate-300">No players found</div>
+            <div className="mt-0.5 text-xs text-slate-500">
+              No active MLB players matching &ldquo;{q}&rdquo;. Try a different name.
+            </div>
+          </motion.div>
+        ) : null)}
       </AnimatePresence>
     </div>
   );

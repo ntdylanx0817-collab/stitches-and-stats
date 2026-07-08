@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  User, Loader2, ArrowLeft, TrendingUp, TrendingDown, Activity,
-  Calendar, MapPin, Weight, Ruler, Hash,
+  User, Loader2, ArrowLeft, TrendingUp, Activity,
+  MapPin, Weight, Ruler,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
+import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 
 interface PlayerStats {
   player: {
@@ -68,7 +67,7 @@ export function PlayersView() {
 
 function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | "pitcher" }) {
   const setSelectedPlayer = useSavantStore((s) => s.setSelectedPlayer);
-  const { data, isLoading, error } = useQuery<PlayerStats>({
+  const { data, isLoading, error, refetch } = useQuery<PlayerStats>({
     queryKey: ["player-profile", playerId, type],
     queryFn: async () => {
       const res = await fetch(`/api/player/${playerId}?type=${type}`);
@@ -76,26 +75,72 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
       return res.json();
     },
     staleTime: 5 * 60_000,
+    retry: 2,
   });
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
-        <div className="glass rounded-2xl p-10 text-center">
-          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-cobalt" />
-          <p className="text-sm text-slate-400">Loading player profile & Statcast metrics…</p>
+      <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+        {/* Hero skeleton */}
+        <div className="glass rounded-2xl p-5 mb-4">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-20 w-20 rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-12 rounded-full" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Percentile skeleton */}
+        <div className="glass rounded-2xl p-5 mb-4">
+          <Skeleton className="mb-4 h-5 w-56" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
+                <div className="mb-2 flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-8" />
+                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Stats skeleton */}
+        <div className="glass rounded-2xl p-5">
+          <Skeleton className="mb-4 h-5 w-40" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
+                <Skeleton className="mx-auto mb-1 h-2 w-10" />
+                <Skeleton className="mx-auto h-5 w-12" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !data.player) {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
-        <div className="glass rounded-2xl p-10 text-center">
-          <p className="text-sm text-crimson">Failed to load player.</p>
-          <Button variant="outline" className="mt-4" onClick={() => setSelectedPlayer(null)}>
-            Back
+        <ErrorState
+          title="Couldn't load player profile"
+          description="The MLB Stats API or Statcast leaderboard may be temporarily unavailable."
+          onRetry={() => refetch()}
+        />
+        <div className="mt-4 text-center">
+          <Button variant="outline" size="sm" onClick={() => setSelectedPlayer(null)}>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to search
           </Button>
         </div>
       </div>

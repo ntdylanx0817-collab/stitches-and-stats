@@ -1,0 +1,704 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useEffect, useState, useMemo, useRef } from "react";
+     4→     4→import { useQuery } from "@tanstack/react-query";
+     5→     5→import { motion, AnimatePresence } from "framer-motion";
+     6→     6→import {
+     7→     7→  Activity, Calendar, ChevronRight, Clock, Filter, Loader2, Radio,
+     8→     8→  TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight, Search,
+     9→     9→  AlertCircle, Trophy,
+    10→    10→} from "lucide-react";
+    11→    11→import { Button } from "@/components/ui/button";
+    12→    12→import { Badge } from "@/components/ui/badge";
+    13→    13→import { ScrollArea } from "@/components/ui/scroll-area";
+    14→    14→import { StrikeZone } from "@/components/strike-zone";
+    15→    15→import { PitchLogEntry } from "@/components/pitch-log-entry";
+    16→    16→import { useSocket, type GameSnapshot } from "@/components/socket-provider";
+    17→    17→import { useSavantStore } from "@/lib/store";
+    18→    18→import { cn } from "@/lib/utils";
+    19→    19→import type { EnrichedPitch } from "@/lib/types";
+    20→    20→import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton } from "@/components/loading-states";
+    21→    21→
+    22→    22→interface ScheduleGame {
+    23→    23→  gamePk: number;
+    24→    24→  gameDate: string;
+    25→    25→  status: { abstractGameState: string; detailedState: string; statusCode: string };
+    26→    26→  venue?: { name: string };
+    27→    27→  away: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
+    28→    28→  home: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
+    29→    29→}
+    30→    30→
+    31→    31→export function LiveFeedView() {
+    32→    32→  const selectedGamePk = useSavantStore((s) => s.selectedGamePk);
+    33→    33→  const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
+    34→    34→
+    35→    35→  const { data: scheduleData, isLoading: scheduleLoading, error: scheduleError, refetch: refetchSchedule } = useQuery<{ games: ScheduleGame[]; date: string }>({
+    36→    36→    queryKey: ["schedule"],
+    37→    37→    queryFn: async () => {
+    38→    38→      const res = await fetch("/api/schedule");
+    39→    39→      if (!res.ok) throw new Error("schedule failed");
+    40→    40→      return res.json();
+    41→    41→    },
+    42→    42→    refetchInterval: 60_000,
+    43→    43→    retry: 2,
+    44→    44→  });
+    45→    45→
+    46→    46→  const games = scheduleData?.games ?? [];
+    47→    47→
+    48→    48→  // Auto-pick the first live game if none selected.
+    49→    49→  // Priority: Live > Final (has pitch data) > Preview (today's upcoming)
+    50→    50→  useEffect(() => {
+    51→    51→    if (!selectedGamePk && games.length > 0) {
+    52→    52→      const live = games.find((g) => g.status.abstractGameState === "Live");
+    53→    53→      const final = games.find((g) => g.status.abstractGameState === "Final");
+    54→    54→      const preview = games.find((g) => g.status.abstractGameState === "Preview");
+    55→    55→      setSelectedGame((live ?? final ?? preview ?? games[0]).gamePk);
+    56→    56→    }
+    57→    57→  }, [games, selectedGamePk, setSelectedGame]);
+    58→    58→
+    59→    59→  return (
+    60→    60→    <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    61→    61→      {/* Game selector strip */}
+    62→    62→      <div className="mb-5">
+    63→    63→        <div className="mb-2 flex items-center justify-between">
+    64→    64→          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+    65→    65→            <Calendar className="h-4 w-4" />
+    66→    66→            Today's Games · {scheduleData?.date ?? "—"}
+    67→    67→          </h2>
+    68→    68→          <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint">
+    69→    69→            <Radio className="mr-1 h-3 w-3" /> {games.filter(g => g.status.abstractGameState === "Live").length} Live
+    70→    70→          </Badge>
+    71→    71→        </div>
+    72→    72→        {scheduleLoading ? (
+    73→    73→          <div className="flex gap-2 overflow-hidden pb-2">
+    74→    74→            {Array.from({ length: 6 }).map((_, i) => (
+    75→    75→              <div key={i} className="min-w-[220px] shrink-0 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+    76→    76→                <div className="mb-2 flex justify-between">
+    77→    77→                  <Skeleton className="h-2 w-12" />
+    78→    78→                  <Skeleton className="h-2 w-10" />
+    79→    79→                </div>
+    80→    80→                <div className="mb-1.5 flex justify-between">
+    81→    81→                  <Skeleton className="h-3 w-12" />
+    82→    82→                  <Skeleton className="h-3 w-4" />
+    83→    83→                </div>
+    84→    84→                <div className="flex justify-between">
+    85→    85→                  <Skeleton className="h-3 w-12" />
+    86→    86→                  <Skeleton className="h-3 w-4" />
+    87→    87→                </div>
+    88→    88→              </div>
+    89→    89→            ))}
+    90→    90→          </div>
+    91→    91→        ) : scheduleError ? (
+    92→    92→          <ErrorState
+    93→    93→            title="Couldn't load today's schedule"
+    94→    94→            description="The MLB Stats API may be temporarily unavailable."
+    95→    95→            onRetry={() => refetchSchedule()}
+    96→    96→          />
+    97→    97→        ) : games.length === 0 ? (
+    98→    98→          <EmptyState
+    99→    99→            icon={Calendar}
+   100→   100→            title="No games today"
+   101→   101→            description="There are no MLB games scheduled for today or yesterday. Check back later."
+   102→   102→          />
+   103→   103→        ) : (
+   104→   104→          <ScrollArea className="w-full overflow-x-auto scrollbar-thin">
+   105→   105→            <div className="flex gap-2 pb-2 min-w-min">
+   106→   106→              {games.map((g) => {
+   107→   107→                const isLive = g.status.abstractGameState === "Live";
+   108→   108→                const isFinal = g.status.abstractGameState === "Final";
+   109→   109→                const isSelected = selectedGamePk === g.gamePk;
+   110→   110→                return (
+   111→   111→                  <button
+   112→   112→                    key={g.gamePk}
+   113→   113→                    onClick={() => setSelectedGame(g.gamePk)}
+   114→   114→                    className={cn(
+   115→   115→                      "glass-hover relative flex min-w-[220px] shrink-0 flex-col gap-1 rounded-xl border p-3 text-left transition-all",
+   116→   116→                      isSelected
+   117→   117→                        ? "border-cobalt/40 bg-cobalt/8 box-glow-cobalt"
+   118→   118→                        : "border-white/5 hover:border-white/15"
+   119→   119→                    )}
+   120→   120→                  >
+   121→   121→                    <div className="flex items-center justify-between text-[10px] uppercase tracking-wide">
+   122→   122→                      <span className={cn(
+   123→   123→                        "flex items-center gap-1 font-bold",
+   124→   124→                        isLive ? "text-mint" : isFinal ? "text-slate-500" : "text-amber"
+   125→   125→                      )}>
+   126→   126→                        {isLive && <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
+   127→   127→                        {g.status.abstractGameState}
+   128→   128→                      </span>
+   129→   129→                      <span className="text-slate-500">{g.venue?.name?.split(" ").pop()}</span>
+   130→   130→                    </div>
+   131→   131→                    <div className="flex items-center justify-between text-xs">
+   132→   132→                      <span className="font-semibold text-slate-200 truncate">{g.away.abbreviation ?? g.away.name}</span>
+   133→   133→                      <span className="font-bold text-white num">{g.away.score ?? 0}</span>
+   134→   134→                    </div>
+   135→   135→                    <div className="flex items-center justify-between text-xs">
+   136→   136→                      <span className="font-semibold text-slate-200 truncate">{g.home.abbreviation ?? g.home.name}</span>
+   137→   137→                      <span className="font-bold text-white num">{g.home.score ?? 0}</span>
+   138→   138→                    </div>
+   139→   139→                  </button>
+   140→   140→                );
+   141→   141→              })}
+   142→   142→            </div>
+   143→   143→          </ScrollArea>
+   144→   144→        )}
+   145→   145→      </div>
+   146→   146→
+   147→   147→      {selectedGamePk ? (
+   148→   148→        <GameFeed key={selectedGamePk} gamePk={selectedGamePk} />
+   149→   149→      ) : (
+   150→   150→        <div className="glass flex h-96 items-center justify-center rounded-2xl text-slate-400">
+   151→   151→          Select a game above to view live pitch-by-pitch data
+   152→   152→        </div>
+   153→   153→      )}
+   154→   154→    </div>
+   155→   155→  );
+   156→   156→}
+   157→   157→
+   158→   158→function GameFeed({ gamePk }: { gamePk: number }) {
+   159→   159→  const { subscribeGame, unsubscribeGame, onSnapshot, connected } = useSocket();
+   160→   160→  const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
+   161→   161→  const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
+   162→   162→  const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
+   163→   163→  const snapshotVersionRef = useRef(0);
+   164→   164→
+   165→   165→  // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
+   166→   166→  useEffect(() => {
+   167→   167→    subscribeGame(gamePk);
+   168→   168→    const offSnap = onSnapshot((snap) => {
+   169→   169→      if (snap.gamePk !== gamePk) return;
+   170→   170→      snapshotVersionRef.current++;
+   171→   171→      setSnapshot(snap);
+   172→   172→      // If we have a latest pitch and it's new, add to live pitches
+   173→   173→      if (snap.latestPitch) {
+   174→   174→        setLivePitches((prev) => {
+   175→   175→          const key = `${snap.latestPitch!.atBatIndex}-${snap.latestPitch!.pitchNumber}`;
+   176→   176→          if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
+   177→   177→          return [snap.latestPitch!, ...prev].slice(0, 60);
+   178→   178→        });
+   179→   179→      }
+   180→   180→    });
+   181→   181→    return () => {
+   182→   182→      offSnap();
+   183→   183→      unsubscribeGame(gamePk);
+   184→   184→    };
+   185→   185→  }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot]);
+   186→   186→
+   187→   187→  // Fallback: if WS not connected, fetch via REST periodically
+   188→   188→  const { data: restData, isLoading: restLoading } = useQuery<{
+   189→   189→    pitches: EnrichedPitch[];
+   190→   190→    linescore: any;
+   191→   191→    status: any;
+   192→   192→    teams: any;
+   193→   193→  }>({
+   194→   194→    queryKey: ["game-feed-rest", gamePk],
+   195→   195→    queryFn: async () => {
+   196→   196→      const res = await fetch(`/api/game/${gamePk}`);
+   197→   197→      if (!res.ok) throw new Error("feed failed");
+   198→   198→      return res.json();
+   199→   199→    },
+   200→   200→    enabled: !connected || !snapshot,
+   201→   201→    refetchInterval: !connected || !snapshot ? 10_000 : false,
+   202→   202→    retry: 2,
+   203→   203→  });
+   204→   204→
+   205→   205→  // Use WS data if available, else REST
+   206→   206→  const allPitches = useMemo<EnrichedPitch[]>(() => {
+   207→   207→    if (snapshot?.savant?.exit_velocity?.length) {
+   208→   208→      // Build enriched pitch list from snapshot
+   209→   209→      const pitches: EnrichedPitch[] = [];
+   210→   210→      const savantMap = new Map<string, any>();
+   211→   211→      for (const sp of snapshot.savant.exit_velocity) {
+   212→   212→        const k = `${sp.inning}-${sp.half_inning}-${sp.ab_number}-${sp.pitch_number ?? 0}`;
+   213→   213→        savantMap.set(k, sp);
+   214→   214→      }
+   215→   215→      for (const play of snapshot.allPlays) {
+   216→   216→        const inning = play.about.inning;
+   217→   217→        const halfInning = play.about.halfInning;
+   218→   218→        const abNumber = play.atBatIndex + 1;
+   219→   219→        // playEvents come from the play, but our snapshot only has lastEvent
+   220→   220→        // So we synthesize one pitch per play if it has a pitch event
+   221→   221→        if (play.lastEvent?.isPitch) {
+   222→   222→          const key = `${inning}-${halfInning}-${abNumber}-${play.lastEvent.pitchNumber ?? 0}`;
+   223→   223→          const sp = savantMap.get(key);
+   224→   224→          pitches.push({
+   225→   225→            playId: play.lastEvent.playId,
+   226→   226→            atBatIndex: play.atBatIndex,
+   227→   227→            inning,
+   228→   228→            halfInning,
+   229→   229→            pitchNumber: play.lastEvent.pitchNumber ?? 0,
+   230→   230→            isPitch: true,
+   231→   231→            batterId: play.matchup?.batter?.id,
+   232→   232→            batterName: play.matchup?.batter?.fullName ?? "—",
+   233→   233→            batterSide: play.matchup?.batterSide?.code,
+   234→   234→            pitcherId: play.matchup?.pitcher?.id,
+   235→   235→            pitcherName: play.matchup?.pitcher?.fullName ?? "—",
+   236→   236→            pitchHand: play.matchup?.pitchHand?.code,
+   237→   237→            description: play.lastEvent.details?.description ?? "",
+   238→   238→            playResult: play.result?.event ?? "",
+   239→   239→            call: play.lastEvent.details?.call?.code,
+   240→   240→            callDescription: play.lastEvent.details?.call?.description,
+   241→   241→            pitchType: sp?.pitch_type ?? play.lastEvent.details?.type?.code,
+   242→   242→            pitchName: sp?.pitch_name ?? play.lastEvent.details?.type?.description,
+   243→   243→            startSpeed: sp?.start_speed ?? play.lastEvent.pitchData?.startSpeed,
+   244→   244→            endSpeed: sp?.end_speed ?? play.lastEvent.pitchData?.endSpeed,
+   245→   245→            spinRate: sp?.spin_rate ?? play.lastEvent.pitchData?.spinRate,
+   246→   246→            breakX: sp?.breakX ?? play.lastEvent.pitchData?.breakX,
+   247→   247→            breakZ: sp?.breakZ ?? play.lastEvent.pitchData?.breakZ,
+   248→   248→            inducedBreakZ: sp?.inducedBreakZ,
+   249→   249→            extension: sp?.extension ?? play.lastEvent.pitchData?.extension,
+   250→   250→            plateTime: sp?.plateTime ?? play.lastEvent.pitchData?.plateTime,
+   251→   251→            pX: sp?.px ?? play.lastEvent.pitchData?.coordinates?.pX,
+   252→   252→            pZ: sp?.pz ?? play.lastEvent.pitchData?.coordinates?.pZ,
+   253→   253→            zone: sp?.zone ?? play.lastEvent.pitchData?.zone,
+   254→   254→            szTop: sp?.sz_top ?? play.lastEvent.pitchData?.strikeZoneTop,
+   255→   255→            szBot: sp?.sz_bot ?? play.lastEvent.pitchData?.strikeZoneBottom,
+   256→   256→            isStrike: !!play.lastEvent.details?.isStrike,
+   257→   257→            isBall: !!play.lastEvent.details?.isBall,
+   258→   258→            isInPlay: !!play.lastEvent.details?.isInPlay,
+   259→   259→            isBarrel: sp?.is_barrel === 1,
+   260→   260→            isSword: !!sp?.isSword,
+   261→   261→            exitVelocity: sp?.hit_speed != null ? parseFloat(sp.hit_speed) : null,
+   262→   262→            launchAngle: sp?.hit_angle != null ? parseFloat(sp.hit_angle) : null,
+   263→   263→            hitDistance: sp?.hit_distance != null ? parseFloat(sp.hit_distance) : null,
+   264→   264→            xBA: sp?.xba != null && sp.xba !== "" ? parseFloat(sp.xba) : null,
+   265→   265→            batSpeed: sp?.batSpeed ?? null,
+   266→   266→            balls: play.count?.balls ?? 0,
+   267→   267→            strikes: play.count?.strikes ?? 0,
+   268→   268→            outs: play.count?.outs ?? 0,
+   269→   269→            homeScore: play.result?.homeScore ?? 0,
+   270→   270→            awayScore: play.result?.awayScore ?? 0,
+   271→   271→            timestamp: play.lastEvent?.endTime ?? play.playEndTime,
+   272→   272→            result: sp?.result,
+   273→   273→            resultDescription: sp?.des,
+   274→   274→          });
+   275→   275→        }
+   276→   276→      }
+   277→   277→      return pitches.reverse(); // newest first
+   278→   278→    }
+   279→   279→    return (restData?.pitches ?? []).slice().reverse();
+   280→   280→  }, [snapshot, restData]);
+   281→   281→
+   282→   282→  const linescore = snapshot?.linescore ?? restData?.linescore ?? null;
+   283→   283→  const status = snapshot?.status ?? restData?.status ?? null;
+   284→   284→  const teams = snapshot?.teams ?? restData?.teams ?? null;
+   285→   285→
+   286→   286→  // "Initial loading" = no snapshot yet AND REST is loading AND not a preview game
+   287→   287→  const isLoadingInitial = !snapshot && restLoading && status?.abstractGameState !== "Preview";
+   288→   288→
+   289→   289→  // The latest "live" pitches from the WS, which take priority over REST
+   290→   290→  const mergedPitches = useMemo(() => {
+   291→   291→    if (livePitches.length === 0) return allPitches;
+   292→   292→    // Merge by pitch key (atBatIndex-pitchNumber), newest first
+   293→   293→    const seen = new Set<string>();
+   294→   294→    const result: EnrichedPitch[] = [];
+   295→   295→    for (const p of livePitches) {
+   296→   296→      const k = `${p.atBatIndex}-${p.pitchNumber}`;
+   297→   297→      if (!seen.has(k)) {
+   298→   298→        seen.add(k);
+   299→   299→        result.push(p);
+   300→   300→      }
+   301→   301→    }
+   302→   302→    for (const p of allPitches) {
+   303→   303→      const k = `${p.atBatIndex}-${p.pitchNumber}`;
+   304→   304→      if (!seen.has(k)) {
+   305→   305→        seen.add(k);
+   306→   306→        result.push(p);
+   307→   307→      }
+   308→   308→    }
+   309→   309→    return result.slice(0, 80);
+   310→   310→  }, [livePitches, allPitches]);
+   311→   311→
+   312→   312→  const latestPitch = mergedPitches[0] ?? null;
+   313→   313→  const recentZonePitches = mergedPitches.slice(0, 30).reverse(); // oldest to newest for strike zone
+   314→   314→  const szTop = latestPitch?.szTop ?? 3.5;
+   315→   315→  const szBot = latestPitch?.szBot ?? 1.5;
+   316→   316→
+   317→   317→  // Pitch-type distribution
+   318→   318→  const pitchTypeStats = useMemo(() => {
+   319→   319→    const map = new Map<string, { count: number; avgSpeed: number; total: number }>();
+   320→   320→    for (const p of mergedPitches) {
+   321→   321→      if (!p.pitchType) continue;
+   322→   322→      const cur = map.get(p.pitchType) ?? { count: 0, avgSpeed: 0, total: 0 };
+   323→   323→      cur.count++;
+   324→   324→      if (p.startSpeed != null) {
+   325→   325→        cur.total += p.startSpeed;
+   326→   326→        cur.avgSpeed = cur.total / cur.count;
+   327→   327→      }
+   328→   328→      map.set(p.pitchType, cur);
+   329→   329→    }
+   330→   330→    return Array.from(map.entries())
+   331→   331→      .map(([type, stats]) => ({ type, ...stats }))
+   332→   332→      .sort((a, b) => b.count - a.count);
+   333→   333→  }, [mergedPitches]);
+   334→   334→
+   335→   335→  // Highlight metrics for the latest pitch
+   336→   336→  const latestMetrics = useMemo(() => {
+   337→   337→    if (!latestPitch) return [];
+   338→   338→    const m: Array<{ label: string; value: string; tone?: string; icon?: any }> = [];
+   339→   339→    if (latestPitch.startSpeed != null) {
+   340→   340→      m.push({ label: "Pitch Velocity", value: `${latestPitch.startSpeed.toFixed(1)} mph`, tone: "cobalt", icon: Gauge });
+   341→   341→    }
+   342→   342→    if (latestPitch.exitVelocity != null) {
+   343→   343→      const isHard = latestPitch.exitVelocity >= 95;
+   344→   344→      m.push({
+   345→   345→        label: "Exit Velocity",
+   346→   346→        value: `${latestPitch.exitVelocity.toFixed(1)} mph`,
+   347→   347→        tone: isHard ? "crimson" : "default",
+   348→   348→        icon: Zap,
+   349→   349→      });
+   350→   350→    }
+   351→   351→    if (latestPitch.launchAngle != null) {
+   352→   352→      m.push({ label: "Launch Angle", value: `${latestPitch.launchAngle.toFixed(0)}°`, tone: "amber", icon: TrendingUp });
+   353→   353→    }
+   354→   354→    if (latestPitch.hitDistance != null) {
+   355→   355→      m.push({ label: "Hit Distance", value: `${latestPitch.hitDistance.toFixed(0)} ft`, icon: ArrowUpRight });
+   356→   356→    }
+   357→   357→    if (latestPitch.spinRate != null) {
+   358→   358→      m.push({ label: "Spin Rate", value: `${latestPitch.spinRate.toFixed(0)} rpm`, icon: CircleDot });
+   359→   359→    }
+   360→   360→    if (latestPitch.xBA != null) {
+   361→   361→      m.push({ label: "xBA", value: latestPitch.xBA.toFixed(3).replace(/^0/, ""), tone: "mint", icon: Target });
+   362→   362→    }
+   363→   363→    if (latestPitch.batSpeed != null) {
+   364→   364→      m.push({ label: "Bat Speed", value: `${latestPitch.batSpeed.toFixed(1)} mph`, icon: Gauge });
+   365→   365→    }
+   366→   366→    if (latestPitch.zone != null) {
+   367→   367→      m.push({ label: "Zone", value: `${latestPitch.zone}`, tone: "cobalt", icon: Target });
+   368→   368→    }
+   369→   369→    return m;
+   370→   370→  }, [latestPitch]);
+   371→   371→
+   372→   372→  return (
+   373→   373→    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+   374→   374→      {/* Left column: Score + Strike Zone */}
+   375→   375→      <div className="lg:col-span-4 space-y-4">
+   376→   376→        <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
+   377→   377→        <div className="glass rounded-2xl p-4">
+   378→   378→          <div className="mb-3 flex items-center justify-between">
+   379→   379→            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+   380→   380→              <Target className="h-4 w-4 text-cobalt" />
+   381→   381→              Strike Zone
+   382→   382→            </h3>
+   383→   383→            <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
+   384→   384→              {recentZonePitches.length} pitches
+   385→   385→            </Badge>
+   386→   386→          </div>
+   387→   387→          <StrikeZone
+   388→   388→            pitches={recentZonePitches}
+   389→   389→            szTop={szTop}
+   390→   390→            szBot={szBot}
+   391→   391→            batterSide={latestPitch?.batterSide}
+   392→   392→            selectedPitchId={selectedPitch ? `${selectedPitch.atBatIndex}-${selectedPitch.pitchNumber}` : null}
+   393→   393→            onSelectPitch={setSelectedPitch}
+   394→   394→          />
+   395→   395→          {/* Legend */}
+   396→   396→          <div className="mt-3 flex flex-wrap gap-1.5 min-h-[20px]">
+   397→   397→            {pitchTypeStats.length === 0 && (
+   398→   398→              <span className="text-[10px] text-slate-600">No pitch types to display</span>
+   399→   399→            )}
+   400→   400→            {Object.entries({
+   401→   401→              FF: "4-Seam", FT: "Sinker", SL: "Slider", CH: "Changeup", CU: "Curveball", FC: "Cutter", ST: "Sweeper", SI: "Sinker",
+   402→   402→            }).map(([code, name]) => {
+   403→   403→              const has = pitchTypeStats.some((p) => p.type === code);
+   404→   404→              if (!has) return null;
+   405→   405→              const color = (PITCH_COLOR_LEGEND as any)[code] ?? "#94A3B8";
+   406→   406→              return (
+   407→   407→                <span key={code} className="inline-flex items-center gap-1 rounded-full bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-300">
+   408→   408→                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+   409→   409→                  {name}
+   410→   410→                </span>
+   411→   411→              );
+   412→   412→            })}
+   413→   413→          </div>
+   414→   414→        </div>
+   415→   415→      </div>
+   416→   416→
+   417→   417→      {/* Middle column: Pitch Log */}
+   418→   418→      <div className="lg:col-span-4 space-y-4">
+   419→   419→        <div className="glass rounded-2xl p-3">
+   420→   420→          <div className="mb-3 flex items-center justify-between px-1">
+   421→   421→            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+   422→   422→              <Activity className="h-4 w-4 text-mint" />
+   423→   423→              Pitch-by-Pitch Feed
+   424→   424→            </h3>
+   425→   425→            <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint text-[10px]">
+   426→   426→              <span className="mr-1 h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />
+   427→   427→              {connected ? "Streaming" : "Polling"}
+   428→   428→            </Badge>
+   429→   429→          </div>
+   430→   430→          <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
+   431→   431→            <div className="space-y-1.5">
+   432→   432→              <AnimatePresence initial={false}>
+   433→   433→                {mergedPitches.length === 0 ? (
+   434→   434→                  <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
+   435→   435→                    {status?.abstractGameState === "Preview" ? (
+   436→   436→                      <>
+   437→   437→                        <Clock className="h-6 w-6 text-amber" />
+   438→   438→                        <div className="text-sm font-medium text-slate-300">Game hasn't started yet</div>
+   439→   439→                        <div className="text-xs text-slate-500">Pitch-by-pitch data will appear here once the game begins.</div>
+   440→   440→                      </>
+   441→   441→                    ) : isLoadingInitial ? (
+   442→   442→                      <>
+   443→   443→                        <Loader2 className="h-5 w-5 animate-spin text-cobalt" />
+   444→   444→                        <div className="text-sm">Loading pitches…</div>
+   445→   445→                      </>
+   446→   446→                    ) : (
+   447→   447→                      <>
+   448→   448→                        <Activity className="h-6 w-6 text-slate-500" />
+   449→   449→                        <div className="text-sm">No pitches available</div>
+   450→   450→                        <div className="text-xs text-slate-500">Statcast data may not be available for this game.</div>
+   451→   451→                      </>
+   452→   452→                    )}
+   453→   453→                  </div>
+   454→   454→                ) : (
+   455→   455→                  mergedPitches.map((p, idx) => (
+   456→   456→                    <PitchLogEntry
+   457→   457→                      key={`${p.atBatIndex}-${p.pitchNumber}-${idx}`}
+   458→   458→                      pitch={p}
+   459→   459→                      index={idx}
+   460→   460→                      isSelected={selectedPitch?.atBatIndex === p.atBatIndex && selectedPitch?.pitchNumber === p.pitchNumber}
+   461→   461→                      onSelect={() => setSelectedPitch(p)}
+   462→   462→                      isLatest={idx === 0}
+   463→   463→                    />
+   464→   464→                  ))
+   465→   465→                )}
+   466→   466→              </AnimatePresence>
+   467→   467→            </div>
+   468→   468→          </ScrollArea>
+   469→   469→        </div>
+   470→   470→      </div>
+   471→   471→
+   472→   472→      {/* Right column: Latest pitch metrics + pitch mix */}
+   473→   473→      <div className="lg:col-span-4 space-y-4">
+   474→   474→        <div className="glass rounded-2xl p-4">
+   475→   475→          <div className="mb-3 flex items-center justify-between">
+   476→   476→            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+   477→   477→              <Zap className="h-4 w-4 text-crimson" />
+   478→   478→              Latest Pitch Metrics
+   479→   479→            </h3>
+   480→   480→            {latestPitch?.isBarrel && (
+   481→   481→              <Badge className="bg-crimson/20 text-crimson border-crimson/40 animate-pulse-glow">
+   482→   482→                <Zap className="mr-1 h-3 w-3" fill="currentColor" /> BARREL
+   483→   483→              </Badge>
+   484→   484→            )}
+   485→   485→          </div>
+   486→   486→          {latestPitch ? (
+   487→   487→            <div>
+   488→   488→              <div className="mb-3 rounded-xl bg-white/[0.03] p-3 border border-white/5">
+   489→   489→                <div className="text-[10px] uppercase tracking-wide text-slate-500">
+   490→   490→                  {latestPitch.inning > 0 ? `${latestPitch.halfInning === "top" ? "Top" : "Bottom"} ${latestPitch.inning}` : "Pre-game"}
+   491→   491→                </div>
+   492→   492→                <div className="text-sm font-semibold text-white">{latestPitch.batterName}</div>
+   493→   493→                <div className="text-xs text-slate-400">vs {latestPitch.pitcherName}</div>
+   494→   494→                <div className="mt-1 text-xs text-slate-300">{latestPitch.description}</div>
+   495→   495→              </div>
+   496→   496→              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+   497→   497→                {latestMetrics.map((m, i) => {
+   498→   498→                  const Icon = m.icon;
+   499→   499→                  const toneCls =
+   500→   500→                    m.tone === "crimson" ? "text-crimson" :
+   501→   501→                    m.tone === "cobalt" ? "text-cobalt" :
+   502→   502→                    m.tone === "amber" ? "text-amber" :
+   503→   503→                    m.tone === "mint" ? "text-mint" : "text-white";
+   504→   504→                  return (
+   505→   505→                    <motion.div
+   506→   506→                      key={`${m.label}-${i}`}
+   507→   507→                      initial={{ opacity: 0, y: 8 }}
+   508→   508→                      animate={{ opacity: 1, y: 0 }}
+   509→   509→                      transition={{ delay: i * 0.05 }}
+   510→   510→                      className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5"
+   511→   511→                    >
+   512→   512→                      <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-500">
+   513→   513→                        {Icon && <Icon className="h-3 w-3" />}
+   514→   514→                        {m.label}
+   515→   515→                      </div>
+   516→   516→                      <div className={cn("text-lg font-bold num", toneCls)}>{m.value}</div>
+   517→   517→                    </motion.div>
+   518→   518→                  );
+   519→   519→                })}
+   520→   520→              </div>
+   521→   521→            </div>
+   522→   522→          ) : (
+   523→   523→            <div className="flex h-40 items-center justify-center text-slate-400 text-sm">
+   524→   524→              No pitches yet
+   525→   525→            </div>
+   526→   526→          )}
+   527→   527→        </div>
+   528→   528→
+   529→   529→        {/* Pitch mix */}
+   530→   530→        <div className="glass rounded-2xl p-4">
+   531→   531→          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+   532→   532→            <Gauge className="h-4 w-4 text-cobalt" />
+   533→   533→            Pitch Mix
+   534→   534→          </h3>
+   535→   535→          <div className="space-y-2">
+   536→   536→            {pitchTypeStats.slice(0, 8).map((p) => {
+   537→   537→              const color = (PITCH_COLOR_LEGEND as any)[p.type] ?? "#94A3B8";
+   538→   538→              const pct = mergedPitches.length > 0 ? (p.count / mergedPitches.length) * 100 : 0;
+   539→   539→              return (
+   540→   540→                <div key={p.type}>
+   541→   541→                  <div className="flex items-center justify-between text-xs mb-1">
+   542→   542→                    <span className="flex items-center gap-2 text-slate-300">
+   543→   543→                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+   544→   544→                      {p.type}
+   545→   545→                    </span>
+   546→   546→                    <span className="text-slate-400 num">
+   547→   547→                      {p.count} · {pct.toFixed(0)}% · {p.avgSpeed > 0 ? `${p.avgSpeed.toFixed(0)}mph` : "—"}
+   548→   548→                    </span>
+   549→   549→                  </div>
+   550→   550→                  <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+   551→   551→                    <motion.div
+   552→   552→                      initial={{ width: 0 }}
+   553→   553→                      animate={{ width: `${pct}%` }}
+   554→   554→                      transition={{ duration: 0.5, ease: "easeOut" }}
+   555→   555→                      className="h-full rounded-full"
+   556→   556→                      style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}80` }}
+   557→   557→                    />
+   558→   558→                  </div>
+   559→   559→                </div>
+   560→   560→              );
+   561→   561→            })}
+   562→   562→            {pitchTypeStats.length === 0 && (
+   563→   563→              <div className="text-xs text-slate-500 text-center py-4">No pitch data yet</div>
+   564→   564→            )}
+   565→   565→          </div>
+   566→   566→        </div>
+   567→   567→      </div>
+   568→   568→    </div>
+   569→   569→  );
+   570→   570→}
+   571→   571→
+   572→   572→function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; status: any; teams: any; gamePk: number }) {
+   573→   573→  const innings = linescore?.innings ?? [];
+   574→   574→  const away = linescore?.teams?.away;
+   575→   575→  const home = linescore?.teams?.home;
+   576→   576→  const awayName = teams?.away?.name ?? "Away";
+   577→   577→  const homeName = teams?.home?.name ?? "Home";
+   578→   578→  const awayAbbr = teams?.away?.abbreviation ?? "";
+   579→   579→  const homeAbbr = teams?.home?.abbreviation ?? "";
+   580→   580→
+   581→   581→  const state = status?.abstractGameState ?? "Final";
+   582→   582→  const isInning = status?.inning != null && state === "Live";
+   583→   583→  const inningLabel = isInning
+   584→   584→    ? `${status.inningState ?? ""} ${status.inning ?? ""}${getOrdinal(status.inning ?? 0)}`
+   585→   585→    : state === "Final" ? "Final" : state === "Preview" ? "Preview" : state;
+   586→   586→
+   587→   587→  return (
+   588→   588→    <div className="glass rounded-2xl p-4">
+   589→   589→      <div className="mb-3 flex items-center justify-between">
+   590→   590→        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+   591→   591→          <Activity className="h-4 w-4 text-mint" />
+   592→   592→          Scoreboard
+   593→   593→        </h3>
+   594→   594→        <Badge
+   595→   595→          variant="outline"
+   596→   596→          className={cn(
+   597→   597→            "text-[10px] font-bold uppercase tracking-wide",
+   598→   598→            state === "Live" ? "border-mint/40 bg-mint/10 text-mint" :
+   599→   599→            state === "Final" ? "border-slate-600 bg-slate-700/30 text-slate-400" :
+   600→   600→            "border-amber/40 bg-amber/10 text-amber"
+   601→   601→          )}
+   602→   602→        >
+   603→   603→          {state === "Live" && <span className="mr-1 h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
+   604→   604→          {inningLabel}
+   605→   605→        </Badge>
+   606→   606→      </div>
+   607→   607→
+   608→   608→      <div className="overflow-x-auto scrollbar-thin">
+   609→   609→        {innings.length === 0 ? (
+   610→   610→          <div className="py-6 text-center text-xs text-slate-500">
+   611→   611→            {state === "Preview" ? "Game starts soon" : "Scoreboard unavailable"}
+   612→   612→          </div>
+   613→   613→        ) : (
+   614→   614→          <table className="w-full text-xs num">
+   615→   615→            <thead>
+   616→   616→              <tr className="text-[10px] uppercase text-slate-500">
+   617→   617→                <th className="text-left py-1 pr-2 sticky left-0 bg-transparent"></th>
+   618→   618→                {innings.map((inn: any) => (
+   619→   619→                  <th key={inn.num} className="px-1.5 py-1 text-center min-w-[20px]">{inn.num}</th>
+   620→   620→                ))}
+   621→   621→                {(away || home) && (
+   622→   622→                  <>
+   623→   623→                    <th className="px-2 py-1 text-center border-l border-white/5">R</th>
+   624→   624→                    <th className="px-1.5 py-1 text-center">H</th>
+   625→   625→                    <th className="px-1.5 py-1 text-center">E</th>
+   626→   626→                  </>
+   627→   627→                )}
+   628→   628→              </tr>
+   629→   629→            </thead>
+   630→   630→            <tbody>
+   631→   631→              <tr className="border-t border-white/5">
+   632→   632→                <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
+   633→   633→                  <div className="flex items-center gap-1.5">
+   634→   634→                    <span className="text-xs font-bold text-white">{awayAbbr}</span>
+   635→   635→                    <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
+   636→   636→                  </div>
+   637→   637→                </td>
+   638→   638→              {innings.map((inn: any) => (
+   639→   639→                <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
+   640→   640→                  {inn.away.runs ?? 0}
+   641→   641→                </td>
+   642→   642→              ))}
+   643→   643→              {away && (
+   644→   644→                <>
+   645→   645→                  <td className="px-2 py-1.5 text-center font-bold text-white border-l border-white/5">{away.runs ?? 0}</td>
+   646→   646→                  <td className="px-1.5 py-1.5 text-center text-slate-300">{away.hits ?? 0}</td>
+   647→   647→                  <td className="px-1.5 py-1.5 text-center text-slate-300">{away.errors ?? 0}</td>
+   648→   648→                </>
+   649→   649→              )}
+   650→   650→            </tr>
+   651→   651→            <tr className="border-t border-white/5">
+   652→   652→              <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
+   653→   653→                <div className="flex items-center gap-1.5">
+   654→   654→                  <span className="text-xs font-bold text-white">{homeAbbr}</span>
+   655→   655→                  <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{homeName.split(" ").slice(-1)[0]}</span>
+   656→   656→                </div>
+   657→   657→              </td>
+   658→   658→              {innings.map((inn: any) => (
+   659→   659→                <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
+   660→   660→                  {inn.home.runs ?? 0}
+   661→   661→                </td>
+   662→   662→              ))}
+   663→   663→              {home && (
+   664→   664→                <>
+   665→   665→                  <td className="px-2 py-1.5 text-center font-bold text-white border-l border-white/5">{home.runs ?? 0}</td>
+   666→   666→                  <td className="px-1.5 py-1.5 text-center text-slate-300">{home.hits ?? 0}</td>
+   667→   667→                  <td className="px-1.5 py-1.5 text-center text-slate-300">{home.errors ?? 0}</td>
+   668→   668→                </>
+   669→   669→              )}
+   670→   670→            </tr>
+   671→   671→          </tbody>
+   672→   672→        </table>
+   673→   673→        )}
+   674→   674→      </div>
+   675→   675→      <div className="mt-2 text-[10px] text-slate-500">GamePk: <span className="font-mono">{gamePk}</span></div>
+   676→   676→    </div>
+   677→   677→  );
+   678→   678→}
+   679→   679→
+   680→   680→function getOrdinal(n: number): string {
+   681→   681→  if (n === 1) return "st";
+   682→   682→  if (n === 2) return "nd";
+   683→   683→  if (n === 3) return "rd";
+   684→   684→  return "th";
+   685→   685→}
+   686→   686→
+   687→   687→const PITCH_COLOR_LEGEND: Record<string, string> = {
+   688→   688→  FF: "#FF6B6B",
+   689→   689→  FT: "#FF8E72",
+   690→   690→  FC: "#FFB547",
+   691→   691→  SI: "#FF7A45",
+   692→   692→  FS: "#C68BFF",
+   693→   693→  SL: "#4DA3FF",
+   694→   694→  ST: "#5DADEC",
+   695→   695→  CU: "#3DDBA0",
+   696→   696→  KC: "#7BE3B4",
+   697→   697→  CS: "#A78BFA",
+   698→   698→  SC: "#A78BFA",
+   699→   699→  CH: "#FFB547",
+   700→   700→  KN: "#94A3B8",
+   701→   701→  PO: "#94A3B8",
+   702→   702→  FO: "#94A3B8",
+   703→   703→};
+   704→   704→

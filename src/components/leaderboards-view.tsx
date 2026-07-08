@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Search,
-  Filter, User, Hash,
+  Filter, User, Hash, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 
 type SortDir = "asc" | "desc" | null;
 interface ColDef {
@@ -160,7 +161,7 @@ export function LeaderboardsView() {
     }
   }
 
-  const { data, isLoading, error } = useQuery<{ rows: any[]; total: number; year: number; type: string }>({
+  const { data, isLoading, error, refetch } = useQuery<{ rows: any[]; total: number; year: number; type: string }>({
     queryKey: ["leaderboard", lbType, lbYear, lbMin, lbTeam, lbPosition],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -172,6 +173,7 @@ export function LeaderboardsView() {
       return res.json();
     },
     staleTime: 5 * 60_000,
+    retry: 2,
   });
 
   const cols = lbType === "batter" ? BATTER_COLS : PITCHER_COLS;
@@ -347,12 +349,37 @@ export function LeaderboardsView() {
       {/* Table */}
       <div className="glass rounded-2xl overflow-hidden">
         {isLoading ? (
-          <div className="flex h-40 items-center justify-center text-slate-400">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin text-cobalt" /> Loading leaderboard…
+          <div className="p-3">
+            <div className="space-y-1">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 rounded-lg px-2.5 py-2">
+                  <Skeleton className="h-4 w-6 shrink-0" />
+                  <Skeleton className="h-4 w-32 shrink-0" />
+                  <div className="flex-1" />
+                  {Array.from({ length: 6 }).map((_, j) => (
+                    <Skeleton key={j} className="h-4 w-12" />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
-          <div className="p-6 text-center text-sm text-crimson">
-            Failed to load leaderboard. Please try again.
+          <div className="p-6">
+            <ErrorState
+              title="Couldn't load leaderboard"
+              description="The Baseball Savant leaderboard endpoint may be temporarily unavailable."
+              onRetry={() => refetch()}
+            />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="p-6">
+            <EmptyState
+              icon={Search}
+              title="No matching players"
+              description={search.trim()
+                ? `No players matching "${search}". Try a different name or clear the filter.`
+                : "No players match the current filter criteria. Try adjusting the season, team, position, or minimum PA filter."}
+            />
           </div>
         ) : (
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] overflow-x-auto scrollbar-thin">
@@ -431,13 +458,6 @@ export function LeaderboardsView() {
                     })}
                   </motion.tr>
                 ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={visibleCols.length} className="py-10 text-center text-slate-400">
-                      No players match the current filters.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
             {/* Lazy-load more */}

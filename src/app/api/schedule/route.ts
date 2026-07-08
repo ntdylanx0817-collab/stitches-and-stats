@@ -9,8 +9,11 @@ export async function GET(req: NextRequest) {
   // If no date specified, fetch yesterday + today so we always have
   // final games (with pitch data) available alongside live/preview ones.
   const today = requestedDate ?? ymd(new Date());
-  const yesterdayDate = new Date(today);
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  // Parse the YYYY-MM-DD string in UTC to avoid timezone-shift bugs.
+  // `new Date("2025-04-15")` is parsed as UTC midnight, but getDate()/setDate()
+  // operate in local server time — on a US server that yields the wrong "yesterday".
+  const [y, m, d] = today.split("-").map(Number);
+  const yesterdayDate = new Date(Date.UTC(y, m - 1, d - 1));
   const yesterday = ymd(yesterdayDate);
 
   try {
@@ -32,20 +35,20 @@ export async function GET(req: NextRequest) {
       venue: g.venue,
       seriesDescription: g.seriesDescription,
       away: {
-        id: g.teams.away.team.id,
-        name: g.teams.away.team.name,
-        abbreviation: g.teams.away.team.abbreviation,
-        score: g.teams.away.score,
-        record: g.teams.away.leagueRecord,
-        isWinner: g.teams.away.isWinner,
+        id: g.teams?.away?.team?.id ?? 0,
+        name: g.teams?.away?.team?.name ?? "Unknown",
+        abbreviation: g.teams?.away?.team?.abbreviation,
+        score: g.teams?.away?.score ?? null,
+        record: g.teams?.away?.leagueRecord,
+        isWinner: g.teams?.away?.isWinner,
       },
       home: {
-        id: g.teams.home.team.id,
-        name: g.teams.home.team.name,
-        abbreviation: g.teams.home.team.abbreviation,
-        score: g.teams.home.score,
-        record: g.teams.home.leagueRecord,
-        isWinner: g.teams.home.isWinner,
+        id: g.teams?.home?.team?.id ?? 0,
+        name: g.teams?.home?.team?.name ?? "Unknown",
+        abbreviation: g.teams?.home?.team?.abbreviation,
+        score: g.teams?.home?.score ?? null,
+        record: g.teams?.home?.leagueRecord,
+        isWinner: g.teams?.home?.isWinner,
       },
     });
 

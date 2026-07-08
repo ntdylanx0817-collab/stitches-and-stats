@@ -1,4 +1,8 @@
 :81 {
+	# Route requests with XTransformPort query param to the specified port.
+	# NOTE: The actual Caddy config is managed by the platform at /app/Caddyfile.
+	# This file is a reference copy. The platform's Caddy accepts any XTransformPort
+	# value and reverse-proxies to localhost:{port}.
 	@transform_port_query {
 		query XTransformPort=*
 	}

@@ -83,15 +83,15 @@ export function Header() {
             )}>
               <span className={cn(
                 "absolute inline-flex h-full w-full rounded-full opacity-75",
-                connected ? "bg-mint animate-ping" : "bg-slate-500"
+                connected ? "bg-mint animate-ping" : "bg-amber"
               )} />
               <span className={cn(
                 "relative inline-flex h-2 w-2 rounded-full",
-                connected ? "bg-mint" : "bg-slate-500"
+                connected ? "bg-mint" : "bg-amber"
               )} />
             </span>
             <span className="hidden text-[11px] font-medium uppercase tracking-wide text-slate-400 sm:inline">
-              {connected ? "Live WS" : "Offline"}
+              {connected ? "Live WS" : "Live REST"}
             </span>
           </div>
         </div>

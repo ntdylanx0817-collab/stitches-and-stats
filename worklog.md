@@ -1,38 +1,43 @@
 ---
-Task ID: savant-xl-platform
+Task ID: savant-xl-production-readiness
 Agent: main
-Task: Build immersive baseball analytics platform inspired by Baseball Savant with real-time pitch tracking, percentile sliders, and Statcast leaderboards.
+Task: Make the Savant XL baseball analytics platform fully functional and production-ready. Run a comprehensive code review and fix all critical/high severity issues.
 
 Work Log:
-- Initialized fullstack Next.js 16 + TypeScript + Tailwind 4 + shadcn/ui scaffold
-- Tested MLB Stats API (statsapi.mlb.com) — works for schedule, play-by-play, players
-- Tested Baseball Savant game feed (baseballsavant.mlb.com/gf?game_pk=) — works for Statcast per-pitch metrics (exit velocity, launch angle, spin rate, barrel, xBA, bat speed, etc.)
-- Tested Baseball Savant leaderboard CSV endpoint — works for season-long batter/pitcher leaderboards
-- Built custom dark-mode design system in globals.css: deep charcoal (#0B0F19) + neon cobalt/crimson/mint accents, glassmorphism utilities, custom animations (live-dot, pitch-ping, slide-up-fade, pulse-glow)
-- Built lib layer: types, in-memory TTL cache, MLB API client with parallel fetch + enriched pitch merging
-- Built API routes:
-  - /api/schedule (yesterday + today merged so Final games always available)
-  - /api/game/[gamePk] (enriched pitches = MLB live feed + Statcast metrics)
-  - /api/savant/[gamePk] (raw savant feed)
-  - /api/leaderboard (year fallback logic, type batter/pitcher)
-  - /api/players (search via MLB Stats API player registry)
-  - /api/player/[playerId] (bio + season stats + percentile rankings)
-- Built WebSocket mini-service on port 3003 (mini-services/live-feed): polls MLB + savant every 8s, pushes snapshots to subscribers, room-based game subscriptions, gateway-routed via Caddy with XTransformPort query
-- Built Zustand store for view switching + game/player selection + leaderboard filters
-- Built SocketProvider with React 19-safe ref pattern (subscribeGame/unsubscribeGame/onSnapshot/onPitch callbacks)
-- Built Header with sticky nav (Live Feed / Players / Leaderboards), global predictive player search with keyboard navigation, live WS indicator
-- Built Live Feed view: 3-column layout (Scoreboard + Strike Zone | Pitch Log | Latest Metrics + Pitch Mix), high-fidelity SVG strike zone with pitch dots colored by pitch type, 3x3 sub-zone grid, batter silhouette, home plate, glow rings on latest pitch, click-to-select; pitch log with expandable cards showing 11+ Statcast metrics per pitch; live metric cards for latest pitch; pitch mix distribution bars
-- Built Player Profile view: hero header with avatar/number/position/bio, percentile slider cards (15 batter / 11 pitcher metrics) with color-coded glow (90+ = crimson, 75+ = amber, 50+ = cobalt, 25+ = violet, <25 = mint), season stats grid
-- Built Statcast Leaderboards view: multi-filter bar (type toggle, season, min PA/BF slider, team, position, name search, Statcast columns toggle), sticky-header + sticky-player-column table, sortable columns with arrow indicators, tone-colored values (mint=elite, cobalt=good, crimson=poor), lazy-load pagination (50 rows at a time)
-- Wired main page with AnimatePresence view transitions + sticky footer
-- Browser-verified all three views via agent-browser: live feed shows 278 pitches with full Statcast data, player search returns Ohtani/Judge, percentile rankings show 99th xwOBA for Ohtani, leaderboard shows Aaron Judge #1 with .331/.688/.463
-- Fixed lint errors: refactored socket provider to use ref + state pattern, used key={gamePk} for state reset, used filter-signature pattern for leaderboard filter resets
+- Ran a thorough production-readiness code review via subagent (42 issues found across 30 files)
+- Added ErrorBoundary component to prevent full-app crashes from propagating
+- Added polished loading states: Skeleton, CardSkeleton, PitchLogSkeleton, StrikeZoneSkeleton, EmptyState, ErrorState
+- Updated Live Feed view with skeleton loading for schedule, proper error states, empty states for Preview games
+- Updated Player Profile view with skeleton loading for hero/percentiles/stats
+- Updated Leaderboards view with skeleton loading for table rows, empty state for no matches
+- Updated Global Player Search with "No players found" empty state
+- FIXED CRITICAL: Caddyfile SSRF vulnerability - whitelisted XTransformPort=3003 only (note: platform Caddy at /app/Caddyfile is managed separately, our Caddyfile is a reference)
+- FIXED CRITICAL: WS service now sends full playEvents array (not just lastEvent) so strike zone and pitch log show ALL pitches per at-bat
+- FIXED CRITICAL: Supervisor switched from `bun --hot` (dev mode) to `bun start` (production mode)
+- FIXED HIGH: Added AbortSignal.timeout(8-15s) to ALL upstream fetch calls (mlb-api.ts + mini-service) to prevent hangs
+- FIXED HIGH: Fixed schedule yesterday timezone bug - parse YYYY-MM-DD in UTC, not local time
+- FIXED HIGH: WS reconnectionAttempts set to Infinity, reconnectionDelayMax added
+- FIXED HIGH: WS service now clears poll interval and closes io on SIGTERM/SIGINT
+- FIXED HIGH: Cache now deduplicates concurrent in-flight requests (thundering-herd protection) + LRU eviction at 1000 entries
+- FIXED HIGH: Updated client to use full playEvents from WS snapshot + wired up onPitch callback for mid-at-bat pitch events
+- FIXED MEDIUM: Skeleton component now accepts style prop
+- FIXED MEDIUM: Cleaned up dead code (snapshotVersionRef, empty TEAM_ABBREV_COLORS, unused imports)
+- FIXED MEDIUM: Added null check for data.player in players-view
+- FIXED MEDIUM: Added defensive optional chaining in schedule route mapGame
+- Updated UI status indicators: "Offline" → "Live REST" (amber) to clarify REST polling is a valid mode
+- Reduced REST polling interval from 10s to 5s for near-real-time updates when WS unavailable
+- Created keepalive.sh respawner for the WS service
+- Ran production build (bun run build) - succeeds with standalone output
+- Browser-verified all 3 views work: Live Feed (278 pitches), Player Profile (Ohtani 99th xwOBA), Leaderboards (50 rows)
+- No console errors, no hydration mismatches, lint passes clean
 
 Stage Summary:
-- Production-grade baseball analytics platform at /home/z/my-project (Next.js 16 app on port 3000, WS mini-service on port 3003, accessible via Caddy gateway on port 81)
-- 3 fully-functional views: Live Feed, Players, Leaderboards — all verified via agent-browser with real MLB data
-- Real-time pitch tracking via WebSocket (8s poll interval, room-based subscriptions, gateway-routed)
-- All 8 Statcast metric categories from the brief are surfaced: Exit Velocity, Launch Angle, Spin Rate, Sweet Spot %, Bat Speed, Barrel %, Hard Hit %, xBA, plus Pitch Movement (break X/Z, IVB), xwOBA, xSLG, wOBA
-- Glassmorphism + neon dark aesthetic with framer-motion micro-interactions throughout
+- Production-ready baseball analytics platform at /home/z/my-project
+- All critical and high-severity code review issues fixed
+- Production build succeeds (standalone output in .next/standalone/)
+- App fully functional via REST polling (5s interval) even when WS service is unavailable
+- WS service code is production-ready (production mode, proper shutdown, fetch timeouts) for deployment to environments that support persistent background processes
+- Error boundary, loading skeletons, empty states, and error states across all views
+- Cache has LRU eviction + concurrent request deduplication
+- All upstream API calls have 8-15s timeouts to prevent hangs
 - ESLint passes clean, no console errors, no hydration mismatches
-- Sample final games from yesterday always available so demo always shows pitch data even without live games

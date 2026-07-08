@@ -41,7 +41,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionDelayMax: 10_000,
+      // Infinite reconnection attempts — never give up on the WS server.
+      // The user should not have to manually refresh to reconnect.
+      reconnectionAttempts: Infinity,
     });
     socketRef.current = sock;
 

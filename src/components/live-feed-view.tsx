@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, Calendar, ChevronRight, Clock, Filter, Loader2, Radio,
   TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight, Search,
+  AlertCircle, Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch } from "@/lib/types";
+import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton } from "@/components/loading-states";
 
 interface ScheduleGame {
   gamePk: number;
@@ -30,7 +32,7 @@ export function LiveFeedView() {
   const selectedGamePk = useSavantStore((s) => s.selectedGamePk);
   const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
 
-  const { data: scheduleData, isLoading: scheduleLoading } = useQuery<{ games: ScheduleGame[]; date: string }>({
+  const { data: scheduleData, isLoading: scheduleLoading, error: scheduleError, refetch: refetchSchedule } = useQuery<{ games: ScheduleGame[]; date: string }>({
     queryKey: ["schedule"],
     queryFn: async () => {
       const res = await fetch("/api/schedule");
@@ -38,6 +40,7 @@ export function LiveFeedView() {
       return res.json();
     },
     refetchInterval: 60_000,
+    retry: 2,
   });
 
   const games = scheduleData?.games ?? [];
@@ -67,9 +70,36 @@ export function LiveFeedView() {
           </Badge>
         </div>
         {scheduleLoading ? (
-          <div className="flex h-20 items-center justify-center text-slate-400">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading schedule…
+          <div className="flex gap-2 overflow-hidden pb-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="min-w-[220px] shrink-0 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                <div className="mb-2 flex justify-between">
+                  <Skeleton className="h-2 w-12" />
+                  <Skeleton className="h-2 w-10" />
+                </div>
+                <div className="mb-1.5 flex justify-between">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-4" />
+                </div>
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-4" />
+                </div>
+              </div>
+            ))}
           </div>
+        ) : scheduleError ? (
+          <ErrorState
+            title="Couldn't load today's schedule"
+            description="The MLB Stats API may be temporarily unavailable."
+            onRetry={() => refetchSchedule()}
+          />
+        ) : games.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No games today"
+            description="There are no MLB games scheduled for today or yesterday. Check back later."
+          />
         ) : (
           <ScrollArea className="w-full overflow-x-auto scrollbar-thin">
             <div className="flex gap-2 pb-2 min-w-min">
@@ -126,18 +156,16 @@ export function LiveFeedView() {
 }
 
 function GameFeed({ gamePk }: { gamePk: number }) {
-  const { subscribeGame, unsubscribeGame, onSnapshot, connected } = useSocket();
+  const { subscribeGame, unsubscribeGame, onSnapshot, onPitch, connected } = useSocket();
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
-  const snapshotVersionRef = useRef(0);
 
   // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
   useEffect(() => {
     subscribeGame(gamePk);
     const offSnap = onSnapshot((snap) => {
       if (snap.gamePk !== gamePk) return;
-      snapshotVersionRef.current++;
       setSnapshot(snap);
       // If we have a latest pitch and it's new, add to live pitches
       if (snap.latestPitch) {
@@ -148,14 +176,80 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         });
       }
     });
+    // Also subscribe to the granular game:pitch event for snappier UI feedback
+    // when a new pitch arrives mid-at-bat (the snapshot polls every 8s, but
+    // game:pitch fires immediately when a new pitch key is detected).
+    const offPitch = onPitch((pitch: any) => {
+      if (!pitch || pitch.atBatIndex == null || pitch.pitchNumber == null) return;
+      setLivePitches((prev) => {
+        const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
+        if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
+        // The game:pitch payload is shaped like EnrichedPitch but may be missing
+        // some fields — coerce to the expected type with sensible defaults.
+        const enriched: EnrichedPitch = {
+          playId: pitch.playId,
+          atBatIndex: pitch.atBatIndex,
+          inning: pitch.inning ?? 0,
+          halfInning: pitch.halfInning ?? "top",
+          pitchNumber: pitch.pitchNumber,
+          isPitch: true,
+          batterId: pitch.batter?.id,
+          batterName: pitch.batter?.fullName ?? "—",
+          batterSide: pitch.batterSide,
+          pitcherId: pitch.pitcher?.id,
+          pitcherName: pitch.pitcher?.fullName ?? "—",
+          pitchHand: pitch.pitchHand,
+          description: pitch.description ?? "",
+          playResult: pitch.result ?? "",
+          call: pitch.call?.code ?? pitch.call,
+          callDescription: pitch.call?.description,
+          pitchType: pitch.pitchType,
+          pitchName: pitch.pitchName,
+          startSpeed: pitch.startSpeed,
+          endSpeed: pitch.endSpeed,
+          spinRate: pitch.spinRate,
+          breakX: pitch.breakX,
+          breakZ: pitch.breakZ,
+          inducedBreakZ: pitch.inducedBreakZ,
+          extension: pitch.extension,
+          plateTime: pitch.plateTime,
+          pX: pitch.pX ?? pitch.coordinates?.pX,
+          pZ: pitch.pZ ?? pitch.coordinates?.pZ,
+          zone: pitch.zone,
+          szTop: pitch.szTop,
+          szBot: pitch.szBot,
+          isStrike: !!pitch.isStrike,
+          isBall: !!pitch.isBall,
+          isInPlay: !!pitch.isInPlay,
+          isBarrel: pitch.isBarrel,
+          isSword: pitch.isSword,
+          exitVelocity: pitch.exitVelocity ?? null,
+          launchAngle: pitch.launchAngle ?? null,
+          hitDistance: pitch.hitDistance ?? null,
+          xBA: pitch.xBA ?? null,
+          batSpeed: pitch.batSpeed ?? null,
+          balls: pitch.count?.balls ?? 0,
+          strikes: pitch.count?.strikes ?? 0,
+          outs: pitch.count?.outs ?? 0,
+          homeScore: pitch.homeScore ?? 0,
+          awayScore: pitch.awayScore ?? 0,
+          timestamp: pitch.timestamp,
+          result: pitch.result,
+          resultDescription: pitch.resultDescription,
+        };
+        return [enriched, ...prev].slice(0, 60);
+      });
+    });
     return () => {
       offSnap();
+      offPitch();
       unsubscribeGame(gamePk);
     };
-  }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot]);
+  }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot, onPitch]);
 
-  // Fallback: if WS not connected, fetch via REST periodically
-  const { data: restData } = useQuery<{
+  // Fallback: if WS not connected, fetch via REST periodically.
+  // Polls every 5s for near-real-time updates when WS is unavailable.
+  const { data: restData, isLoading: restLoading } = useQuery<{
     pitches: EnrichedPitch[];
     linescore: any;
     status: any;
@@ -168,13 +262,16 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       return res.json();
     },
     enabled: !connected || !snapshot,
-    refetchInterval: !connected || !snapshot ? 10_000 : false,
+    refetchInterval: !connected || !snapshot ? 5_000 : false,
+    retry: 2,
   });
 
   // Use WS data if available, else REST
   const allPitches = useMemo<EnrichedPitch[]>(() => {
     if (snapshot?.savant?.exit_velocity?.length) {
-      // Build enriched pitch list from snapshot
+      // Build enriched pitch list from snapshot — iterate ALL pitch events
+      // in each play (not just the last one) so the strike zone and pitch log
+      // show every pitch of every at-bat.
       const pitches: EnrichedPitch[] = [];
       const savantMap = new Map<string, any>();
       for (const sp of snapshot.savant.exit_velocity) {
@@ -185,17 +282,17 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         const inning = play.about.inning;
         const halfInning = play.about.halfInning;
         const abNumber = play.atBatIndex + 1;
-        // playEvents come from the play, but our snapshot only has lastEvent
-        // So we synthesize one pitch per play if it has a pitch event
-        if (play.lastEvent?.isPitch) {
-          const key = `${inning}-${halfInning}-${abNumber}-${play.lastEvent.pitchNumber ?? 0}`;
+        const events = play.playEvents ?? [];
+        for (const ev of events) {
+          if (!ev.isPitch) continue;
+          const key = `${inning}-${halfInning}-${abNumber}-${ev.pitchNumber ?? 0}`;
           const sp = savantMap.get(key);
           pitches.push({
-            playId: play.lastEvent.playId,
+            playId: ev.playId,
             atBatIndex: play.atBatIndex,
             inning,
             halfInning,
-            pitchNumber: play.lastEvent.pitchNumber ?? 0,
+            pitchNumber: ev.pitchNumber ?? 0,
             isPitch: true,
             batterId: play.matchup?.batter?.id,
             batterName: play.matchup?.batter?.fullName ?? "—",
@@ -203,28 +300,28 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             pitcherId: play.matchup?.pitcher?.id,
             pitcherName: play.matchup?.pitcher?.fullName ?? "—",
             pitchHand: play.matchup?.pitchHand?.code,
-            description: play.lastEvent.details?.description ?? "",
+            description: ev.details?.description ?? "",
             playResult: play.result?.event ?? "",
-            call: play.lastEvent.details?.call?.code,
-            callDescription: play.lastEvent.details?.call?.description,
-            pitchType: sp?.pitch_type ?? play.lastEvent.details?.type?.code,
-            pitchName: sp?.pitch_name ?? play.lastEvent.details?.type?.description,
-            startSpeed: sp?.start_speed ?? play.lastEvent.pitchData?.startSpeed,
-            endSpeed: sp?.end_speed ?? play.lastEvent.pitchData?.endSpeed,
-            spinRate: sp?.spin_rate ?? play.lastEvent.pitchData?.spinRate,
-            breakX: sp?.breakX ?? play.lastEvent.pitchData?.breakX,
-            breakZ: sp?.breakZ ?? play.lastEvent.pitchData?.breakZ,
+            call: ev.details?.call?.code,
+            callDescription: ev.details?.call?.description,
+            pitchType: sp?.pitch_type ?? ev.details?.type?.code,
+            pitchName: sp?.pitch_name ?? ev.details?.type?.description,
+            startSpeed: sp?.start_speed ?? ev.pitchData?.startSpeed,
+            endSpeed: sp?.end_speed ?? ev.pitchData?.endSpeed,
+            spinRate: sp?.spin_rate ?? ev.pitchData?.spinRate,
+            breakX: sp?.breakX ?? ev.pitchData?.breakX,
+            breakZ: sp?.breakZ ?? ev.pitchData?.breakZ,
             inducedBreakZ: sp?.inducedBreakZ,
-            extension: sp?.extension ?? play.lastEvent.pitchData?.extension,
-            plateTime: sp?.plateTime ?? play.lastEvent.pitchData?.plateTime,
-            pX: sp?.px ?? play.lastEvent.pitchData?.coordinates?.pX,
-            pZ: sp?.pz ?? play.lastEvent.pitchData?.coordinates?.pZ,
-            zone: sp?.zone ?? play.lastEvent.pitchData?.zone,
-            szTop: sp?.sz_top ?? play.lastEvent.pitchData?.strikeZoneTop,
-            szBot: sp?.sz_bot ?? play.lastEvent.pitchData?.strikeZoneBottom,
-            isStrike: !!play.lastEvent.details?.isStrike,
-            isBall: !!play.lastEvent.details?.isBall,
-            isInPlay: !!play.lastEvent.details?.isInPlay,
+            extension: sp?.extension ?? ev.pitchData?.extension,
+            plateTime: sp?.plateTime ?? ev.pitchData?.plateTime,
+            pX: sp?.px ?? ev.pitchData?.coordinates?.pX,
+            pZ: sp?.pz ?? ev.pitchData?.coordinates?.pZ,
+            zone: sp?.zone ?? ev.pitchData?.zone,
+            szTop: sp?.sz_top ?? ev.pitchData?.strikeZoneTop,
+            szBot: sp?.sz_bot ?? ev.pitchData?.strikeZoneBottom,
+            isStrike: !!ev.details?.isStrike,
+            isBall: !!ev.details?.isBall,
+            isInPlay: !!ev.details?.isInPlay,
             isBarrel: sp?.is_barrel === 1,
             isSword: !!sp?.isSword,
             exitVelocity: sp?.hit_speed != null ? parseFloat(sp.hit_speed) : null,
@@ -232,12 +329,12 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             hitDistance: sp?.hit_distance != null ? parseFloat(sp.hit_distance) : null,
             xBA: sp?.xba != null && sp.xba !== "" ? parseFloat(sp.xba) : null,
             batSpeed: sp?.batSpeed ?? null,
-            balls: play.count?.balls ?? 0,
-            strikes: play.count?.strikes ?? 0,
-            outs: play.count?.outs ?? 0,
+            balls: ev.count?.balls ?? play.count?.balls ?? 0,
+            strikes: ev.count?.strikes ?? play.count?.strikes ?? 0,
+            outs: ev.count?.outs ?? play.count?.outs ?? 0,
             homeScore: play.result?.homeScore ?? 0,
             awayScore: play.result?.awayScore ?? 0,
-            timestamp: play.lastEvent?.endTime ?? play.playEndTime,
+            timestamp: ev.endTime ?? play.playEndTime,
             result: sp?.result,
             resultDescription: sp?.des,
           });
@@ -251,6 +348,9 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const linescore = snapshot?.linescore ?? restData?.linescore ?? null;
   const status = snapshot?.status ?? restData?.status ?? null;
   const teams = snapshot?.teams ?? restData?.teams ?? null;
+
+  // "Initial loading" = no snapshot yet AND REST is loading AND not a preview game
+  const isLoadingInitial = !snapshot && restLoading && status?.abstractGameState !== "Preview";
 
   // The latest "live" pitches from the WS, which take priority over REST
   const mergedPitches = useMemo(() => {
@@ -359,7 +459,10 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             onSelectPitch={setSelectedPitch}
           />
           {/* Legend */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-1.5 min-h-[20px]">
+            {pitchTypeStats.length === 0 && (
+              <span className="text-[10px] text-slate-600">No pitch types to display</span>
+            )}
             {Object.entries({
               FF: "4-Seam", FT: "Sinker", SL: "Slider", CH: "Changeup", CU: "Curveball", FC: "Cutter", ST: "Sweeper", SI: "Sinker",
             }).map(([code, name]) => {
@@ -385,17 +488,45 @@ function GameFeed({ gamePk }: { gamePk: number }) {
               <Activity className="h-4 w-4 text-mint" />
               Pitch-by-Pitch Feed
             </h3>
-            <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint text-[10px]">
-              <span className="mr-1 h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />
-              {connected ? "Streaming" : "Polling"}
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px]",
+                connected
+                  ? "border-mint/30 bg-mint/10 text-mint"
+                  : "border-amber/30 bg-amber/10 text-amber"
+              )}
+            >
+              <span className={cn(
+                "mr-1 h-1.5 w-1.5 rounded-full",
+                connected ? "animate-live-dot bg-mint" : "bg-amber"
+              )} />
+              {connected ? "WS Streaming" : "REST Polling"}
             </Badge>
           </div>
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
             <div className="space-y-1.5">
               <AnimatePresence initial={false}>
                 {mergedPitches.length === 0 ? (
-                  <div className="flex h-40 items-center justify-center text-slate-400">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Waiting for pitches…
+                  <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
+                    {status?.abstractGameState === "Preview" ? (
+                      <>
+                        <Clock className="h-6 w-6 text-amber" />
+                        <div className="text-sm font-medium text-slate-300">Game hasn't started yet</div>
+                        <div className="text-xs text-slate-500">Pitch-by-pitch data will appear here once the game begins.</div>
+                      </>
+                    ) : isLoadingInitial ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin text-cobalt" />
+                        <div className="text-sm">Loading pitches…</div>
+                      </>
+                    ) : (
+                      <>
+                        <Activity className="h-6 w-6 text-slate-500" />
+                        <div className="text-sm">No pitches available</div>
+                        <div className="text-xs text-slate-500">Statcast data may not be available for this game.</div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   mergedPitches.map((p, idx) => (
@@ -552,30 +683,35 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
       </div>
 
       <div className="overflow-x-auto scrollbar-thin">
-        <table className="w-full text-xs num">
-          <thead>
-            <tr className="text-[10px] uppercase text-slate-500">
-              <th className="text-left py-1 pr-2 sticky left-0 bg-transparent"></th>
-              {innings.map((inn: any) => (
-                <th key={inn.num} className="px-1.5 py-1 text-center min-w-[20px]">{inn.num}</th>
-              ))}
-              {(away || home) && (
-                <>
-                  <th className="px-2 py-1 text-center border-l border-white/5">R</th>
-                  <th className="px-1.5 py-1 text-center">H</th>
-                  <th className="px-1.5 py-1 text-center">E</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t border-white/5">
-              <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white">{awayAbbr}</span>
-                  <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
-                </div>
-              </td>
+        {innings.length === 0 ? (
+          <div className="py-6 text-center text-xs text-slate-500">
+            {state === "Preview" ? "Game starts soon" : "Scoreboard unavailable"}
+          </div>
+        ) : (
+          <table className="w-full text-xs num">
+            <thead>
+              <tr className="text-[10px] uppercase text-slate-500">
+                <th className="text-left py-1 pr-2 sticky left-0 bg-transparent"></th>
+                {innings.map((inn: any) => (
+                  <th key={inn.num} className="px-1.5 py-1 text-center min-w-[20px]">{inn.num}</th>
+                ))}
+                {(away || home) && (
+                  <>
+                    <th className="px-2 py-1 text-center border-l border-white/5">R</th>
+                    <th className="px-1.5 py-1 text-center">H</th>
+                    <th className="px-1.5 py-1 text-center">E</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-white/5">
+                <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white">{awayAbbr}</span>
+                    <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
+                  </div>
+                </td>
               {innings.map((inn: any) => (
                 <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
                   {inn.away.runs ?? 0}
@@ -611,6 +747,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
             </tr>
           </tbody>
         </table>
+        )}
       </div>
       <div className="mt-2 text-[10px] text-slate-500">GamePk: <span className="font-mono">{gamePk}</span></div>
     </div>

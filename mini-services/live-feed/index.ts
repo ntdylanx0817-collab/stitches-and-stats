@@ -34,6 +34,7 @@ function log(msg: string) {
 async function fetchJSON(url: string, init?: RequestInit): Promise<any> {
   const res = await fetch(url, {
     ...init,
+    signal: AbortSignal.timeout(8_000),
     headers: {
       'Accept': 'application/json',
       'Referer': 'https://baseballsavant.mlb.com/',
@@ -126,8 +127,22 @@ function extractFeedSnapshot(feed: any) {
         postOnThird: p.matchup?.postOnThird,
       },
       playEndTime: p.playEndTime,
+      // Include ALL pitch events (not just the last one) so the client can
+      // render the full pitch log and strike zone. Each event is trimmed to
+      // the fields we actually use to keep payload size manageable.
+      playEvents: (p.playEvents ?? []).map((e: any) => ({
+        index: e.index,
+        playId: e.playId,
+        pitchNumber: e.pitchNumber,
+        isPitch: e.isPitch,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        type: e.type,
+        details: e.details,
+        count: e.count,
+        pitchData: e.pitchData,
+      })),
       pitchCount: p.playEvents?.filter((e: any) => e.isPitch).length ?? 0,
-      lastEvent: p.playEvents?.[p.playEvents.length - 1] ?? null,
     })),
     currentPlay,
     playCount: allPlays.length,
@@ -205,13 +220,17 @@ async function pollLoop() {
         const isNewPlay = state ? state.lastPlayIndex !== snapshot.playCount - 1 : true
         const lastPlay = snapshot.allPlays[snapshot.allPlays.length - 1] ?? null
 
-        // Build the latest pitch event (if any) by combining feed + savant
+        // Build the latest pitch event (if any) by combining feed + savant.
+        // Use the LAST pitch event from the last play (not just lastEvent which
+        // could be a non-pitch action like a pickoff).
         let latestPitch: any = null
-        if (lastPlay?.lastEvent?.isPitch) {
+        const pitchEvents = lastPlay?.playEvents?.filter((e: any) => e.isPitch) ?? []
+        const lastPitchEvent = pitchEvents[pitchEvents.length - 1] ?? null
+        if (lastPitchEvent) {
           const inning = lastPlay.about.inning
           const halfInning = lastPlay.about.halfInning
           const abNumber = lastPlay.atBatIndex + 1
-          const pitchNumber = lastPlay.lastEvent.pitchNumber ?? 0
+          const pitchNumber = lastPitchEvent.pitchNumber ?? 0
           const key = `${inning}-${halfInning}-${abNumber}-${pitchNumber}`
           const sp = savantSnapshot?.exit_velocity?.find(
             (p: any) => `${p.inning}-${p.half_inning}-${p.ab_number}-${p.pitch_number}` === key
@@ -226,25 +245,25 @@ async function pollLoop() {
             pitcher: lastPlay.matchup?.pitcher,
             batterSide: lastPlay.matchup?.batterSide?.code,
             pitchHand: lastPlay.matchup?.pitchHand?.code,
-            description: lastPlay.lastEvent.details?.description,
-            call: lastPlay.lastEvent.details?.call,
-            isStrike: lastPlay.lastEvent.details?.isStrike,
-            isBall: lastPlay.lastEvent.details?.isBall,
-            isInPlay: lastPlay.lastEvent.details?.isInPlay,
-            coordinates: lastPlay.lastEvent.pitchData?.coordinates,
-            startSpeed: sp?.start_speed ?? lastPlay.lastEvent.pitchData?.startSpeed,
-            spinRate: sp?.spin_rate ?? lastPlay.lastEvent.pitchData?.spinRate,
-            breakX: sp?.breakX ?? lastPlay.lastEvent.pitchData?.breakX,
-            breakZ: sp?.breakZ ?? lastPlay.lastEvent.pitchData?.breakZ,
-            extension: sp?.extension ?? lastPlay.lastEvent.pitchData?.extension,
-            plateTime: sp?.plateTime ?? lastPlay.lastEvent.pitchData?.plateTime,
-            szTop: sp?.sz_top ?? lastPlay.lastEvent.pitchData?.strikeZoneTop,
-            szBot: sp?.sz_bot ?? lastPlay.lastEvent.pitchData?.strikeZoneBottom,
-            pX: sp?.px ?? lastPlay.lastEvent.pitchData?.coordinates?.pX,
-            pZ: sp?.pz ?? lastPlay.lastEvent.pitchData?.coordinates?.pZ,
-            zone: sp?.zone ?? lastPlay.lastEvent.pitchData?.zone,
-            pitchType: sp?.pitch_type ?? lastPlay.lastEvent.details?.type?.code,
-            pitchName: sp?.pitch_name ?? lastPlay.lastEvent.details?.type?.description,
+            description: lastPitchEvent.details?.description,
+            call: lastPitchEvent.details?.call,
+            isStrike: lastPitchEvent.details?.isStrike,
+            isBall: lastPitchEvent.details?.isBall,
+            isInPlay: lastPitchEvent.details?.isInPlay,
+            coordinates: lastPitchEvent.pitchData?.coordinates,
+            startSpeed: sp?.start_speed ?? lastPitchEvent.pitchData?.startSpeed,
+            spinRate: sp?.spin_rate ?? lastPitchEvent.pitchData?.spinRate,
+            breakX: sp?.breakX ?? lastPitchEvent.pitchData?.breakX,
+            breakZ: sp?.breakZ ?? lastPitchEvent.pitchData?.breakZ,
+            extension: sp?.extension ?? lastPitchEvent.pitchData?.extension,
+            plateTime: sp?.plateTime ?? lastPitchEvent.pitchData?.plateTime,
+            szTop: sp?.sz_top ?? lastPitchEvent.pitchData?.strikeZoneTop,
+            szBot: sp?.sz_bot ?? lastPitchEvent.pitchData?.strikeZoneBottom,
+            pX: sp?.px ?? lastPitchEvent.pitchData?.coordinates?.pX,
+            pZ: sp?.pz ?? lastPitchEvent.pitchData?.coordinates?.pZ,
+            zone: sp?.zone ?? lastPitchEvent.pitchData?.zone,
+            pitchType: sp?.pitch_type ?? lastPitchEvent.details?.type?.code,
+            pitchName: sp?.pitch_name ?? lastPitchEvent.details?.type?.description,
             exitVelocity: sp?.hit_speed != null ? parseFloat(sp.hit_speed) : null,
             launchAngle: sp?.hit_angle != null ? parseFloat(sp.hit_angle) : null,
             hitDistance: sp?.hit_distance != null ? parseFloat(sp.hit_distance) : null,
@@ -257,9 +276,15 @@ async function pollLoop() {
             homeScore: lastPlay.result?.homeScore,
             awayScore: lastPlay.result?.awayScore,
             count: lastPlay.count,
-            timestamp: lastPlay.lastEvent.endTime ?? lastPlay.playEndTime,
+            timestamp: lastPitchEvent.endTime ?? lastPlay.playEndTime,
           }
         }
+
+        // Detect a genuinely new pitch (vs. a new at-bat) by tracking the last
+        // pitch key we emitted for this game.
+        const lastSeenKey = state ? `${state.lastPlayIndex}-${state.lastPitchCount}` : ''
+        const currentKey = `${snapshot.playCount - 1}-${latestPitch?.pitchNumber ?? 0}`
+        const isNewPitch = !!latestPitch && lastSeenKey !== currentKey
 
         // Update state
         liveGames.set(gamePk, {
@@ -286,7 +311,7 @@ async function pollLoop() {
         })
 
         // If there's a new pitch, also emit a separate event for snappy UI feedback
-        if (latestPitch && isNewPlay) {
+        if (latestPitch && isNewPitch) {
           io.to(`game:${gamePk}`).emit('game:pitch', latestPitch)
         }
       } catch (err) {
@@ -388,17 +413,21 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, () => {
   log(`Savant XL live-feed WebSocket service listening on port ${PORT}`)
   log(`Polling interval: ${POLL_INTERVAL_MS}ms`)
-  // Start polling loop
-  setInterval(pollLoop, POLL_INTERVAL_MS)
+  // Start polling loop — keep a handle so we can clear it on shutdown
+  const pollInterval = setInterval(pollLoop, POLL_INTERVAL_MS)
   // Initial poll
   setTimeout(pollLoop, 1000)
-})
 
-process.on('SIGTERM', () => {
-  log('SIGTERM received, shutting down')
-  httpServer.close(() => process.exit(0))
-})
-process.on('SIGINT', () => {
-  log('SIGINT received, shutting down')
-  httpServer.close(() => process.exit(0))
+  process.on('SIGTERM', () => {
+    log('SIGTERM received, shutting down')
+    clearInterval(pollInterval)
+    io.close()
+    httpServer.close(() => process.exit(0))
+  })
+  process.on('SIGINT', () => {
+    log('SIGINT received, shutting down')
+    clearInterval(pollInterval)
+    io.close()
+    httpServer.close(() => process.exit(0))
+  })
 })

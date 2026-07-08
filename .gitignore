@@ -36,19 +36,43 @@ yarn-error.log*
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local development artifacts
 local-*
 .claude
 .z-ai-config
+
+# logs
 *.log
 dev.log
 dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
+
+# runtime PID files
+*.pid
+
+# prisma generated client
+prisma/migrations/dev.db*
+
+# Skills directory (internal tooling)
 /skills/
+
+# z-scripts (platform-specific dev tooling)
+/.zscripts/
+
+# screenshots & downloaded assets (regenerated at runtime)
+/scripts/*.png
+/download/*.png
+
+# mini-service runtime artifacts
+mini-services/live-feed/stdout.log
+mini-services/live-feed/service.log
+mini-services/live-feed/supervisor.log
+mini-services/live-feed/keepalive.log
+
+# database files (local SQLite)
+db/*.db
+db/*.db-journal

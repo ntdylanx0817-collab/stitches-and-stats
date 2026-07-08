@@ -66,6 +66,8 @@ prisma/migrations/dev.db*
 # screenshots & downloaded assets (regenerated at runtime)
 /scripts/*.png
 /download/*.png
+/download/*.tar.gz
+/download/*.zip
 
 # mini-service runtime artifacts
 mini-services/live-feed/stdout.log

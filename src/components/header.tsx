@@ -34,7 +34,7 @@ export function Header() {
             </div>
             <div className="hidden flex-col leading-none sm:flex">
               <span className="text-base font-bold tracking-tight text-white">
-                Savant <span className="text-cobalt">XL</span>
+                Stitches <span className="text-cobalt">& Stats</span>
               </span>
               <span className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
                 Statcast Analytics

@@ -78,3 +78,4 @@ db/*.db
 db/*.db-journal
 # tool results (internal)
 /tool-results/
+upload/

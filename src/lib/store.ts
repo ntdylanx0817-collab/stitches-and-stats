@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "players" | "leaderboard" | "news";
+export type ViewKey = "live" | "players" | "leaderboard" | "news" | "simulator";
 
 interface SelectedPlayer {
   id: number;
@@ -47,8 +47,9 @@ export const useSavantStore = create<SavantState>((set) => ({
 
   lbType: "batter",
   setLbType: (lbType) => set({ lbType }),
-  // Default to most recent season with completed data; the API will fall back if needed
-  lbYear: 2025,
+  // Default to current year — the API will fall back to the most recent
+  // season with data if the current year isn't available yet.
+  lbYear: new Date().getFullYear(),
   setLbYear: (lbYear) => set({ lbYear }),
   lbMin: 50,
   setLbMin: (lbMin) => set({ lbMin }),

@@ -63,25 +63,20 @@ const BATTER_COLS: ColDef[] = [
 const PITCHER_COLS: ColDef[] = [
   { key: "rank", label: "#", width: 40, align: "center", group: "standard" },
   { key: "player_name", label: "Player", short: "Player", align: "left", width: 180, group: "standard" },
-  { key: "p_ip", label: "IP", width: 50, group: "standard", format: (v) => v ? Number(v).toFixed(1) : "—" },
-  { key: "p_pa", label: "BF", width: 50, group: "standard" },
   { key: "p_era", label: "ERA", width: 60, group: "standard", format: (v) => v ? Number(v).toFixed(2) : "—", tone: (v) => toneReverse(Number(v), 4.2, 3.5) },
   { key: "p_whip", label: "WHIP", width: 60, group: "standard", format: (v) => v ? Number(v).toFixed(2) : "—", tone: (v) => toneReverse(Number(v), 1.35, 1.15) },
-  { key: "p_k", label: "K", width: 50, group: "standard" },
-  { key: "p_bb", label: "BB", width: 50, group: "standard" },
-  { key: "p_k_percent", label: "K%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 23, 28) },
-  { key: "p_bb_percent", label: "BB%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 6) },
-  { key: "p_avg", label: "AVG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
-  { key: "p_slg", label: "SLG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.420, 0.350) },
-  // Advanced
-  { key: "p_xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.330, 0.290) },
-  { key: "p_xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
-  { key: "p_hard_hit_percent", label: "HardHit%", short: "HardHit%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 40, 35) },
-  { key: "p_barrel_brea", label: "Barrel%", short: "Barrel%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 5) },
-  { key: "p_avg_hit_speed", label: "Avg EV", short: "Avg EV", width: 75, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}` : "—", tone: (v) => toneReverse(Number(v), 89, 87) },
-  { key: "p_whiff_percent", label: "Whiff%", short: "Whiff%", width: 75, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 26, 30) },
-  { key: "p_csw_percent", label: "CSW%", short: "CSW%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 28, 32) },
-  { key: "p_oz_swing_percent", label: "O-Swing%", short: "O-Swing%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 32, 28) },
+  { key: "k_percent", label: "K%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 23, 28) },
+  { key: "bb_percent", label: "BB%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 6) },
+  { key: "avg", label: "AVG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
+  // Advanced / Statcast
+  { key: "xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.330, 0.290) },
+  { key: "xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
+  { key: "hard_hit_percent", label: "HardHit%", short: "HardHit%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 40, 35) },
+  { key: "barrel_brea", label: "Barrel%", short: "Barrel%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 5) },
+  { key: "avg_hit_speed", label: "Avg EV", short: "Avg EV", width: 75, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}` : "—", tone: (v) => toneReverse(Number(v), 89, 87) },
+  { key: "whiff_percent", label: "Whiff%", short: "Whiff%", width: 75, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 26, 30) },
+  { key: "csw_percent", label: "CSW%", short: "CSW%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 28, 32) },
+  { key: "oz_swing_percent", label: "O-Swing%", short: "O-Swing%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 32, 28) },
 ];
 
 function toneAvg(v: number, mid: number, high: number): string {
@@ -271,7 +266,7 @@ export function LeaderboardsView() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
+                {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
                   <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                 ))}
               </SelectContent>

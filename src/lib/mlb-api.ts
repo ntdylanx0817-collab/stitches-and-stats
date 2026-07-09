@@ -255,12 +255,19 @@ const LEADERBOARD_SELECTIONS_BATTER = [
   "poz_swing_percent", "oz_swing_percent",
 ].join(",");
 
+// Note: Baseball Savant's pitcher leaderboard uses DIFFERENT field names than
+// the batter leaderboard. The p_ prefix fields (p_era, p_whip) only return ERA.
+// The non-p_ prefix fields (k_percent, bb_percent, xwoba, etc.) return the
+// actual Statcast data. We request BOTH and merge them on the client side.
 const LEADERBOARD_SELECTIONS_PITCHER = [
-  "player_name", "player_id", "year", "p_ip", "p_pa", "p_k", "p_bb", "p_era",
-  "p_whip", "p_avg", "p_slg", "p_obp", "p_woba", "p_xwoba", "p_xba",
-  "p_k_percent", "p_bb_percent", "p_hard_hit_percent", "p_barrel_brea",
-  "p_avg_hit_speed", "p_max_hit_speed", "p_sweet_spot_percent", "p_whiff_percent",
-  "p_oz_swing_percent", "p_csw_percent",
+  "player_name", "player_id", "year",
+  // p_ prefix fields (only ERA/WHIP/K/BB/IP are populated)
+  "p_ip", "p_pa", "p_k", "p_bb", "p_era", "p_whip",
+  // non-p_ prefix fields (these are the ones with actual data)
+  "k_percent", "bb_percent", "hard_hit_percent", "barrel_brea",
+  "avg_hit_speed", "max_hit_speed", "sweet_spot_percent", "whiff_percent",
+  "oz_swing_percent", "csw_percent",
+  "avg", "slg", "obp", "woba", "xwoba", "xba",
 ].join(",");
 
 export async function fetchLeaderboard(opts: {

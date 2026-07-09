@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
+import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 import { cn } from "@/lib/utils";
 
 interface PlayerOption {
@@ -106,24 +107,31 @@ export function SimulatorView() {
     return pitchers.filter((p) => p.player_name?.toLowerCase().includes(q)).slice(0, 50);
   }, [pitchers, pitcherSearch]);
 
-  // Run the simulation
-  const { data: simResult, isLoading: simLoading, error: simError, refetch: runSim } = useQuery<SimResult>({
-    queryKey: ["simulate", selectedBatter?.player_id, selectedPitcher?.player_id],
-    queryFn: async () => {
+  const canSimulate = selectedBatter && selectedPitcher;
+
+  // Manual simulation state — we don't use useQuery here because refetch()
+  // with enabled:false and the same query key doesn't reliably re-run.
+  const [simResult, setSimResult] = useState<SimResult | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
+
+  const handleSimulate = async () => {
+    if (!canSimulate || simLoading) return;
+    setSimLoading(true);
+    setSimError(null);
+    try {
       const res = await fetch(
         `/api/simulate?batterId=${selectedBatter!.player_id}&pitcherId=${selectedPitcher!.player_id}&iterations=10000`
       );
       if (!res.ok) throw new Error("simulation failed");
-      return res.json();
-    },
-    enabled: false, // Only run on button click
-    retry: 1,
-  });
-
-  const canSimulate = selectedBatter && selectedPitcher;
-
-  const handleSimulate = () => {
-    if (canSimulate) runSim();
+      const data: SimResult = await res.json();
+      setSimResult(data);
+    } catch (err: any) {
+      setSimError(err.message || "Simulation failed");
+      setSimResult(null);
+    } finally {
+      setSimLoading(false);
+    }
   };
 
   return (
@@ -276,7 +284,7 @@ function PlayerSelector({
   renderStats: (p: PlayerOption) => React.ReactNode;
 }) {
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="glass rounded-2xl p-4 relative z-10">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
           {icon === "bat" ? (
@@ -329,7 +337,8 @@ function PlayerSelector({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="glass-strong absolute z-50 mt-2 max-h-[320px] w-full overflow-y-auto rounded-xl p-1.5 scrollbar-thin"
+                className="glass-strong absolute left-0 right-0 z-[100] mt-2 max-h-[320px] w-full overflow-y-auto rounded-xl p-1.5 scrollbar-thin"
+                style={{ position: "absolute" }}
               >
                 {filteredPlayers.map((p) => (
                   <button
@@ -453,6 +462,23 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
           ))}
         </div>
       </div>
+
+      {/* Matchup Strike Zone */}
+      <MatchupStrikeZone
+        batterStats={{
+          avgExitVelo: result.batterStats.avgExitVelo,
+          barrelPercent: result.batterStats.barrelPercent,
+          hardHitPercent: result.batterStats.hardHitPercent,
+          battingAvg: result.batterStats.battingAvg,
+          slg: result.batterStats.slg,
+        }}
+        pitcherStats={{
+          avgExitVelo: result.pitcherStats.avgExitVelo,
+          barrelPercent: result.pitcherStats.barrelPercent,
+          hardHitPercent: result.pitcherStats.hardHitPercent,
+          avg: result.pitcherStats.avg,
+        }}
+      />
 
       {/* Rerun button */}
       <div className="flex justify-center">

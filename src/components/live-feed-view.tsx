@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StrikeZone } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
+import { LineupChanges } from "@/components/lineup-changes";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -101,7 +102,7 @@ export function LiveFeedView() {
             description="There are no MLB games scheduled for today or yesterday. Check back later."
           />
         ) : (
-          <ScrollArea className="w-full overflow-x-auto scrollbar-thin">
+          <div className="w-full overflow-x-auto scrollbar-thin -webkit-overflow-scrolling-touch">
             <div className="flex gap-2 pb-2 min-w-min">
               {games.map((g) => {
                 const isLive = g.status.abstractGameState === "Live";
@@ -140,7 +141,7 @@ export function LiveFeedView() {
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 
@@ -450,9 +451,10 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      {/* Left column: Score + Strike Zone */}
+      {/* Left column: Score + Strike Zone + Lineup */}
       <div className="lg:col-span-4 space-y-4">
         <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
+        <LineupChanges gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white">

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, User, Zap, Newspaper, Swords } from "lucide-react";
+import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
@@ -11,6 +11,7 @@ const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
   { key: "live", label: "Live Feed", icon: Activity },
   { key: "players", label: "Players", icon: User },
   { key: "leaderboard", label: "Leaderboards", icon: BarChart3 },
+  { key: "compare", label: "Compare", icon: GitCompare },
   { key: "simulator", label: "Simulator", icon: Swords },
   { key: "news", label: "News", icon: Newspaper },
 ];
@@ -22,7 +23,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="glass-strong border-b border-white/5">
+      <div className="glass-strong border-b border-chalk">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6">
           {/* Logo */}
           <button
@@ -30,22 +31,22 @@ export function Header() {
             className="group flex shrink-0 items-center gap-2.5"
             aria-label="Stitches and Stats home"
           >
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cobalt to-crimson shadow-lg shadow-cobalt/30 transition-transform group-hover:scale-105">
-              <Zap className="h-5 w-5 text-white" fill="white" />
-              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-[#0B0F19]" />
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-warning-track to-crimson shadow-lg shadow-warning-track/30 transition-transform group-hover:scale-105">
+              <Zap className="h-5 w-5 text-chalk" fill="currentColor" />
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-midnight" />
             </div>
             <div className="hidden flex-col leading-none sm:flex">
-              <span className="text-base font-bold tracking-tight text-white">
-                Stitches <span className="text-cobalt">& Stats</span>
+              <span className="font-scoreboard text-base font-bold tracking-wide text-chalk uppercase">
+                Stitches <span className="text-warning-track">& Stats</span>
               </span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                Statcast Analytics
+              <span className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-scoreboard">
+                Pro Broadcast Analytics
               </span>
             </div>
           </button>
 
           {/* Nav tabs */}
-          <nav className="flex items-center gap-1 rounded-full border border-white/5 bg-white/[0.02] p-1">
+          <nav className="flex items-center gap-0.5 rounded-lg border border-chalk bg-midnight/60 p-0.5">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
@@ -54,19 +55,19 @@ export function Header() {
                   key={item.key}
                   onClick={() => setView(item.key)}
                   className={cn(
-                    "relative flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors sm:px-4",
-                    active ? "text-white" : "text-slate-400 hover:text-slate-200"
+                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors font-scoreboard uppercase tracking-wide sm:px-3.5",
+                    active ? "text-chalk" : "text-slate-400 hover:text-slate-200"
                   )}
                 >
                   {active && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-0 rounded-full bg-gradient-to-r from-cobalt/25 to-cobalt/10 ring-1 ring-cobalt/40"
+                      className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
-                  <Icon className="relative h-4 w-4" />
-                  <span className="relative hidden sm:inline">{item.label}</span>
+                  <Icon className="relative h-3.5 w-3.5" />
+                  <span className="relative hidden lg:inline">{item.label}</span>
                 </button>
               );
             })}
@@ -78,28 +79,28 @@ export function Header() {
           </div>
 
           {/* Live status indicator */}
-          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/[0.02] px-3 py-1.5">
+          <div className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5">
             <span className={cn(
               "relative flex h-2 w-2",
               connected && "animate-live-dot"
             )}>
               <span className={cn(
                 "absolute inline-flex h-full w-full rounded-full opacity-75",
-                connected ? "bg-mint animate-ping" : "bg-amber"
+                connected ? "bg-mint animate-ping" : "bg-warning-track"
               )} />
               <span className={cn(
                 "relative inline-flex h-2 w-2 rounded-full",
-                connected ? "bg-mint" : "bg-amber"
+                connected ? "bg-mint" : "bg-warning-track"
               )} />
             </span>
-            <span className="hidden text-[11px] font-medium uppercase tracking-wide text-slate-400 sm:inline">
+            <span className="hidden text-[10px] font-bold uppercase tracking-wide text-slate-400 font-scoreboard sm:inline">
               {connected ? "Live WS" : "Live REST"}
             </span>
           </div>
         </div>
 
         {/* Mobile search */}
-        <div className="border-t border-white/5 px-4 py-2 md:hidden">
+        <div className="border-t border-chalk px-4 py-2 md:hidden">
           <GlobalPlayerSearch />
         </div>
       </div>

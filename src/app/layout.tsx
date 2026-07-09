@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
@@ -13,6 +13,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Oswald: bold, condensed, athletic "scoreboard" font for all headers
+const oswald = Oswald({
+  variable: "--font-scoreboard",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -30,11 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
-        // Browser extensions (Grammarly, password managers, etc.) inject attributes
-        // like data-gr-ext-installed onto <body> before React hydrates, causing
-        // hydration mismatch warnings. suppressHydrationWarning silences these
-        // cosmetic mismatches — they don't affect functionality.
+        className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} antialiased bg-background text-foreground`}
         suppressHydrationWarning
       >
         <ErrorBoundary>

@@ -134,12 +134,12 @@ export function StrikeZone({
       >
         <defs>
           <radialGradient id="zoneGlow" cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stopColor="rgba(77,163,255,0.18)" />
-            <stop offset="100%" stopColor="rgba(77,163,255,0)" />
+            <stop offset="0%" stopColor="rgba(230, 126, 34, 0.12)" />
+            <stop offset="100%" stopColor="rgba(230, 126, 34, 0)" />
           </radialGradient>
           <linearGradient id="zoneBg" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(11,15,25,0.5)" />
-            <stop offset="100%" stopColor="rgba(22,27,38,0.5)" />
+            <stop offset="0%" stopColor="rgba(5, 10, 20, 0.6)" />
+            <stop offset="100%" stopColor="rgba(10, 19, 34, 0.6)" />
           </linearGradient>
           <filter id="pitchGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="blur" />
@@ -148,6 +148,11 @@ export function StrikeZone({
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          {/* Corner glow gradient for Tactical Zone Visualizer */}
+          <radialGradient id="cornerGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(230, 126, 34, 0.5)" />
+            <stop offset="100%" stopColor="rgba(230, 126, 34, 0)" />
+          </radialGradient>
         </defs>
 
         {/* Outer field area */}
@@ -157,26 +162,26 @@ export function StrikeZone({
           width={SVG_SIZE - SVG_PADDING * 2}
           height={SVG_SIZE - SVG_PADDING * 2}
           fill="url(#zoneBg)"
-          stroke="rgba(255,255,255,0.05)"
+          stroke="rgba(248, 249, 250, 0.08)"
           strokeWidth="1"
           rx="8"
         />
 
         {/* Batter silhouette — left/right based on batter side */}
         {batterSide === "L" && (
-          <g opacity="0.25" fill="rgba(255,255,255,0.4)">
+          <g opacity="0.25" fill="rgba(248, 249, 250, 0.4)">
             <rect x={zone.leftX - 28} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
             <circle cx={zone.leftX - 23} cy={zone.botY - 8} r="5" />
           </g>
         )}
         {batterSide === "R" && (
-          <g opacity="0.25" fill="rgba(255,255,255,0.4)">
+          <g opacity="0.25" fill="rgba(248, 249, 250, 0.4)">
             <rect x={zone.rightX + 18} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
             <circle cx={zone.rightX + 23} cy={zone.botY - 8} r="5" />
           </g>
         )}
         {!batterSide && (
-          <g opacity="0.15" fill="rgba(255,255,255,0.4)">
+          <g opacity="0.15" fill="rgba(248, 249, 250, 0.4)">
             <rect x={zone.rightX + 18} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
             <circle cx={zone.rightX + 23} cy={zone.botY - 8} r="5" />
           </g>
@@ -185,10 +190,41 @@ export function StrikeZone({
         {/* Home plate */}
         <polygon
           points={`${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 8} ${SVG_SIZE / 2 - 14},${SVG_SIZE - SVG_PADDING - 8} ${SVG_SIZE / 2 - 14},${SVG_SIZE - SVG_PADDING - 24} ${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 32} ${SVG_SIZE / 2 + 14},${SVG_SIZE - SVG_PADDING - 24} ${SVG_SIZE / 2 + 14},${SVG_SIZE - SVG_PADDING - 8}`}
-          fill="rgba(255,255,255,0.04)"
-          stroke="rgba(255,255,255,0.12)"
+          fill="rgba(248, 249, 250, 0.03)"
+          stroke="rgba(248, 249, 250, 0.10)"
           strokeWidth="1"
         />
+
+        {/* Tactical Zone Visualizer: corner glow indicators */}
+        {/* Four corner pulse circles — glow when a pitch hits the corner */}
+        {[
+          { x: zone.leftX, y: zone.topY },
+          { x: zone.rightX, y: zone.topY },
+          { x: zone.leftX, y: zone.botY },
+          { x: zone.rightX, y: zone.botY },
+        ].map((corner, i) => {
+          // Check if the latest pitch is near this corner
+          const latest = recentPitches[recentPitches.length - 1];
+          let isCorner = false;
+          if (latest?.pX != null && latest?.pZ != null) {
+            const lp = pitchToSVG(latest.pX, latest.pZ, szTop, szBot);
+            if (lp) {
+              const dist = Math.sqrt((lp.x - corner.x) ** 2 + (lp.y - corner.y) ** 2);
+              isCorner = dist < 30;
+            }
+          }
+          return (
+            <circle
+              key={`corner-${i}`}
+              cx={corner.x}
+              cy={corner.y}
+              r={isCorner ? 16 : 6}
+              fill="url(#cornerGlow)"
+              className={isCorner ? "animate-corner-glow" : ""}
+              opacity={isCorner ? 1 : 0.3}
+            />
+          );
+        })}
 
         {/* Strike zone rectangle */}
         <rect
@@ -197,7 +233,7 @@ export function StrikeZone({
           width={zoneW}
           height={zoneH}
           fill="url(#zoneGlow)"
-          stroke="rgba(77,163,255,0.5)"
+          stroke="rgba(230, 126, 34, 0.45)"
           strokeWidth="1.5"
           strokeDasharray="4 3"
           rx="2"

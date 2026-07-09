@@ -7,6 +7,7 @@ import { PlayersView } from "@/components/players-view";
 import { LeaderboardsView } from "@/components/leaderboards-view";
 import { NewsView } from "@/components/news-view";
 import { SimulatorView } from "@/components/simulator-view";
+import { CompareView } from "@/components/compare-view";
 import { useSavantStore } from "@/lib/store";
 import { Footer } from "@/components/footer";
 
@@ -28,6 +29,7 @@ export default function Home() {
             {view === "live" && <LiveFeedView />}
             {view === "players" && <PlayersView />}
             {view === "leaderboard" && <LeaderboardsView />}
+            {view === "compare" && <CompareView />}
             {view === "simulator" && <SimulatorView />}
             {view === "news" && <NewsView />}
           </motion.div>

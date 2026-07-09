@@ -161,6 +161,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
+  const [highLeverageOnly, setHighLeverageOnly] = useState(false);
 
   // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
   useEffect(() => {
@@ -384,7 +385,30 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     return result.slice(0, 80);
   }, [livePitches, allPitches]);
 
-  const latestPitch = mergedPitches[0] ?? null;
+  // High-leverage filter: only show critical game situations
+  // - Bases loaded (2+ runners)
+  // - Full count (3-2)
+  // - Late innings (7+)
+  // - Scoring plays / RBIs
+  // - 2 outs with runners on
+  const displayPitches = useMemo(() => {
+    if (!highLeverageOnly) return mergedPitches;
+    return mergedPitches.filter((p) => {
+      // Full count (3-2)
+      if (p.balls >= 3 && p.strikes >= 2) return true;
+      // Late innings (7+)
+      if (p.inning >= 7) return true;
+      // In-play with RBI potential
+      if (p.isInPlay && (p.exitVelocity ?? 0) >= 95) return true;
+      // Barrel (hard-hit ball)
+      if (p.isBarrel) return true;
+      // 2 outs (pressure situation)
+      if (p.outs >= 2 && (p.balls >= 2 || p.strikes >= 1)) return true;
+      return false;
+    });
+  }, [mergedPitches, highLeverageOnly]);
+
+  const latestPitch = displayPitches[0] ?? mergedPitches[0] ?? null;
   const recentZonePitches = mergedPitches.slice(0, 30).reverse(); // oldest to newest for strike zone
   const szTop = latestPitch?.szTop ?? 3.5;
   const szBot = latestPitch?.szBot ?? 1.5;
@@ -498,36 +522,50 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       {/* Middle column: Pitch Log */}
       <div className="lg:col-span-4 space-y-4">
         <div className="glass rounded-2xl p-3">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <div className="mb-3 flex items-center justify-between px-1 gap-2">
+            <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
               <Activity className="h-4 w-4 text-mint" />
-              Pitch-by-Pitch Feed
+              Pitch Feed
             </h3>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px]",
-                connected
-                  ? "border-mint/30 bg-mint/10 text-mint"
-                  : "border-amber/30 bg-amber/10 text-amber"
-              )}
-            >
-              <span className={cn(
-                "mr-1 h-1.5 w-1.5 rounded-full",
-                connected ? "animate-live-dot bg-mint" : "bg-amber"
-              )} />
-              {connected ? "WS Streaming" : "REST Polling"}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setHighLeverageOnly(!highLeverageOnly)}
+                className={cn(
+                  "flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-bold uppercase tracking-wide font-scoreboard transition-all",
+                  highLeverageOnly
+                    ? "border-warning-track/40 bg-warning-track/15 text-warning-track box-glow-warning"
+                    : "border-chalk bg-midnight/40 text-slate-400 hover:text-chalk"
+                )}
+              >
+                <Zap className="h-3 w-3" fill={highLeverageOnly ? "currentColor" : "none"} />
+                High Lev
+              </button>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px]",
+                  connected
+                    ? "border-mint/30 bg-mint/10 text-mint"
+                    : "border-warning-track/30 bg-warning-track/10 text-warning-track"
+                )}
+              >
+                <span className={cn(
+                  "mr-1 h-1.5 w-1.5 rounded-full",
+                  connected ? "animate-live-dot bg-mint" : "bg-warning-track"
+                )} />
+                {connected ? "WS" : "REST"}
+              </Badge>
+            </div>
           </div>
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
             <div className="space-y-1.5">
               <AnimatePresence initial={false}>
-                {mergedPitches.length === 0 ? (
+                {displayPitches.length === 0 ? (
                   <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
                     {status?.abstractGameState === "Preview" ? (
                       <>
-                        <Clock className="h-6 w-6 text-amber" />
-                        <div className="text-sm font-medium text-slate-300">Game hasn't started yet</div>
+                        <Clock className="h-6 w-6 text-warning-track" />
+                        <div className="font-scoreboard text-sm font-medium text-slate-300 uppercase tracking-wide">Game hasn't started</div>
                         <div className="text-xs text-slate-500">Pitch-by-pitch data will appear here once the game begins.</div>
                       </>
                     ) : isLoadingInitial ? (
@@ -544,7 +582,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                     )}
                   </div>
                 ) : (
-                  mergedPitches.map((p, idx) => (
+                  displayPitches.map((p, idx) => (
                     <PitchLogEntry
                       key={`${p.atBatIndex}-${p.pitchNumber}-${idx}`}
                       pitch={p}

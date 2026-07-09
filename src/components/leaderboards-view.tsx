@@ -379,7 +379,7 @@ export function LeaderboardsView() {
         ) : (
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] overflow-x-auto scrollbar-thin">
             <table className="w-full text-xs num">
-              <thead className="sticky top-0 z-20 bg-[#0B0F19]/95 backdrop-blur">
+              <thead className="sticky top-0 z-20 bg-midnight/95 backdrop-blur">
                 <tr className="border-b border-white/10">
                   {visibleCols.map((col) => {
                     const isSortable = col.key !== "rank" && col.key !== "player_name";
@@ -391,8 +391,8 @@ export function LeaderboardsView() {
                         className={cn(
                           "px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide",
                           isSortable ? "cursor-pointer hover:bg-white/5 select-none" : "",
-                          col.key === "player_name" && "sticky left-0 z-10 bg-[#0B0F19]/95 backdrop-blur",
-                          col.key === "rank" && "bg-[#0B0F19]/95 backdrop-blur"
+                          col.key === "player_name" && "sticky left-0 z-10 bg-midnight/95 backdrop-blur",
+                          col.key === "rank" && "bg-midnight/95 backdrop-blur"
                         )}
                         onClick={isSortable ? () => handleSort(col.key) : undefined}
                       >
@@ -416,7 +416,7 @@ export function LeaderboardsView() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: Math.min(idx * 0.005, 0.3) }}
-                    className="border-b border-white/5 hover:bg-cobalt/[0.04] cursor-pointer transition-colors group"
+                    className="row-mowed-grass border-b border-chalk cursor-pointer transition-colors group"
                     onClick={() => openPlayer(row)}
                   >
                     {visibleCols.map((col) => {
@@ -431,8 +431,8 @@ export function LeaderboardsView() {
                           style={{ textAlign: col.align ?? "right" }}
                           className={cn(
                             "px-2.5 py-2 whitespace-nowrap",
-                            col.key === "player_name" && "sticky left-0 z-10 bg-[#0B0F19]/95 backdrop-blur group-hover:bg-[#0E1421]/95",
-                            col.key === "rank" && "bg-[#0B0F19]/95 backdrop-blur group-hover:bg-[#0E1421]/95",
+                            col.key === "player_name" && "sticky left-0 z-10 bg-midnight/95 backdrop-blur group-hover:bg-midnight-2/95",
+                            col.key === "rank" && "bg-midnight/95 backdrop-blur group-hover:bg-midnight-2/95",
                             col.key === "player_name" ? "text-white font-medium" : tone
                           )}
                         >

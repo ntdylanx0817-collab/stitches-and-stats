@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Target } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SprayChartProps {
   data: Array<{
@@ -91,13 +93,67 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
   const totalHR = stats.home_run || 0;
   const barrels = filtered.filter((d) => d.isBarrel).length;
 
+  const [viewMode, setViewMode] = useState<"dots" | "heatmap">("dots");
+
+  // Compute hex grid for heatmap mode
+  const heatCells = useMemo(() => {
+    if (viewMode !== "heatmap") return [];
+    const gridSize = 24;
+    const cells: Array<{ cx: number; cy: number; intensity: number; count: number }> = [];
+    for (let gx = 0; gx < FIELD_W; gx += gridSize) {
+      for (let gy = 0; gy < FIELD_H; gy += gridSize) {
+        let count = 0;
+        let totalEV = 0;
+        for (const d of filtered) {
+          const pos = savantToSVG(d.x, d.y);
+          if (pos.x >= gx && pos.x < gx + gridSize && pos.y >= gy && pos.y < gy + gridSize) {
+            count++;
+            if (d.launchSpeed) totalEV += d.launchSpeed;
+          }
+        }
+        if (count > 0) {
+          cells.push({
+            cx: gx + gridSize / 2,
+            cy: gy + gridSize / 2,
+            intensity: Math.min(count / 5, 1),
+            count,
+          });
+        }
+      }
+    }
+    return cells;
+  }, [filtered, viewMode]);
+
   return (
     <div className={className}>
       <div className="glass rounded-2xl p-4">
-        <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-          <Target className="h-4 w-4 text-warning-track" />
-          Spray Chart
-        </h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
+            <Target className="h-4 w-4 text-warning-track" />
+            Spray Chart
+          </h3>
+          {/* View toggle */}
+          <div className="flex rounded-md border border-chalk bg-midnight/40 p-0.5">
+            <button
+              onClick={() => setViewMode("dots")}
+              className={cn(
+                "rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide font-scoreboard transition-colors",
+                viewMode === "dots" ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"
+              )}
+            >
+              Dots
+            </button>
+            <button
+              onClick={() => setViewMode("heatmap")}
+              className={cn(
+                "rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide font-scoreboard transition-colors",
+                viewMode === "heatmap" ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"
+              )}
+            >
+              Heat
+            </button>
+          </div>
+        </div>
         <p className="mb-3 text-[11px] text-slate-500">
           {filtered.length} balls in play · {totalHits} hits · {totalHR} HR · {barrels} barrels
         </p>
@@ -162,8 +218,28 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
               strokeWidth="1"
             />
 
-            {/* Hit location dots */}
-            {filtered.map((d, i) => {
+            {/* Heatmap cells (when in heatmap mode) */}
+            {viewMode === "heatmap" && heatCells.map((cell, i) => {
+              const color = cell.intensity > 0.7 ? "#FF3B5C" : cell.intensity > 0.4 ? "#e67e22" : "#4DA3FF";
+              return (
+                <motion.rect
+                  key={`heat-${i}`}
+                  x={cell.cx - 12}
+                  y={cell.cy - 12}
+                  width={24}
+                  height={24}
+                  fill={color}
+                  opacity={cell.intensity * 0.5}
+                  rx={4}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: cell.intensity * 0.5, scale: 1 }}
+                  transition={{ delay: i * 0.01 }}
+                />
+              );
+            })}
+
+            {/* Hit location dots (when in dots mode) */}
+            {viewMode === "dots" && filtered.map((d, i) => {
               const pos = savantToSVG(d.x, d.y);
               const color = getEventColor(d.event);
               const size = d.isBarrel ? 6 : d.event === "home_run" ? 7 : 4;
@@ -220,4 +296,3 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
   );
 }
 
-import { Target } from "lucide-react";

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton, EmptyState, ErrorState } from "@/components/loading-states";
+import { SprayChart } from "@/components/spray-chart";
 import { cn } from "@/lib/utils";
 
 interface PlayerRow {
@@ -400,6 +401,9 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
           percentiles2={data2.percentiles}
         />
       )}
+
+      {/* Spray chart comparison */}
+      <SprayChartComparison player1Id={player1Id} player2Id={player2Id} name1={p1.fullName} name2={p2.fullName} />
     </motion.div>
   );
 }
@@ -505,4 +509,69 @@ function fmtOps(s: any): string {
   const o = ops(s);
   if (o === 0) return "—";
   return o.toFixed(3).replace(/^0/, "");
+}
+
+/** Side-by-side spray chart comparison for two batters */
+function SprayChartComparison({ player1Id, player2Id, name1, name2 }: {
+  player1Id: number; player2Id: number; name1: string; name2: string;
+}) {
+  const { data: data1, isLoading: loading1 } = useQuery<{ sprayChart: any[]; player: { batSide?: { code: string } } }>({
+    queryKey: ["player-full", player1Id, "batter", null],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-full/${player1Id}?type=batter`);
+      if (!res.ok) throw new Error("failed");
+      return res.json();
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: data2, isLoading: loading2 } = useQuery<{ sprayChart: any[]; player: { batSide?: { code: string } } }>({
+    queryKey: ["player-full", player2Id, "batter", null],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-full/${player2Id}?type=batter`);
+      if (!res.ok) throw new Error("failed");
+      return res.json();
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  if (loading1 || loading2) {
+    return (
+      <div className="border-t border-chalk p-4">
+        <Loader2 className="mx-auto h-5 w-5 animate-spin text-warning-track" />
+      </div>
+    );
+  }
+
+  const spray1 = data1?.sprayChart ?? [];
+  const spray2 = data2?.sprayChart ?? [];
+
+  if (spray1.length === 0 && spray2.length === 0) return null;
+
+  return (
+    <div className="border-t border-chalk p-4">
+      <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
+        <Target className="h-4 w-4 text-warning-track" />
+        Spray Chart Comparison
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="mb-1 text-center font-scoreboard text-xs uppercase tracking-wide text-cobalt truncate">{name1}</div>
+          {spray1.length > 0 ? (
+            <SprayChart data={spray1} playerHand={data1?.player?.batSide?.code === "L" ? "L" : "R"} />
+          ) : (
+            <div className="glass rounded-xl p-8 text-center text-xs text-slate-500">No spray chart data</div>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 text-center font-scoreboard text-xs uppercase tracking-wide text-crimson truncate">{name2}</div>
+          {spray2.length > 0 ? (
+            <SprayChart data={spray2} playerHand={data2?.player?.batSide?.code === "L" ? "L" : "R"} />
+          ) : (
+            <div className="glass rounded-xl p-8 text-center text-xs text-slate-500">No spray chart data</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

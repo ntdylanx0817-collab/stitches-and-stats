@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -8,6 +9,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
@@ -16,6 +20,9 @@ import { SprayChart } from "@/components/spray-chart";
 import { PitchArsenal } from "@/components/pitch-arsenal";
 import { BarrelStats } from "@/components/barrel-stats";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
+import { GameLog } from "@/components/game-log";
+import { LeagueRanks } from "@/components/league-ranks";
+import { PitchMovement } from "@/components/pitch-movement";
 
 interface FullPlayerData {
   player: {
@@ -50,6 +57,7 @@ interface FullPlayerData {
   }>;
   pitchMix: Array<{
     name: string; count: number; percentage: number; avgSpeed: number; avgSpin: number;
+    avgPfxX: number; avgPfxZ: number; avgReleaseX: number; avgReleaseZ: number;
   }>;
   barrelData: {
     totalBIP: number; totalBarrels: number; barrelPercent: number;
@@ -57,6 +65,11 @@ interface FullPlayerData {
     avgDistance: number; sweetSpotPercent: number; hardHitPercent: number;
   };
   totalPitches: number;
+  gameLog: Array<{
+    date: string; opponent: string; isHome: boolean;
+    stat: Record<string, any>;
+  }>;
+  leagueRanks: Array<{ label: string; value: string; rank: number; total: number }>;
 }
 
 export function PlayersView() {
@@ -84,10 +97,12 @@ export function PlayersView() {
 
 function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter" | "pitcher" }) {
   const setSelectedPlayer = useSavantStore((s) => s.setSelectedPlayer);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const { data, isLoading, error, refetch } = useQuery<FullPlayerData>({
-    queryKey: ["player-full", playerId, type],
+    queryKey: ["player-full", playerId, type, selectedYear],
     queryFn: async () => {
-      const res = await fetch(`/api/player-full/${playerId}?type=${type}`);
+      const yearParam = selectedYear ? `&year=${selectedYear}` : "";
+      const res = await fetch(`/api/player-full/${playerId}?type=${type}${yearParam}`);
       if (!res.ok) throw new Error("player fetch failed");
       return res.json();
     },
@@ -200,13 +215,38 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
         </div>
       </div>
 
-      {/* Statcast data disclaimer */}
-      {data.totalPitches > 0 && (
-        <div className="mb-4 rounded-lg border border-warning-track/20 bg-warning-track/5 px-3 py-2 text-center text-[11px] text-slate-400">
-          <span className="font-scoreboard uppercase tracking-wide text-warning-track">{data.totalPitches.toLocaleString()} pitches analyzed</span>
-          {" from "}
-          <span className="font-bold text-chalk">{data.year}</span>
-          {" Statcast · Real pitch-by-pitch data from Baseball Savant"}
+      {/* Season selector + Statcast disclaimer */}
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
+        {data.totalPitches > 0 && (
+          <div className="flex-1 rounded-lg border border-warning-track/20 bg-warning-track/5 px-3 py-2 text-center text-[11px] text-slate-400">
+            <span className="font-scoreboard uppercase tracking-wide text-warning-track">{data.totalPitches.toLocaleString()} pitches analyzed</span>
+            {" from "}
+            <span className="font-bold text-chalk">{data.year}</span>
+            {" Statcast · Real pitch-by-pitch data"}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">Season</span>
+          <Select
+            value={String(selectedYear ?? data.year)}
+            onValueChange={(v) => setSelectedYear(Number(v))}
+          >
+            <SelectTrigger className="w-[90px] h-8 bg-midnight/40 border-chalk font-scoreboard text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* MLB Rankings */}
+      {data.leagueRanks && data.leagueRanks.length > 0 && (
+        <div className="mb-4">
+          <LeagueRanks data={data.leagueRanks} />
         </div>
       )}
 
@@ -289,6 +329,11 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
             </div>
           )}
 
+          {/* Pitch Movement (pitchers only) */}
+          {!isBatter && data.pitchMix.length > 0 && (
+            <PitchMovement data={data.pitchMix} pitchHand={p.pitchHand?.code} />
+          )}
+
           {/* Real Zone Data (for batters) */}
           {isBatter && (
             <MatchupStrikeZone
@@ -297,6 +342,11 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
               pitcherId={0}
               pitcherName="League Average"
             />
+          )}
+
+          {/* Game Log */}
+          {data.gameLog && data.gameLog.length > 0 && (
+            <GameLog data={data.gameLog} isBatter={isBatter} />
           )}
         </div>
 

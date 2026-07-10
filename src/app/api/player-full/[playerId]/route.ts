@@ -8,9 +8,10 @@ export const revalidate = 300;
 /**
  * Comprehensive player data endpoint that aggregates ALL available data:
  * - Bio (MLB Stats API)
- * - Season stats + percentiles (Savant leaderboard)
+ * - Season stats + percentiles + league ranks (Savant leaderboard)
  * - Spray chart data (statcast_search CSV)
  * - Pitch mix breakdown (from statcast_search)
+ * - Game-by-game log (MLB Stats API)
  * - Zone data (already have /api/player-zones)
  */
 export async function GET(
@@ -22,12 +23,18 @@ export async function GET(
   if (!playerId) return NextResponse.json({ error: "invalid playerId" }, { status: 400 });
 
   const type = (req.nextUrl.searchParams.get("type") as "batter" | "pitcher") ?? "batter";
+  const requestedYear = req.nextUrl.searchParams.get("year")
+    ? Number(req.nextUrl.searchParams.get("year"))
+    : null;
+
   const now = new Date();
   const month = now.getMonth();
   const currentYear = now.getFullYear();
   const inSeason = month >= 2 && month <= 10;
   const fallbackYear = inSeason ? currentYear : currentYear - 1;
-  const yearsToTry = [fallbackYear, fallbackYear - 1, fallbackYear - 2, fallbackYear - 3];
+  const yearsToTry = requestedYear
+    ? [requestedYear]
+    : [fallbackYear, fallbackYear - 1, fallbackYear - 2, fallbackYear - 3];
 
   try {
     // 1. Fetch bio
@@ -54,11 +61,26 @@ export async function GET(
       ? computePercentiles(playerRow, qualified.length > 0 ? qualified : leaderboard, type)
       : [];
 
-    // 3. Fetch pitch-by-pitch data from statcast_search (for spray chart + pitch mix)
+    // 3. Compute league ranks for key stats
+    const leagueRanks = computeLeagueRanks(playerRow, leaderboard, type);
+
+    // 4. Fetch pitch-by-pitch data from statcast_search
     const pbpCacheKey = `pbp:${type}:${playerId}:${year}`;
     const pbpData = await getOrSet(pbpCacheKey, 300_000, async () => {
       return await fetchStatcastPBP(playerId, type, year);
     });
+
+    // 5. Fetch game-by-game log from MLB Stats API
+    const gameLog = await fetchGameLog(playerId, type, year);
+
+    // 6. For pitchers: fetch pitch movement data from statcast_search
+    let pitchMovement: any[] = [];
+    if (type === "pitcher") {
+      pitchMovement = pbpData.pitchMix.map((p: any) => ({
+        ...p,
+        // The pbp data already has pitch-level data; extract movement from it
+      }));
+    }
 
     return NextResponse.json({
       player: {
@@ -81,12 +103,14 @@ export async function GET(
       },
       stats: playerRow ?? null,
       percentiles,
+      leagueRanks,
       type,
       year,
       sprayChart: pbpData.sprayChart,
       pitchMix: pbpData.pitchMix,
       barrelData: pbpData.barrelData,
       totalPitches: pbpData.totalPitches,
+      gameLog,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 502 });
@@ -94,8 +118,108 @@ export async function GET(
 }
 
 /**
+ * Compute league ranks for key stats (e.g., "xwOBA: .415 — ranks 3rd in MLB").
+ */
+function computeLeagueRanks(playerRow: any, leaderboard: any[], type: "batter" | "pitcher"): Array<{ label: string; value: string; rank: number; total: number }> {
+  if (!playerRow) return [];
+
+  const statsToRank = type === "batter"
+    ? [
+        { key: "xwoba", label: "xwOBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "woba", label: "wOBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "xba", label: "xBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "batting_avg", label: "AVG", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "slg_percent", label: "SLG", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "home_run", label: "HR", format: (v: any) => String(v), higherIsBetter: true },
+        { key: "barrel_brea", label: "Barrel%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "hard_hit_percent", label: "HardHit%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "avg_hit_speed", label: "Avg EV", format: (v: any) => `${Number(v).toFixed(1)}`, higherIsBetter: true },
+      ]
+    : [
+        { key: "p_era", label: "ERA", format: (v: any) => Number(v).toFixed(2), higherIsBetter: false },
+        { key: "k_percent", label: "K%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "whiff_percent", label: "Whiff%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "barrel_brea", label: "Barrel% Allowed", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
+        { key: "hard_hit_percent", label: "HardHit% Allowed", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
+        { key: "xwoba", label: "xwOBA Allowed", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: false },
+      ];
+
+  const results: Array<{ label: string; value: string; rank: number; total: number }> = [];
+  const total = leaderboard.length;
+
+  for (const stat of statsToRank) {
+    const playerVal = Number(playerRow[stat.key]);
+    if (isNaN(playerVal)) continue;
+
+    let rank = 1;
+    for (const r of leaderboard) {
+      const v = Number(r[stat.key]);
+      if (isNaN(v)) continue;
+      if (stat.higherIsBetter ? v > playerVal : v < playerVal) {
+        rank++;
+      }
+    }
+    results.push({
+      label: stat.label,
+      value: stat.format(playerRow[stat.key]),
+      rank,
+      total,
+    });
+  }
+  return results;
+}
+
+/**
+ * Fetch game-by-game log from MLB Stats API.
+ */
+async function fetchGameLog(playerId: number, type: "batter" | "pitcher", season: number): Promise<any[]> {
+  try {
+    const group = type === "batter" ? "hitting" : "pitching";
+    const url = `https://statsapi.mlb.com/api/v1/people/${playerId}?hydrate=stats(group=%5B${group}%5D,type=%5BgameLog%5D,season=${season})`;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { "Accept": "application/json" },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const stats = data?.people?.[0]?.stats;
+    if (!stats || stats.length === 0) return [];
+    const splits = stats[0]?.splits ?? [];
+    // Return last 15 games (most recent first)
+    return splits.slice(-15).reverse().map((s: any) => ({
+      date: s.date,
+      opponent: s.opponent?.name ?? "Unknown",
+      isHome: s.home || false,
+      stat: {
+        ab: s.stat?.atBats,
+        h: s.stat?.hits,
+        hr: s.stat?.homeRuns,
+        rbi: s.stat?.rbi,
+        r: s.stat?.runs,
+        bb: s.stat?.baseOnBalls,
+        so: s.stat?.strikeOuts,
+        sb: s.stat?.stolenBases,
+        avg: s.stat?.avg,
+        obp: s.stat?.obp,
+        slg: s.stat?.slg,
+        ops: s.stat?.ops,
+        // Pitcher stats
+        ip: s.stat?.inningsPitched,
+        er: s.stat?.earnedRuns,
+        k: s.stat?.strikeOuts,
+        bb_allowed: s.stat?.baseOnBalls,
+        np: s.stat?.numberOfPitches,
+        era: s.stat?.era,
+        whip: s.stat?.whip,
+      },
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Fetch pitch-by-pitch data from Baseball Savant's statcast_search CSV endpoint.
- * Extracts spray chart coordinates, pitch mix, and barrel data.
  */
 async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", season: number): Promise<{
   sprayChart: any[];
@@ -125,10 +249,8 @@ async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", se
     return { sprayChart: [], pitchMix: [], barrelData: null, totalPitches: 0 };
   }
 
-  // Build spray chart (balls in play with coordinates)
   const sprayChart: any[] = [];
-  const pitchTypeMap = new Map<string, { count: number; speeds: number[]; spins: number[] }>();
-  let barrelCount = 0;
+  const pitchTypeMap = new Map<string, { count: number; speeds: number[]; spins: number[]; pfxX: number[]; pfxZ: number[]; releaseX: number[]; releaseZ: number[] }>();
   let totalBIP = 0;
   let totalBarrels = 0;
   let totalEV = 0;
@@ -141,7 +263,6 @@ async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", se
   let hardHitCount = 0;
 
   for (const r of rows) {
-    // Spray chart: only balls in play with hc_x/hc_y
     const hcX = parseFloat(r.hc_x);
     const hcY = parseFloat(r.hc_y);
     const launchSpeed = parseFloat(r.launch_speed);
@@ -167,29 +288,24 @@ async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", se
         distanceCount++;
       }
 
-      if (isBarrel) {
-        totalBarrels++;
-        barrelCount++;
-      }
+      if (isBarrel) totalBarrels++;
 
       sprayChart.push({
-        x: hcX,
-        y: hcY,
+        x: hcX, y: hcY,
         launchSpeed: !isNaN(launchSpeed) ? launchSpeed : null,
         launchAngle: !isNaN(launchAngle) ? launchAngle : null,
         distance: !isNaN(dist) ? dist : null,
-        event,
-        isBarrel,
+        event, isBarrel,
         estimatedBA: parseFloat(r.estimated_ba_using_speedangle) || null,
         estimatedWOBA: parseFloat(r.estimated_woba_using_speedangle) || null,
       });
     }
 
-    // Pitch mix
+    // Pitch mix with movement data
     const pitchName = r.pitch_name || r.pitch_type || "";
     if (pitchName) {
       if (!pitchTypeMap.has(pitchName)) {
-        pitchTypeMap.set(pitchName, { count: 0, speeds: [], spins: [] });
+        pitchTypeMap.set(pitchName, { count: 0, speeds: [], spins: [], pfxX: [], pfxZ: [], releaseX: [], releaseZ: [] });
       }
       const pt = pitchTypeMap.get(pitchName)!;
       pt.count++;
@@ -197,25 +313,33 @@ async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", se
       if (!isNaN(spd)) pt.speeds.push(spd);
       const spin = parseFloat(r.release_spin_rate);
       if (!isNaN(spin)) pt.spins.push(spin);
+      const pfxX = parseFloat(r.pfx_x);
+      if (!isNaN(pfxX)) pt.pfxX.push(pfxX);
+      const pfxZ = parseFloat(r.pfx_z);
+      if (!isNaN(pfxZ)) pt.pfxZ.push(pfxZ);
+      const relX = parseFloat(r.release_pos_x);
+      if (!isNaN(relX)) pt.releaseX.push(relX);
+      const relZ = parseFloat(r.release_pos_z);
+      if (!isNaN(relZ)) pt.releaseZ.push(relZ);
     }
   }
 
-  // Build pitch mix array
   const totalPitches = rows.length;
   const pitchMix = Array.from(pitchTypeMap.entries())
     .map(([name, stats]) => ({
-      name,
-      count: stats.count,
+      name, count: stats.count,
       percentage: (stats.count / totalPitches) * 100,
       avgSpeed: stats.speeds.length > 0 ? stats.speeds.reduce((a: number, b: number) => a + b, 0) / stats.speeds.length : 0,
       avgSpin: stats.spins.length > 0 ? stats.spins.reduce((a: number, b: number) => a + b, 0) / stats.spins.length : 0,
+      avgPfxX: stats.pfxX.length > 0 ? stats.pfxX.reduce((a: number, b: number) => a + b, 0) / stats.pfxX.length : 0,
+      avgPfxZ: stats.pfxZ.length > 0 ? stats.pfxZ.reduce((a: number, b: number) => a + b, 0) / stats.pfxZ.length : 0,
+      avgReleaseX: stats.releaseX.length > 0 ? stats.releaseX.reduce((a: number, b: number) => a + b, 0) / stats.releaseX.length : 0,
+      avgReleaseZ: stats.releaseZ.length > 0 ? stats.releaseZ.reduce((a: number, b: number) => a + b, 0) / stats.releaseZ.length : 0,
     }))
     .sort((a, b) => b.count - a.count);
 
-  // Barrel data summary
   const barrelData = {
-    totalBIP,
-    totalBarrels,
+    totalBIP, totalBarrels,
     barrelPercent: totalBIP > 0 ? (totalBarrels / totalBIP) * 100 : 0,
     avgEV: evCount > 0 ? totalEV / evCount : 0,
     maxEV,
@@ -253,18 +377,11 @@ function parseCSVLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
     } else if (ch === "," && !inQuotes) {
-      cells.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
+      cells.push(current); current = "";
+    } else { current += ch; }
   }
   cells.push(current);
   return cells;

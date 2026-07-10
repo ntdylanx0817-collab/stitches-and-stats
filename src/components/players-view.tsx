@@ -4,55 +4,72 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   User, Loader2, ArrowLeft, TrendingUp, Activity,
-  MapPin, Weight, Ruler,
+  MapPin, Weight, Ruler, Calendar, Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
-import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
+import { Skeleton, ErrorState } from "@/components/loading-states";
+import { SprayChart } from "@/components/spray-chart";
+import { PitchArsenal } from "@/components/pitch-arsenal";
+import { BarrelStats } from "@/components/barrel-stats";
+import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 
-interface PlayerStats {
+interface FullPlayerData {
   player: {
     id: number;
     fullName: string;
     primaryNumber?: string;
+    birthDate?: string;
     currentAge?: number;
     height?: string;
     weight?: number;
     birthCity?: string;
+    birthStateProvince?: string;
     birthCountry?: string;
     primaryPosition?: { code: string; name: string; abbreviation: string };
     batSide?: { code: string; description: string };
     pitchHand?: { code: string; description: string };
     currentTeam?: { id: number; name: string };
+    draftYear?: number;
+    mlbDebutDate?: string;
   };
   stats: any | null;
   percentiles: Array<{
-    key: string;
-    label: string;
-    value: number | string;
-    percentile: number;
-    display?: string;
-    higherIsBetter: boolean;
+    key: string; label: string; value: number | string;
+    percentile: number; display?: string; higherIsBetter: boolean;
   }>;
   type: "batter" | "pitcher";
   year: number;
+  sprayChart: Array<{
+    x: number; y: number; launchSpeed: number | null;
+    launchAngle: number | null; distance: number | null;
+    event: string; isBarrel: boolean;
+  }>;
+  pitchMix: Array<{
+    name: string; count: number; percentage: number; avgSpeed: number; avgSpin: number;
+  }>;
+  barrelData: {
+    totalBIP: number; totalBarrels: number; barrelPercent: number;
+    avgEV: number; maxEV: number; maxLaunchAngle: number;
+    avgDistance: number; sweetSpotPercent: number; hardHitPercent: number;
+  };
+  totalPitches: number;
 }
 
 export function PlayersView() {
   const selectedPlayer = useSavantStore((s) => s.selectedPlayer);
-  const setView = useSavantStore((s) => s.setView);
 
   if (!selectedPlayer) {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
         <div className="glass rounded-2xl p-10 text-center">
           <User className="mx-auto mb-4 h-12 w-12 text-slate-500" />
-          <h2 className="mb-2 text-xl font-bold text-white">Search for a player</h2>
+          <h2 className="font-scoreboard mb-2 text-xl font-bold text-chalk uppercase tracking-wide">Search for a player</h2>
           <p className="mb-6 text-sm text-slate-400">
-            Use the search bar above to find any active MLB player and view their Statcast percentile rankings.
+            Search any active MLB player to see their complete Statcast profile — spray charts, pitch mix, percentiles, batted ball metrics, and more.
           </p>
           <div className="mx-auto max-w-md">
             <GlobalPlayerSearch />
@@ -62,26 +79,25 @@ export function PlayersView() {
     );
   }
 
-  return <PlayerProfile playerId={selectedPlayer.id} type={selectedPlayer.type} />;
+  return <FullPlayerProfile playerId={selectedPlayer.id} type={selectedPlayer.type} />;
 }
 
-function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | "pitcher" }) {
+function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter" | "pitcher" }) {
   const setSelectedPlayer = useSavantStore((s) => s.setSelectedPlayer);
-  const { data, isLoading, error, refetch } = useQuery<PlayerStats>({
-    queryKey: ["player-profile", playerId, type],
+  const { data, isLoading, error, refetch } = useQuery<FullPlayerData>({
+    queryKey: ["player-full", playerId, type],
     queryFn: async () => {
-      const res = await fetch(`/api/player/${playerId}?type=${type}`);
+      const res = await fetch(`/api/player-full/${playerId}?type=${type}`);
       if (!res.ok) throw new Error("player fetch failed");
       return res.json();
     },
     staleTime: 5 * 60_000,
-    retry: 2,
+    retry: 1,
   });
 
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-        {/* Hero skeleton */}
         <div className="glass rounded-2xl p-5 mb-4">
           <div className="flex items-start gap-4">
             <Skeleton className="h-20 w-20 rounded-2xl" />
@@ -99,31 +115,14 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
             </div>
           </div>
         </div>
-        {/* Percentile skeleton */}
-        <div className="glass rounded-2xl p-5 mb-4">
-          <Skeleton className="mb-4 h-5 w-56" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
-                <div className="mb-2 flex justify-between">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-8" />
-                </div>
-                <Skeleton className="h-2 w-full rounded-full" />
-              </div>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-48 w-full rounded-2xl" />
           </div>
-        </div>
-        {/* Stats skeleton */}
-        <div className="glass rounded-2xl p-5">
-          <Skeleton className="mb-4 h-5 w-40" />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center">
-                <Skeleton className="mx-auto mb-1 h-2 w-10" />
-                <Skeleton className="mx-auto h-5 w-12" />
-              </div>
-            ))}
+          <div className="space-y-4">
+            <Skeleton className="h-80 w-full rounded-2xl" />
+            <Skeleton className="h-48 w-full rounded-2xl" />
           </div>
         </div>
       </div>
@@ -135,7 +134,7 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
         <ErrorState
           title="Couldn't load player profile"
-          description="The MLB Stats API or Statcast leaderboard may be temporarily unavailable."
+          description="The MLB Stats API or Statcast may be temporarily unavailable."
           onRetry={() => refetch()}
         />
         <div className="mt-4 text-center">
@@ -150,270 +149,294 @@ function PlayerProfile({ playerId, type }: { playerId: number; type: "batter" | 
   const p = data.player;
   const stats = data.stats;
   const isBatter = type === "batter";
+  const playerHand = p.batSide?.code === "L" ? "L" : p.batSide?.code === "S" ? "S" : "R";
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
       {/* Hero header */}
-      <div className="glass rounded-2xl p-5 mb-4">
+      <div className="card-broadcast rounded-2xl p-5 mb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cobalt/30 to-crimson/20 text-3xl font-black text-white">
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-track/25 to-crimson/15 text-2xl font-bold text-chalk font-scoreboard">
               {(p.fullName?.split(" ").map((n) => n[0]).slice(0, 2).join("") ?? "—")}
               {p.primaryNumber && (
-                <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#0B0F19] text-xs font-bold text-cobalt border border-cobalt/40">
+                <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-midnight text-xs font-bold text-warning-track border border-warning-track/40">
                   {p.primaryNumber}
                 </span>
               )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">{p.fullName}</h1>
+              <h1 className="font-scoreboard text-2xl font-bold text-chalk sm:text-3xl">{p.fullName}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                 {p.primaryPosition && (
-                  <Badge variant="outline" className="border-cobalt/30 bg-cobalt/10 text-cobalt">
+                  <Badge variant="outline" className="border-warning-track/30 bg-warning-track/10 text-warning-track font-scoreboard">
                     {p.primaryPosition.abbreviation}
                   </Badge>
                 )}
                 {p.currentTeam?.name && <span>{p.currentTeam.name}</span>}
-                {p.batSide && <span>B/T: {p.batSide.code}</span>}
-                {p.pitchHand && <span>Throws: {p.pitchHand.code}</span>}
+                {p.batSide && <span className="font-scoreboard">B/T: {p.batSide.code}</span>}
+                {p.pitchHand && <span className="font-scoreboard">Throws: {p.pitchHand.code}</span>}
                 {p.currentAge && <span>{p.currentAge}y</span>}
+                {p.mlbDebutDate && (
+                  <span className="text-slate-600">Debut: {new Date(p.mlbDebutDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+                )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
+              <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-slate-600 font-scoreboard">
                 {p.height && <span className="flex items-center gap-1"><Ruler className="h-3 w-3" /> {p.height}</span>}
                 {p.weight && <span className="flex items-center gap-1"><Weight className="h-3 w-3" /> {p.weight} lb</span>}
-                {p.birthCity && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {p.birthCity}, {p.birthCountry}</span>}
+                {p.birthCity && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {p.birthCity}, {p.birthStateProvince || p.birthCountry}</span>}
+                {p.draftYear && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Draft: {p.draftYear}</span>}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedPlayer(null)}
-              className="border-white/10 bg-white/[0.02] hover:bg-white/5"
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" /> Close
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedPlayer(null)}
+            className="border-chalk bg-midnight/40 hover:bg-white/5"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" /> Close
+          </Button>
         </div>
       </div>
 
-      {/* Statcast Percentile Rankings */}
-      <div className="glass rounded-2xl p-5 mb-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-bold text-white">
-            <Activity className="h-5 w-5 text-cobalt" />
-            Statcast Percentile Rankings
-          </h2>
-          <div className="text-xs text-slate-400">
-            {data.year} · {isBatter ? "Batter" : "Pitcher"} · vs Qualified MLB
-          </div>
-        </div>
-
-        {data.percentiles.length === 0 ? (
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 text-center text-sm text-slate-400">
-            No Statcast data available for this player in {data.year}.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.percentiles.map((m, i) => (
-              <PercentileBar key={m.key} metric={m} index={i} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Standard season stats */}
-      {stats && (
-        <div className="glass rounded-2xl p-5">
-          <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-white">
-            <TrendingUp className="h-5 w-5 text-mint" />
-            {data.year} Season Stats
-          </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-            {isBatter
-              ? ([
-                  ["AVG", fmtAvg(stats.batting_avg), "default"],
-                  ["OBP", fmtAvg(stats.on_base_percent), "default"],
-                  ["SLG", fmtAvg(stats.slg_percent), "default"],
-                  ["OPS", calcOPS(stats.slg_percent, stats.on_base_percent), "default"],
-                  ["wOBA", fmtAvg(stats.woba), "cobalt"],
-                  ["xwOBA", fmtAvg(stats.xwoba), "mint"],
-                  ["xBA", fmtAvg(stats.xba), "mint"],
-                  ["xSLG", fmtAvg(stats.xslg), "mint"],
-                  ["HR", fmtNum(stats.home_run), "crimson"],
-                  ["RBI", "—", "default"],
-                  ["SB", "—", "default"],
-                  ["PA", fmtNum(stats.pa), "default"],
-                  ["K%", fmtPct(stats.k_percent), "default"],
-                  ["BB%", fmtPct(stats.bb_percent), "default"],
-                  ["Barrel%", fmtPct(stats.barrel_brea), "crimson"],
-                  ["Hard Hit%", fmtPct(stats.hard_hit_percent), "amber"],
-                  ["Avg EV", fmtMph(stats.avg_hit_speed), "crimson"],
-                  ["Max EV", fmtMph(stats.max_hit_speed), "crimson"],
-                ] as const).map(([label, val, tone], i) => (
-                  <StatCard key={i} label={label} value={val} tone={tone as any} />
-                ))
-              : ([
-                  ["ERA", fmtNum(stats.p_era, 2), "default"],
-                  ["WHIP", fmtNum(stats.p_whip, 2), "default"],
-                  ["IP", "—", "default"],
-                  ["K%", fmtPct(stats.k_percent), "mint"],
-                  ["BB%", fmtPct(stats.bb_percent), "default"],
-                  ["K/9", "—", "default"],
-                  ["AVG", fmtAvg(stats.avg), "default"],
-                  ["xwOBA", fmtAvg(stats.xwoba), "mint"],
-                  ["xBA", fmtAvg(stats.xba), "mint"],
-                  ["Whiff%", fmtPct(stats.whiff_percent), "mint"],
-                  ["CSW%", fmtPct(stats.csw_percent), "mint"],
-                  ["Barrel%", fmtPct(stats.barrel_brea), "mint"],
-                  ["Hard Hit%", fmtPct(stats.hard_hit_percent), "mint"],
-                ] as const).map(([label, val, tone], i) => (
-                  <StatCard key={i} label={label} value={val} tone={tone as any} />
-                ))
-            }
-          </div>
+      {/* Statcast data disclaimer */}
+      {data.totalPitches > 0 && (
+        <div className="mb-4 rounded-lg border border-warning-track/20 bg-warning-track/5 px-3 py-2 text-center text-[11px] text-slate-400">
+          <span className="font-scoreboard uppercase tracking-wide text-warning-track">{data.totalPitches.toLocaleString()} pitches analyzed</span>
+          {" from "}
+          <span className="font-bold text-chalk">{data.year}</span>
+          {" Statcast · Real pitch-by-pitch data from Baseball Savant"}
         </div>
       )}
+
+      {/* Main grid: 2/3 + 1/3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left column (2/3) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Percentile Rankings */}
+          <div className="glass rounded-2xl p-4">
+            <h2 className="font-scoreboard mb-4 flex items-center gap-2 text-base font-bold text-chalk uppercase tracking-wide">
+              <Activity className="h-5 w-5 text-warning-track" />
+              Statcast Percentile Rankings
+            </h2>
+            {data.percentiles.length === 0 ? (
+              <p className="text-sm text-slate-500">No Statcast data available for this player.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {data.percentiles.map((m, i) => (
+                  <PercentileBar key={m.key} metric={m} index={i} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Season Stats */}
+          {stats && (
+            <div className="glass rounded-2xl p-4">
+              <h2 className="font-scoreboard mb-4 flex items-center gap-2 text-base font-bold text-chalk uppercase tracking-wide">
+                <TrendingUp className="h-5 w-5 text-mint" />
+                {data.year} Season Stats
+              </h2>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                {isBatter
+                  ? ([
+                      ["AVG", fmtAvg(stats.batting_avg), "default"],
+                      ["OBP", fmtAvg(stats.on_base_percent), "default"],
+                      ["SLG", fmtAvg(stats.slg_percent), "default"],
+                      ["OPS", calcOPS(stats.slg_percent, stats.on_base_percent), "default"],
+                      ["wOBA", fmtAvg(stats.woba), "cobalt"],
+                      ["xwOBA", fmtAvg(stats.xwoba), "mint"],
+                      ["xBA", fmtAvg(stats.xba), "mint"],
+                      ["xSLG", fmtAvg(stats.xslg), "mint"],
+                      ["HR", fmtNum(stats.home_run), "crimson"],
+                      ["PA", fmtNum(stats.pa), "default"],
+                      ["K%", fmtPct(stats.k_percent), "default"],
+                      ["BB%", fmtPct(stats.bb_percent), "default"],
+                      ["Barrel%", fmtPct(stats.barrel_brea), "crimson"],
+                      ["HardHit%", fmtPct(stats.hard_hit_percent), "amber"],
+                      ["Avg EV", fmtMph(stats.avg_hit_speed), "crimson"],
+                      ["Max EV", fmtMph(stats.max_hit_speed), "crimson"],
+                    ] as const).map(([label, val, tone], i) => (
+                      <StatCard key={i} label={label} value={val} tone={tone as any} />
+                    ))
+                  : ([
+                      ["ERA", fmtNum(stats.p_era, 2), "default"],
+                      ["WHIP", fmtNum(stats.p_whip, 2), "default"],
+                      ["K%", fmtPct(stats.k_percent), "mint"],
+                      ["BB%", fmtPct(stats.bb_percent), "default"],
+                      ["AVG", fmtAvg(stats.avg), "default"],
+                      ["xwOBA", fmtAvg(stats.xwoba), "mint"],
+                      ["xBA", fmtAvg(stats.xba), "mint"],
+                      ["Whiff%", fmtPct(stats.whiff_percent), "mint"],
+                      ["CSW%", fmtPct(stats.csw_percent), "mint"],
+                      ["Barrel%", fmtPct(stats.barrel_brea), "mint"],
+                      ["HardHit%", fmtPct(stats.hard_hit_percent), "mint"],
+                      ["Avg EV", fmtMph(stats.avg_hit_speed), "mint"],
+                    ] as const).map(([label, val, tone], i) => (
+                      <StatCard key={i} label={label} value={val} tone={tone as any} />
+                    ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* Spray Chart + Batted Ball Metrics (batters only) */}
+          {isBatter && data.sprayChart.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SprayChart data={data.sprayChart} playerHand={playerHand} />
+              <BarrelStats data={data.barrelData} />
+            </div>
+          )}
+
+          {/* Real Zone Data (for batters) */}
+          {isBatter && (
+            <MatchupStrikeZone
+              batterId={p.id}
+              batterName={p.fullName}
+              pitcherId={0}
+              pitcherName="League Average"
+            />
+          )}
+        </div>
+
+        {/* Right column (1/3) */}
+        <div className="space-y-4">
+          {/* Pitch Arsenal / Pitches Seen */}
+          {data.pitchMix.length > 0 && (
+            <PitchArsenal data={data.pitchMix} isPitcher={!isBatter} />
+          )}
+
+          {/* Quick bio stats */}
+          <div className="glass rounded-2xl p-4">
+            <h3 className="font-scoreboard mb-3 text-sm font-bold text-chalk uppercase tracking-wide">Bio</h3>
+            <div className="space-y-1.5 text-xs">
+              {p.birthDate && (
+                <BioRow label="Born" value={`${p.birthCity || ""}, ${p.birthStateProvince || p.birthCountry || ""}`} sub={new Date(p.birthDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} />
+              )}
+              {p.currentAge && <BioRow label="Age" value={`${p.currentAge} years`} />}
+              {p.height && <BioRow label="Height" value={p.height} />}
+              {p.weight && <BioRow label="Weight" value={`${p.weight} lb`} />}
+              {p.primaryPosition && <BioRow label="Position" value={p.primaryPosition.name} />}
+              {p.batSide && <BioRow label="Bats" value={p.batSide.description} />}
+              {p.pitchHand && <BioRow label="Throws" value={p.pitchHand.description} />}
+              {p.mlbDebutDate && <BioRow label="MLB Debut" value={new Date(p.mlbDebutDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} />}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function calcOPS(slg?: string | number, obp?: string | number): string {
-  if (slg == null || obp == null) return "—";
-  const s = typeof slg === "number" ? slg : parseFloat(slg);
-  const o = typeof obp === "number" ? obp : parseFloat(obp);
-  if (isNaN(s) || isNaN(o)) return "—";
-  return (s + o).toFixed(3).replace(/^0/, "");
-}
-
-/** Format a batting average / rate stat like .314 (strips leading 0) */
-function fmtAvg(v: unknown): string {
-  if (v == null || v === "") return "—";
-  const n = typeof v === "number" ? v : parseFloat(String(v));
-  if (isNaN(n)) return "—";
-  return n.toFixed(3).replace(/^0/, "");
-}
-
-/** Format a plain number with optional decimals */
-function fmtNum(v: unknown, decimals: number = 0): string {
-  if (v == null || v === "") return "—";
-  const n = typeof v === "number" ? v : Number(v);
-  if (isNaN(n)) return "—";
-  return n.toFixed(decimals);
-}
-
-/** Format a percentage value like 23.6% */
-function fmtPct(v: unknown): string {
-  if (v == null || v === "") return "—";
-  const n = typeof v === "number" ? v : Number(v);
-  if (isNaN(n)) return "—";
-  return `${n.toFixed(1)}%`;
-}
-
-/** Format a speed value like 99.5 mph */
-function fmtMph(v: unknown): string {
-  if (v == null || v === "") return "—";
-  const n = typeof v === "number" ? v : Number(v);
-  if (isNaN(n)) return "—";
-  return `${n.toFixed(1)} mph`;
-}
-
-function PercentileBar({
-  metric,
-  index,
-}: {
+function PercentileBar({ metric, index }: {
   metric: { key: string; label: string; value: number | string; percentile: number; display?: string; higherIsBetter: boolean };
   index: number;
 }) {
   const pct = metric.percentile;
-  // Color: high pct = crimson glow, low pct = deep blue, mid = white
   const tone =
-    pct >= 90 ? "crimson" :
-    pct >= 75 ? "amber" :
-    pct >= 50 ? "cobalt" :
-    pct >= 25 ? "violet" :
-    "deep";
-
+    pct >= 90 ? "crimson" : pct >= 75 ? "amber" : pct >= 50 ? "warning-track" : pct >= 25 ? "cobalt" : "mint";
   const toneColor =
-    tone === "crimson" ? "#FF3B5C" :
-    tone === "amber" ? "#FFB547" :
-    tone === "cobalt" ? "#4DA3FF" :
-    tone === "violet" ? "#A78BFA" :
-    "#3DDBA0";
-
-  const toneGlow =
-    tone === "crimson" ? "box-glow-crimson" :
-    tone === "cobalt" ? "box-glow-cobalt" :
-    tone === "amber" ? "" :
-    "";
+    tone === "crimson" ? "#FF3B5C" : tone === "amber" ? "#FFB547" : tone === "warning-track" ? "#e67e22" : tone === "cobalt" ? "#4DA3FF" : "#3DDBA0";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.5), type: "spring", stiffness: 220, damping: 26 }}
-      className={cn(
-        "rounded-xl border border-white/5 bg-white/[0.02] p-3.5 transition-all hover:border-white/10",
-        toneGlow
-      )}
+      className="rounded-xl border border-chalk bg-midnight/40 p-3 transition-all hover:border-chalk-strong"
     >
       <div className="flex items-start justify-between mb-2">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-slate-500">{metric.label}</div>
-          <div className="text-lg font-bold num" style={{ color: toneColor }}>
+          <div className="font-scoreboard text-[9px] uppercase tracking-wide text-slate-500">{metric.label}</div>
+          <div className="font-scoreboard text-lg font-bold num" style={{ color: toneColor }}>
             {metric.display ?? String(metric.value)}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-black num leading-none" style={{ color: toneColor, textShadow: `0 0 12px ${toneColor}80` }}>
+          <div className="font-scoreboard text-2xl font-black num leading-none" style={{ color: toneColor, textShadow: `0 0 12px ${toneColor}80` }}>
             {pct}
           </div>
-          <div className="text-[9px] uppercase tracking-wide text-slate-500">pctile</div>
+          <div className="text-[8px] uppercase tracking-wide text-slate-600 font-scoreboard">pctile</div>
         </div>
       </div>
-
-      {/* Horizontal sliding bar */}
-      <div className="relative h-2 overflow-hidden rounded-full bg-white/5 mt-3">
+      <div className="relative h-2 overflow-hidden rounded-full bg-midnight mt-3">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ delay: Math.min(index * 0.04, 0.5) + 0.1, duration: 0.7, ease: "easeOut" }}
           className="absolute inset-y-0 left-0 rounded-full"
-          style={{
-            background: `linear-gradient(90deg, ${toneColor}40, ${toneColor})`,
-            boxShadow: `0 0 8px ${toneColor}80`,
-          }}
+          style={{ background: `linear-gradient(90deg, ${toneColor}40, ${toneColor})`, boxShadow: `0 0 8px ${toneColor}80` }}
         />
-        {/* 50% marker */}
         <div className="absolute inset-y-0 left-1/2 w-px bg-white/20" />
-      </div>
-      <div className="mt-1 flex justify-between text-[9px] text-slate-600 font-mono">
-        <span>0</span>
-        <span>50</span>
-        <span>100</span>
       </div>
     </motion.div>
   );
 }
 
-function StatCard({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "cobalt" | "crimson" | "amber" | "mint" }) {
+function StatCard({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "cobalt" | "crimson" | "amber" | "mint" | "warning-track" }) {
   const toneCls = {
-    default: "text-white",
+    default: "text-chalk",
     cobalt: "text-cobalt",
     crimson: "text-crimson",
     amber: "text-amber",
     mint: "text-mint",
+    "warning-track": "text-warning-track",
   }[tone];
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-center"
+      className="rounded-xl border border-chalk bg-midnight/40 p-3 text-center hover-lift"
     >
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={cn("text-lg font-bold num", toneCls)}>{value}</div>
+      <div className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+      <div className={cn("font-scoreboard text-lg font-bold num", toneCls)}>{value}</div>
     </motion.div>
   );
+}
+
+function BioRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-2 border-b border-chalk pb-1.5">
+      <span className="font-scoreboard text-slate-500 uppercase tracking-wide text-[10px]">{label}</span>
+      <div className="text-right">
+        <span className="text-slate-300">{value}</span>
+        {sub && <div className="text-[10px] text-slate-600">{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Helpers
+function calcOPS(slg?: string | number, obp?: string | number): string {
+  if (slg == null || obp == null) return "—";
+  const s = typeof slg === "number" ? slg : parseFloat(String(slg));
+  const o = typeof obp === "number" ? obp : parseFloat(String(obp));
+  if (isNaN(s) || isNaN(o)) return "—";
+  return (s + o).toFixed(3).replace(/^0/, "");
+}
+function fmtAvg(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : parseFloat(String(v));
+  if (isNaN(n)) return "—";
+  return n.toFixed(3).replace(/^0/, "");
+}
+function fmtNum(v: unknown, decimals: number = 0): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return n.toFixed(decimals);
+}
+function fmtPct(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return `${n.toFixed(1)}%`;
+}
+function fmtMph(v: unknown): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (isNaN(n)) return "—";
+  return `${n.toFixed(1)} mph`;
 }

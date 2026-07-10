@@ -123,6 +123,12 @@ export function LiveFeedView() {
                 const isLive = g.status.abstractGameState === "Live";
                 const isFinal = g.status.abstractGameState === "Final";
                 const isSelected = selectedGamePk === g.gamePk;
+                // Format start time for preview games (convert UTC to local time)
+                const gameDate = g.gameDate ? new Date(g.gameDate) : null;
+                const startTime = gameDate
+                  ? gameDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+                  : null;
+                const isDelayed = g.status?.detailedState?.includes("Delayed") || g.status?.detailedState?.includes("Postponed");
                 return (
                   <button
                     key={g.gamePk}
@@ -141,10 +147,10 @@ export function LiveFeedView() {
                     <div className="flex items-center justify-between text-[9px] uppercase tracking-wide font-scoreboard">
                       <span className={cn(
                         "flex items-center gap-1 font-bold",
-                        isLive ? "text-mint" : isFinal ? "text-slate-600" : "text-warning-track"
+                        isLive ? "text-mint" : isFinal ? "text-slate-600" : isDelayed ? "text-crimson" : "text-warning-track"
                       )}>
                         {isLive && <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
-                        {isLive ? "LIVE" : isFinal ? "FINAL" : "PREVIEW"}
+                        {isLive ? "LIVE" : isFinal ? "FINAL" : isDelayed ? "DELAYED" : startTime}
                       </span>
                       <span className="text-slate-600 text-[8px]">{g.venue?.name?.split(" ").pop()}</span>
                     </div>

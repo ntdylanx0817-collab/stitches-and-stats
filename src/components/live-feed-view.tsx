@@ -44,7 +44,18 @@ export function LiveFeedView() {
     retry: 2,
   });
 
-  const games = scheduleData?.games ?? [];
+  const allGames = scheduleData?.games ?? [];
+
+  // Sort games: Live first, then Preview, then Final
+  // This way you see live games immediately without scrolling
+  const games = useMemo(() => {
+    return [...allGames].sort((a, b) => {
+      const order = { Live: 0, Preview: 1, Final: 2 };
+      const aOrder = order[a.status.abstractGameState as keyof typeof order] ?? 3;
+      const bOrder = order[b.status.abstractGameState as keyof typeof order] ?? 3;
+      return aOrder - bOrder;
+    });
+  }, [allGames]);
 
   // Auto-pick the first live game if none selected.
   // Priority: Live > Final (has pitch data) > Preview (today's upcoming)
@@ -58,22 +69,26 @@ export function LiveFeedView() {
   }, [games, selectedGamePk, setSelectedGame]);
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
       {/* Game selector strip */}
-      <div className="mb-5">
+      <div className="mb-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
-            <Calendar className="h-4 w-4" />
-            Today's Games · {scheduleData?.date ?? "—"}
+          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
+            <Calendar className="h-4 w-4 text-warning-track" />
+            {scheduleData?.date ?? "—"}
           </h2>
-          <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint">
-            <Radio className="mr-1 h-3 w-3" /> {games.filter(g => g.status.abstractGameState === "Live").length} Live
-          </Badge>
+          <div className="flex items-center gap-2">
+            {games.filter(g => g.status.abstractGameState === "Live").length > 0 && (
+              <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint font-scoreboard">
+                <Radio className="mr-1 h-3 w-3 animate-live-dot" /> {games.filter(g => g.status.abstractGameState === "Live").length} LIVE
+              </Badge>
+            )}
+          </div>
         </div>
         {scheduleLoading ? (
           <div className="flex gap-2 overflow-hidden pb-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="min-w-[220px] shrink-0 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+              <div key={i} className="min-w-[200px] shrink-0 rounded-xl border border-chalk bg-midnight/40 p-3">
                 <div className="mb-2 flex justify-between">
                   <Skeleton className="h-2 w-12" />
                   <Skeleton className="h-2 w-10" />
@@ -113,29 +128,33 @@ export function LiveFeedView() {
                     key={g.gamePk}
                     onClick={() => setSelectedGame(g.gamePk)}
                     className={cn(
-                      "glass-hover relative flex min-w-[220px] shrink-0 flex-col gap-1 rounded-xl border p-3 text-left transition-all",
+                      "hover-lift relative flex min-w-[190px] shrink-0 flex-col gap-1 rounded-xl border p-2.5 text-left transition-all",
                       isSelected
-                        ? "border-cobalt/40 bg-cobalt/8 box-glow-cobalt"
-                        : "border-white/5 hover:border-white/15"
+                        ? "border-warning-track/40 bg-warning-track/8 box-glow-warning"
+                        : isLive
+                        ? "border-mint/25 bg-mint/5 shimmer-sweep"
+                        : isFinal
+                        ? "border-chalk bg-midnight/30 opacity-70"
+                        : "border-chalk bg-midnight/40"
                     )}
                   >
-                    <div className="flex items-center justify-between text-[10px] uppercase tracking-wide">
+                    <div className="flex items-center justify-between text-[9px] uppercase tracking-wide font-scoreboard">
                       <span className={cn(
                         "flex items-center gap-1 font-bold",
-                        isLive ? "text-mint" : isFinal ? "text-slate-500" : "text-amber"
+                        isLive ? "text-mint" : isFinal ? "text-slate-600" : "text-warning-track"
                       )}>
                         {isLive && <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
-                        {g.status.abstractGameState}
+                        {isLive ? "LIVE" : isFinal ? "FINAL" : "PREVIEW"}
                       </span>
-                      <span className="text-slate-500">{g.venue?.name?.split(" ").pop()}</span>
+                      <span className="text-slate-600 text-[8px]">{g.venue?.name?.split(" ").pop()}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-200 truncate">{g.away.abbreviation ?? g.away.name}</span>
-                      <span className="font-bold text-white num">{g.away.score ?? 0}</span>
+                      <span className="font-scoreboard font-semibold text-slate-200 truncate">{g.away.abbreviation ?? g.away.name}</span>
+                      <span className={cn("font-scoreboard font-bold num", isLive ? "text-chalk" : "text-slate-300")}>{g.away.score ?? 0}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-200 truncate">{g.home.abbreviation ?? g.home.name}</span>
-                      <span className="font-bold text-white num">{g.home.score ?? 0}</span>
+                      <span className="font-scoreboard font-semibold text-slate-200 truncate">{g.home.abbreviation ?? g.home.name}</span>
+                      <span className={cn("font-scoreboard font-bold num", isLive ? "text-chalk" : "text-slate-300")}>{g.home.score ?? 0}</span>
                     </div>
                   </button>
                 );
@@ -715,9 +734,9 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
     : state === "Final" ? "Final" : state === "Preview" ? "Preview" : state;
 
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="card-broadcast rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+        <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
           <Activity className="h-4 w-4 text-mint" />
           Scoreboard
         </h3>

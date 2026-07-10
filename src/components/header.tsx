@@ -8,9 +8,9 @@ import { useSocket } from "@/components/socket-provider";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
-  { key: "live", label: "Live Feed", icon: Activity },
+  { key: "live", label: "Live", icon: Activity },
   { key: "players", label: "Players", icon: User },
-  { key: "leaderboard", label: "Leaderboards", icon: BarChart3 },
+  { key: "leaderboard", label: "Stats", icon: BarChart3 },
   { key: "compare", label: "Compare", icon: GitCompare },
   { key: "simulator", label: "Simulator", icon: Swords },
   { key: "news", label: "News", icon: Newspaper },
@@ -23,15 +23,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="glass-strong border-b border-chalk">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6">
+      <div className="card-broadcast border-b border-chalk">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
           {/* Logo */}
           <button
             onClick={() => setView("live")}
             className="group flex shrink-0 items-center gap-2.5"
             aria-label="Stitches and Stats home"
           >
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-warning-track to-crimson shadow-lg shadow-warning-track/30 transition-transform group-hover:scale-105">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-warning-track to-crimson shadow-lg shadow-warning-track/30 transition-transform group-hover:scale-105 group-active:scale-95">
               <Zap className="h-5 w-5 text-chalk" fill="currentColor" />
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-midnight" />
             </div>
@@ -39,7 +39,7 @@ export function Header() {
               <span className="font-scoreboard text-base font-bold tracking-wide text-chalk uppercase">
                 Stitches <span className="text-warning-track">& Stats</span>
               </span>
-              <span className="text-[9px] uppercase tracking-[0.2em] text-slate-500 font-scoreboard">
+              <span className="text-[8px] uppercase tracking-[0.25em] text-slate-500 font-scoreboard">
                 Pro Broadcast Analytics
               </span>
             </div>
@@ -55,7 +55,7 @@ export function Header() {
                   key={item.key}
                   onClick={() => setView(item.key)}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors font-scoreboard uppercase tracking-wide sm:px-3.5",
+                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
                     active ? "text-chalk" : "text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -94,7 +94,7 @@ export function Header() {
               )} />
             </span>
             <span className="hidden text-[10px] font-bold uppercase tracking-wide text-slate-400 font-scoreboard sm:inline">
-              {connected ? "Live WS" : "Live REST"}
+              {connected ? "Live" : "REST"}
             </span>
           </div>
         </div>

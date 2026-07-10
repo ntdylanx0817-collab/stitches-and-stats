@@ -1,381 +1,444 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import { Target } from "lucide-react";
+import { Loader2, Target } from "lucide-react";
+
+interface ZoneData {
+  zone: number;
+  count: number;
+  hits: number;
+  avgExitVelo: number;
+  battingAvg: number;
+  slg: number;
+  isHot: boolean;
+  isCold: boolean;
+}
+
+interface PlayerZoneData {
+  playerId: number;
+  playerName: string;
+  type: "batter" | "pitcher";
+  season: number;
+  totalPitches: number;
+  zones: ZoneData[];
+}
 
 interface MatchupStrikeZoneProps {
-  batterStats: {
-    avgExitVelo: number;
-    barrelPercent: number;
-    hardHitPercent: number;
-    battingAvg: number;
-    slg: number;
-  };
-  pitcherStats: {
-    avgExitVelo: number;
-    barrelPercent: number;
-    hardHitPercent: number;
-    avg: number;
-  };
-  batterSide?: string;
+  batterId: number;
+  batterName: string;
+  pitcherId: number;
+  pitcherName: string;
   className?: string;
 }
 
-const SVG_SIZE = 340;
-const SVG_PADDING = 40;
+const SVG_SIZE = 360;
+const SVG_PADDING = 36;
 const ZONE_LEFT = -8.5 / 12;
 const ZONE_RIGHT = 8.5 / 12;
 const SZ_TOP_DEFAULT = 3.5;
 const SZ_BOT_DEFAULT = 1.6;
 
-/** Map a pitch coordinate (pX, pZ in feet) to SVG coordinates. */
-function pitchToSVG(pX: number, pZ: number, szTop: number = SZ_TOP_DEFAULT, szBot: number = SZ_BOT_DEFAULT) {
-  const xRange = 4.0;
-  const x = SVG_PADDING + ((pX + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
-  const zMax = 5.0;
-  const y = SVG_SIZE - SVG_PADDING - pZ * ((SVG_SIZE - SVG_PADDING * 2) / zMax);
-  return { x, y };
+/**
+ * Convert zone number (1-14) to SVG coordinates.
+ * Zones 1-9 are the 3x3 strike zone grid (1=top-left, 9=bottom-right).
+ * Zones 11-14 are outside (11=above, 12=below, 13=left, 14=right).
+ */
+function zoneToSVG(zone: number, szTop: number, szBot: number) {
+  const zoneLines = zoneLineToSVG(szTop, szBot);
+  const zoneW = zoneLines.rightX - zoneLines.leftX;
+  const zoneH = zoneLines.topY - zoneLines.botY;
+  const colW = zoneW / 3;
+  const rowH = zoneH / 3;
+
+  // Zones 1-3: top row, 4-6: middle, 7-9: bottom
+  if (zone >= 1 && zone <= 9) {
+    const row = Math.floor((zone - 1) / 3); // 0=top, 1=mid, 2=bottom
+    const col = (zone - 1) % 3; // 0=left, 1=mid, 2=right
+    const x = zoneLines.leftX + col * colW + colW / 2;
+    const y = zoneLines.topY + row * rowH + rowH / 2;
+    return { x, y };
+  }
+  // Zone 11: above, 12: below, 13: left, 14: right
+  if (zone === 11) return { x: (zoneLines.leftX + zoneLines.rightX) / 2, y: zoneLines.topY - rowH * 0.5 };
+  if (zone === 12) return { x: (zoneLines.leftX + zoneLines.rightX) / 2, y: zoneLines.botY + rowH * 0.5 };
+  if (zone === 13) return { x: zoneLines.leftX - colW * 0.5, y: (zoneLines.topY + zoneLines.botY) / 2 };
+  if (zone === 14) return { x: zoneLines.rightX + colW * 0.5, y: (zoneLines.topY + zoneLines.botY) / 2 };
+  return null;
 }
 
 function zoneLineToSVG(szTop: number, szBot: number) {
-  return {
-    topY: pitchToSVG(0, szTop, szTop, szBot).y,
-    botY: pitchToSVG(0, szBot, szTop, szBot).y,
-    leftX: pitchToSVG(ZONE_LEFT, 0).x,
-    rightX: pitchToSVG(ZONE_RIGHT, 0).x,
-  };
-}
-
-/**
- * Generate a heatmap of pitcher location tendency.
- * Pitchers generally target the edges of the zone and avoid the middle.
- * We model this as a probability distribution centered on the corners
- * with lower density in the heart of the plate.
- */
-function generatePitcherHeatmap(szTop: number, szBot: number) {
-  const points: Array<{ x: number; y: number; intensity: number; label: string }> = [];
-  const zone = zoneLineToSVG(szTop, szBot);
-  const zoneW = zone.rightX - zone.leftX;
-  const zoneH = zone.topY - zone.botY;
-  const cx = (zone.leftX + zone.rightX) / 2;
-  const cy = (zone.topY + zone.botY) / 2;
-
-  // Pitcher target zones: 4 corners + 2 edges (up/down)
-  // Intensity decreases with distance from corners
-  const targets = [
-    { fx: 0.15, fy: 0.15, intensity: 0.85, label: "Up & In" },
-    { fx: 0.85, fy: 0.15, intensity: 0.80, label: "Up & Away" },
-    { fx: 0.15, fy: 0.85, intensity: 0.90, label: "Down & In" },
-    { fx: 0.85, fy: 0.85, intensity: 0.88, label: "Down & Away" },
-    { fx: 0.50, fy: 0.90, intensity: 0.65, label: "Low Middle" },
-    { fx: 0.50, fy: 0.10, intensity: 0.55, label: "Up Middle" },
-  ];
-
-  for (const t of targets) {
-    const px = zone.leftX + t.fx * zoneW;
-    const py = zone.topY + t.fy * zoneH;
-    points.push({ x: px, y: py, intensity: t.intensity, label: t.label });
-  }
-  return points;
-}
-
-/**
- * Generate a batter sweet-spot heatmap.
- * Power hitters tend to do damage on pitches in the heart of the zone
- * and slightly down-and-in (where they can extend their arms).
- * We model this using the batter's barrel% and exit velocity.
- */
-function generateBatterSweetSpots(
-  szTop: number,
-  szBot: number,
-  barrelPercent: number,
-  avgExitVelo: number
-) {
-  const points: Array<{ x: number; y: number; intensity: number; label: string }> = [];
-  const zone = zoneLineToSVG(szTop, szBot);
-  const zoneW = zone.rightX - zone.leftX;
-  const zoneH = zone.topY - zone.botY;
-
-  // Base intensity from barrel% (higher barrel% = more dangerous sweet spots)
-  const barrelBoost = Math.min(1.0, barrelPercent / 15);
-  const veloBoost = Math.min(1.0, (avgExitVelo - 85) / 12);
-
-  // Batter sweet spots: heart of zone, down-and-in, middle-middle
-  const spots = [
-    { fx: 0.50, fy: 0.50, intensity: 0.70 + barrelBoost * 0.25, label: "Heart" },
-    { fx: 0.30, fy: 0.65, intensity: 0.60 + barrelBoost * 0.30, label: "Down & In" },
-    { fx: 0.70, fy: 0.40, intensity: 0.50 + barrelBoost * 0.20, label: "Mid Away" },
-    { fx: 0.45, fy: 0.35, intensity: 0.55 + veloBoost * 0.20, label: "Up & In" },
-  ];
-
-  for (const s of spots) {
-    const px = zone.leftX + s.fx * zoneW;
-    const py = zone.topY + s.fy * zoneH;
-    points.push({ x: px, y: py, intensity: Math.min(1.0, s.intensity), label: s.label });
-  }
-  return points;
+  const xRange = 4.0;
+  const leftX = SVG_PADDING + ((ZONE_LEFT + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
+  const rightX = SVG_PADDING + ((ZONE_RIGHT + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
+  const zMax = 5.0;
+  const topY = SVG_SIZE - SVG_PADDING - szTop * ((SVG_SIZE - SVG_PADDING * 2) / zMax);
+  const botY = SVG_SIZE - SVG_PADDING - szBot * ((SVG_SIZE - SVG_PADDING * 2) / zMax);
+  return { topY, botY, leftX, rightX };
 }
 
 export function MatchupStrikeZone({
-  batterStats,
-  pitcherStats,
-  batterSide = "R",
-  className,
+  batterId, batterName, pitcherId, pitcherName, className,
 }: MatchupStrikeZoneProps) {
+  // Fetch REAL batter zone data from Baseball Savant statcast_search
+  const { data: batterZones, isLoading: batterLoading } = useQuery<PlayerZoneData>({
+    queryKey: ["player-zones", batterId, "batter"],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-zones?playerId=${batterId}&type=batter`);
+      if (!res.ok) throw new Error("batter zones fetch failed");
+      return res.json();
+    },
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
+  // Fetch REAL pitcher zone data
+  const { data: pitcherZones, isLoading: pitcherLoading } = useQuery<PlayerZoneData>({
+    queryKey: ["player-zones", pitcherId, "pitcher"],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-zones?playerId=${pitcherId}&type=pitcher`);
+      if (!res.ok) throw new Error("pitcher zones fetch failed");
+      return res.json();
+    },
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
+  const isLoading = batterLoading || pitcherLoading;
   const szTop = SZ_TOP_DEFAULT;
   const szBot = SZ_BOT_DEFAULT;
+  const zoneLines = zoneLineToSVG(szTop, szBot);
+  const zoneW = zoneLines.rightX - zoneLines.leftX;
+  const zoneH = zoneLines.topY - zoneLines.botY;
 
-  const pitcherHeat = useMemo(() => generatePitcherHeatmap(szTop, szBot), [szTop, szBot]);
-  const batterSweet = useMemo(
-    () => generateBatterSweetSpots(szTop, szBot, batterStats.barrelPercent, batterStats.avgExitVelo),
-    [szTop, szBot, batterStats.barrelPercent, batterStats.avgExitVelo]
-  );
+  // Find the batter's hottest zone
+  const hottestBatterZone = useMemo(() => {
+    if (!batterZones) return null;
+    const inZone = batterZones.zones.filter(z => z.zone >= 1 && z.zone <= 9 && z.count > 5);
+    if (inZone.length === 0) return null;
+    return inZone.reduce((a, b) => (a.battingAvg * a.avgExitVelo > b.battingAvg * b.avgExitVelo ? a : b));
+  }, [batterZones]);
 
-  const zone = zoneLineToSVG(szTop, szBot);
-  const zoneW = zone.rightX - zone.leftX;
-  const zoneH = zone.topY - zone.botY;
+  // Find the pitcher's most-targeted zone
+  const topPitcherZone = useMemo(() => {
+    if (!pitcherZones) return null;
+    const all = pitcherZones.zones.filter(z => z.count > 0);
+    if (all.length === 0) return null;
+    return all.reduce((a, b) => (a.count > b.count ? a : b));
+  }, [pitcherZones]);
 
   return (
     <div className={className}>
       <div className="glass rounded-2xl p-4">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-          <Target className="h-4 w-4 text-cobalt" />
-          Matchup Strike Zone
+        <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
+          <Target className="h-4 w-4 text-warning-track" />
+          Real Matchup Zone Data
         </h3>
         <p className="mb-3 text-[11px] text-slate-500">
-          Pitcher location tendency (blue) vs batter sweet spots (red) — where damage happens
+          {batterZones && pitcherZones
+            ? `${batterZones.totalPitches.toLocaleString()} batter pitches · ${pitcherZones.totalPitches.toLocaleString()} pitcher pitches from ${batterZones.season} Statcast`
+            : "Fetching real pitch-by-pitch zone data from Baseball Savant…"
+          }
         </p>
 
-        <div className="flex justify-center">
-          <svg
-            viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
-            className="w-full max-w-[360px] h-auto"
-            role="img"
-            aria-label="Matchup strike zone heatmap"
-          >
-            <defs>
-              <radialGradient id="pitcherHeat" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(77,163,255,0.6)" />
-                <stop offset="60%" stopColor="rgba(77,163,255,0.2)" />
-                <stop offset="100%" stopColor="rgba(77,163,255,0)" />
-              </radialGradient>
-              <radialGradient id="batterHeat" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(255,59,92,0.65)" />
-                <stop offset="60%" stopColor="rgba(255,59,92,0.22)" />
-                <stop offset="100%" stopColor="rgba(255,59,92,0)" />
-              </radialGradient>
-              <filter id="heatBlur">
-                <feGaussianBlur stdDeviation="14" />
-              </filter>
-            </defs>
-
-            {/* Background */}
-            <rect
-              x={SVG_PADDING}
-              y={SVG_PADDING}
-              width={SVG_SIZE - SVG_PADDING * 2}
-              height={SVG_SIZE - SVG_PADDING * 2}
-              fill="rgba(11,15,25,0.5)"
-              stroke="rgba(255,255,255,0.05)"
-              strokeWidth="1"
-              rx="8"
-            />
-
-            {/* Home plate */}
-            <polygon
-              points={`${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 8} ${SVG_SIZE / 2 - 14},${SVG_SIZE - SVG_PADDING - 8} ${SVG_SIZE / 2 - 14},${SVG_SIZE - SVG_PADDING - 24} ${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 32} ${SVG_SIZE / 2 + 14},${SVG_SIZE - SVG_PADDING - 24} ${SVG_SIZE / 2 + 14},${SVG_SIZE - SVG_PADDING - 8}`}
-              fill="rgba(255,255,255,0.04)"
-              stroke="rgba(255,255,255,0.12)"
-              strokeWidth="1"
-            />
-
-            {/* Batter silhouette */}
-            {batterSide === "L" && (
-              <g opacity="0.25" fill="rgba(255,255,255,0.4)">
-                <rect x={zone.leftX - 28} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
-                <circle cx={zone.leftX - 23} cy={zone.botY - 8} r="5" />
-              </g>
-            )}
-            {(batterSide === "R" || !batterSide) && (
-              <g opacity="0.25" fill="rgba(255,255,255,0.4)">
-                <rect x={zone.rightX + 18} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
-                <circle cx={zone.rightX + 23} cy={zone.botY - 8} r="5" />
-              </g>
-            )}
-
-            {/* Strike zone rectangle */}
-            <rect
-              x={zone.leftX}
-              y={zone.topY}
-              width={zoneW}
-              height={zoneH}
-              fill="rgba(255,255,255,0.02)"
-              stroke="rgba(77,163,255,0.4)"
-              strokeWidth="1.5"
-              strokeDasharray="4 3"
-              rx="2"
-            />
-
-            {/* 3x3 sub-zone grid */}
-            {[1, 2].map((i) => (
-              <line
-                key={`v${i}`}
-                x1={zone.leftX + (zoneW / 3) * i}
-                y1={zone.topY}
-                x2={zone.leftX + (zoneW / 3) * i}
-                y2={zone.botY}
-                stroke="rgba(77,163,255,0.10)"
-                strokeWidth="1"
-                strokeDasharray="2 3"
+        {isLoading ? (
+          <div className="flex h-64 items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-warning-track" />
+              <p className="text-xs text-slate-500">Loading {batterLoading ? "batter" : "pitcher"} zone data…</p>
+              <p className="text-[10px] text-slate-600 mt-1">Fetching 25,000+ pitches from Statcast</p>
+            </div>
+          </div>
+        ) : batterZones && pitcherZones ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Batter Hot/Cold Zones */}
+            <div>
+              <div className="mb-2 text-center">
+                <div className="font-scoreboard text-xs uppercase tracking-wide text-cobalt">Batter Hot Zones</div>
+                <div className="text-xs text-slate-400 truncate">{batterName}</div>
+              </div>
+              <ZoneHeatmap
+                zones={batterZones.zones}
+                szTop={szTop}
+                szBot={szBot}
+                mode="batter"
+                highlightZone={hottestBatterZone?.zone}
               />
-            ))}
-            {[1, 2].map((i) => (
-              <line
-                key={`h${i}`}
-                x1={zone.leftX}
-                y1={zone.topY + (zoneH / 3) * i}
-                x2={zone.rightX}
-                y2={zone.topY + (zoneH / 3) * i}
-                stroke="rgba(77,163,255,0.10)"
-                strokeWidth="1"
-                strokeDasharray="2 3"
+            </div>
+
+            {/* Pitcher Location Tendency */}
+            <div>
+              <div className="mb-2 text-center">
+                <div className="font-scoreboard text-xs uppercase tracking-wide text-mint">Pitcher Locations</div>
+                <div className="text-xs text-slate-400 truncate">{pitcherName}</div>
+              </div>
+              <ZoneHeatmap
+                zones={pitcherZones.zones}
+                szTop={szTop}
+                szBot={szBot}
+                mode="pitcher"
+                highlightZone={topPitcherZone?.zone}
               />
-            ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+            Zone data not available for this matchup.
+          </div>
+        )}
 
-            {/* Pitcher heatmap (blue, blurred) */}
-            <g filter="url(#heatBlur)">
-              {pitcherHeat.map((p, i) => (
-                <circle
-                  key={`pitch-${i}`}
-                  cx={p.x}
-                  cy={p.y}
-                  r={28 + p.intensity * 14}
-                  fill="url(#pitcherHeat)"
-                  opacity={p.intensity}
-                />
-              ))}
-            </g>
-
-            {/* Batter sweet spots (red, blurred) */}
-            <g filter="url(#heatBlur)">
-              {batterSweet.map((p, i) => (
-                <circle
-                  key={`batter-${i}`}
-                  cx={p.x}
-                  cy={p.y}
-                  r={24 + p.intensity * 16}
-                  fill="url(#batterHeat)"
-                  opacity={p.intensity}
-                />
-              ))}
-            </g>
-
-            {/* Pitcher target markers (blue dots with ring) */}
-            {pitcherHeat.map((p, i) => (
-              <g key={`pmark-${i}`}>
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={5}
-                  fill="rgba(77,163,255,0.9)"
-                  stroke="rgba(77,163,255,0.3)"
-                  strokeWidth="2"
-                />
-                <text
-                  x={p.x}
-                  y={p.y - 10}
-                  fill="rgba(77,163,255,0.8)"
-                  fontSize="8"
-                  fontFamily="monospace"
-                  textAnchor="middle"
-                >
-                  {p.label}
-                </text>
-              </g>
-            ))}
-
-            {/* Batter sweet spot markers (red dots) */}
-            {batterSweet.map((p, i) => (
-              <g key={`bmark-${i}`}>
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={5}
-                  fill="rgba(255,59,92,0.9)"
-                  stroke="rgba(255,59,92,0.3)"
-                  strokeWidth="2"
-                />
-                {p.intensity > 0.7 && (
-                  <text
-                    x={p.x}
-                    y={p.y - 10}
-                    fill="rgba(255,59,92,0.9)"
-                    fontSize="8"
-                    fontFamily="monospace"
-                    textAnchor="middle"
-                    fontWeight="bold"
-                  >
-                    HOT
-                  </text>
-                )}
-              </g>
-            ))}
-
-            {/* Labels */}
-            <text x={SVG_PADDING} y={SVG_PADDING - 10} fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="monospace">
-              MATCHUP ZONE
-            </text>
-            <text x={SVG_SIZE - SVG_PADDING} y={SVG_PADDING - 10} fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="monospace" textAnchor="end">
-              {batterSide === "L" ? "LHB" : "RHB"}
-            </text>
-          </svg>
-        </div>
+        {/* Overlap analysis */}
+        {batterZones && pitcherZones && hottestBatterZone && topPitcherZone && (
+          <div className="mt-4 rounded-lg border border-chalk bg-midnight/40 p-3">
+            <div className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500 mb-1">Zone Overlap Analysis</div>
+            <p className="text-[11px] leading-relaxed text-slate-300">
+              {analyzeOverlap(hottestBatterZone, topPitcherZone, batterName, pitcherName)}
+            </p>
+          </div>
+        )}
 
         {/* Legend */}
         <div className="mt-3 flex justify-center gap-4 text-[10px]">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-cobalt" />
-            <span className="text-slate-400">Pitcher targets</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-crimson" />
+            <span className="text-slate-400">Hot Zone</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-crimson" />
-            <span className="text-slate-400">Batter sweet spots</span>
+            <span className="h-2.5 w-2.5 rounded-full bg-cobalt" />
+            <span className="text-slate-400">Cold Zone</span>
           </span>
-        </div>
-
-        {/* Matchup analysis */}
-        <div className="mt-3 rounded-lg border border-white/5 bg-white/[0.02] p-2.5">
-          <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">Zone Overlap Analysis</div>
-          <p className="text-[11px] leading-relaxed text-slate-300">
-            {analyzeZoneOverlap(pitcherHeat, batterSweet)}
-          </p>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-warning-track" />
+            <span className="text-slate-400">Primary Target</span>
+          </span>
         </div>
       </div>
     </div>
   );
 }
 
-/** Generate a text analysis of how the pitcher's targets overlap with the batter's sweet spots. */
-function analyzeZoneOverlap(
-  pitcherHeat: Array<{ x: number; y: number; intensity: number; label: string }>,
-  batterSweet: Array<{ x: number; y: number; intensity: number; label: string }>
+/** Zone heatmap SVG showing real zone-level data */
+function ZoneHeatmap({
+  zones, szTop, szBot, mode, highlightZone,
+}: {
+  zones: ZoneData[];
+  szTop: number;
+  szBot: number;
+  mode: "batter" | "pitcher";
+  highlightZone?: number;
+}) {
+  const zoneLines = zoneLineToSVG(szTop, szBot);
+  const zoneW = zoneLines.rightX - zoneLines.leftX;
+  const zoneH = zoneLines.topY - zoneLines.botY;
+  const colW = zoneW / 3;
+  const rowH = zoneH / 3;
+
+  // Find max count for normalization
+  const maxCount = Math.max(...zones.map(z => z.count), 1);
+
+  return (
+    <svg viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`} className="w-full max-w-[280px] h-auto mx-auto">
+      <defs>
+        <linearGradient id={`hot-${mode}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255, 59, 92, 0.6)" />
+          <stop offset="100%" stopColor="rgba(255, 59, 92, 0.2)" />
+        </linearGradient>
+        <linearGradient id={`cold-${mode}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="rgba(77, 163, 255, 0.5)" />
+          <stop offset="100%" stopColor="rgba(77, 163, 255, 0.15)" />
+        </linearGradient>
+      </defs>
+
+      {/* Background */}
+      <rect
+        x={SVG_PADDING}
+        y={SVG_PADDING}
+        width={SVG_SIZE - SVG_PADDING * 2}
+        height={SVG_SIZE - SVG_PADDING * 2}
+        fill="rgba(5, 10, 20, 0.5)"
+        stroke="rgba(248, 249, 250, 0.08)"
+        strokeWidth="1"
+        rx="6"
+      />
+
+      {/* Home plate */}
+      <polygon
+        points={`${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 4} ${SVG_SIZE / 2 - 12},${SVG_SIZE - SVG_PADDING - 4} ${SVG_SIZE / 2 - 12},${SVG_SIZE - SVG_PADDING - 16} ${SVG_SIZE / 2},${SVG_SIZE - SVG_PADDING - 22} ${SVG_SIZE / 2 + 12},${SVG_SIZE - SVG_PADDING - 16} ${SVG_SIZE / 2 + 12},${SVG_SIZE - SVG_PADDING - 4}`}
+        fill="rgba(248, 249, 250, 0.03)"
+        stroke="rgba(248, 249, 250, 0.08)"
+        strokeWidth="1"
+      />
+
+      {/* Strike zone outline */}
+      <rect
+        x={zoneLines.leftX}
+        y={zoneLines.topY}
+        width={zoneW}
+        height={zoneH}
+        fill="none"
+        stroke="rgba(230, 126, 34, 0.35)"
+        strokeWidth="1.5"
+        strokeDasharray="4 3"
+        rx="2"
+      />
+
+      {/* 3x3 grid lines */}
+      {[1, 2].map((i) => (
+        <line
+          key={`v${i}`}
+          x1={zoneLines.leftX + colW * i}
+          y1={zoneLines.topY}
+          x2={zoneLines.leftX + colW * i}
+          y2={zoneLines.botY}
+          stroke="rgba(248, 249, 250, 0.06)"
+          strokeWidth="1"
+        />
+      ))}
+      {[1, 2].map((i) => (
+        <line
+          key={`h${i}`}
+          x1={zoneLines.leftX}
+          y1={zoneLines.topY + rowH * i}
+          x2={zoneLines.rightX}
+          y2={zoneLines.topY + rowH * i}
+          stroke="rgba(248, 249, 250, 0.06)"
+          strokeWidth="1"
+        />
+      ))}
+
+      {/* Zone cells with real data */}
+      {zones.map((zd) => {
+        const pos = zoneToSVG(zd.zone, szTop, szBot);
+        if (!pos) return null;
+
+        // For batter: hot=red, cold=blue, based on BA and EV
+        // For pitcher: show pitch frequency as opacity, highlight primary target
+        let fill = "transparent";
+        let stroke = "transparent";
+        let label = "";
+
+        if (mode === "batter") {
+          if (zd.isHot) {
+            fill = "rgba(255, 59, 92, 0.35)";
+            stroke = "rgba(255, 59, 92, 0.8)";
+            label = "HOT";
+          } else if (zd.isCold) {
+            fill = "rgba(77, 163, 255, 0.25)";
+            stroke = "rgba(77, 163, 255, 0.6)";
+            label = "COLD";
+          } else if (zd.count > 5) {
+            const intensity = zd.battingAvg;
+            fill = `rgba(248, 249, 250, ${intensity * 0.08})`;
+          }
+        } else {
+          // Pitcher mode: show pitch frequency
+          const freq = zd.count / maxCount;
+          if (highlightZone === zd.zone) {
+            fill = "rgba(230, 126, 34, 0.35)";
+            stroke = "rgba(230, 126, 34, 0.8)";
+            label = "TARGET";
+          } else if (freq > 0.1) {
+            fill = `rgba(61, 219, 160, ${freq * 0.25})`;
+          }
+        }
+
+        // Cell dimensions (for zones 1-9)
+        if (zd.zone >= 1 && zd.zone <= 9) {
+          const row = Math.floor((zd.zone - 1) / 3);
+          const col = (zd.zone - 1) % 3;
+          const cellX = zoneLines.leftX + col * colW;
+          const cellY = zoneLines.topY + row * rowH;
+          return (
+            <g key={`zone-${zd.zone}`}>
+              <rect
+                x={cellX + 2}
+                y={cellY + 2}
+                width={colW - 4}
+                height={rowH - 4}
+                fill={fill}
+                stroke={stroke}
+                strokeWidth="1.5"
+                rx="3"
+                className={highlightZone === zd.zone ? "animate-corner-glow" : ""}
+              />
+              {label && (
+                <text
+                  x={cellX + colW / 2}
+                  y={cellY + rowH / 2 + 3}
+                  fill={label === "HOT" ? "rgba(255, 59, 92, 0.9)" : label === "COLD" ? "rgba(77, 163, 255, 0.8)" : "rgba(230, 126, 34, 0.9)"}
+                  fontSize="8"
+                  fontFamily="monospace"
+                  textAnchor="middle"
+                  fontWeight="bold"
+                >
+                  {label}
+                </text>
+              )}
+              {/* Show BA for batter mode, count for pitcher mode */}
+              {zd.count > 5 && !label && mode === "batter" && (
+                <text
+                  x={cellX + colW / 2}
+                  y={cellY + rowH / 2 + 3}
+                  fill="rgba(248, 249, 250, 0.4)"
+                  fontSize="8"
+                  fontFamily="monospace"
+                  textAnchor="middle"
+                >
+                  {zd.battingAvg > 0 ? `. ${Math.round(zd.battingAvg * 1000)}` : ""}
+                </text>
+              )}
+            </g>
+          );
+        }
+
+        // Outside zones (11-14) - show as small circles
+        if (zd.count > 0) {
+          const freq = zd.count / maxCount;
+          return (
+            <circle
+              key={`zone-${zd.zone}`}
+              cx={pos.x}
+              cy={pos.y}
+              r={6 + freq * 8}
+              fill={mode === "pitcher" ? `rgba(61, 219, 160, ${freq * 0.3})` : "rgba(248, 249, 250, 0.05)"}
+              stroke="rgba(248, 249, 250, 0.1)"
+              strokeWidth="1"
+            />
+          );
+        }
+        return null;
+      })}
+
+      {/* Labels */}
+      <text x={SVG_PADDING} y={SVG_PADDING - 10} fill="rgba(248, 249, 250, 0.4)" fontSize="9" fontFamily="monospace">
+        {mode === "batter" ? "BATTER ZONES" : "PITCHER ZONES"}
+      </text>
+    </svg>
+  );
+}
+
+function analyzeOverlap(
+  hotZone: ZoneData,
+  targetZone: ZoneData,
+  batterName: string,
+  pitcherName: string
 ): string {
-  // Find the batter's hottest spot (highest intensity)
-  const hottestBatter = batterSweet.reduce((a, b) => a.intensity > b.intensity ? a : b);
-  // Find the pitcher's most-targeted spot
-  const topPitcher = pitcherHeat.reduce((a, b) => a.intensity > b.intensity ? a : b);
+  // Check if the pitcher's primary target overlaps with the batter's hot zone
+  if (hotZone.zone === targetZone.zone) {
+    return `⚠️ Danger! ${pitcherName}'s primary target (zone ${targetZone.zone}) is ${batterName}'s hottest zone. ${batterName} hits .${Math.round(hotZone.battingAvg * 1000)} there with ${hotZone.avgExitVelo.toFixed(0)} mph avg exit velocity. Expect damage if the pitcher misses his spot.`;
+  }
 
-  // Calculate distance between them
-  const dx = hottestBatter.x - topPitcher.x;
-  const dy = hottestBatter.y - topPitcher.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
+  // Check proximity (adjacent zones)
+  const hotRow = Math.floor((hotZone.zone - 1) / 3);
+  const hotCol = (hotZone.zone - 1) % 3;
+  const targetRow = Math.floor((targetZone.zone - 1) / 3);
+  const targetCol = (targetZone.zone - 1) % 3;
+  const dist = Math.abs(hotRow - targetRow) + Math.abs(hotCol - targetCol);
 
-  if (dist < 50) {
-    return `⚠️ Danger zone: The pitcher's favorite location (${topPitcher.label}) overlaps with the batter's hottest sweet spot (${hottestBatter.label}). Expect hard contact if the pitcher misses his spot.`;
-  } else if (dist < 100) {
-    return `The pitcher targets ${topPitcher.label} while the batter does damage on ${hottestBatter.label}. There's some overlap — the batter can still do damage on mistakes.`;
+  if (dist <= 1) {
+    return `⚠️ Close call: ${pitcherName} targets zone ${targetZone.zone}, which is adjacent to ${batterName}'s hot zone (${hotZone.zone}). The batter does .${Math.round(hotZone.battingAvg * 1000)} damage in his hot zone — one missed location could mean trouble.`;
   } else {
-    return `✅ Smart targeting: The pitcher avoids the batter's sweet spot (${hottestBatter.label}) by living on the ${topPitcher.label}. Good game plan to suppress damage.`;
+    return `✅ Smart game plan: ${pitcherName} primarily targets zone ${targetZone.zone}, avoiding ${batterName}'s hottest zone (${hotZone.zone}) where he hits .${Math.round(hotZone.battingAvg * 1000)} with ${hotZone.avgExitVelo.toFixed(0)} mph EV. Good pitch sequencing.`;
   }
 }

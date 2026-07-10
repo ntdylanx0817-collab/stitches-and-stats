@@ -463,21 +463,12 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
         </div>
       </div>
 
-      {/* Matchup Strike Zone */}
+      {/* Matchup Strike Zone — uses REAL statcast zone data */}
       <MatchupStrikeZone
-        batterStats={{
-          avgExitVelo: result.batterStats.avgExitVelo,
-          barrelPercent: result.batterStats.barrelPercent,
-          hardHitPercent: result.batterStats.hardHitPercent,
-          battingAvg: result.batterStats.battingAvg,
-          slg: result.batterStats.slg,
-        }}
-        pitcherStats={{
-          avgExitVelo: result.pitcherStats.avgExitVelo,
-          barrelPercent: result.pitcherStats.barrelPercent,
-          hardHitPercent: result.pitcherStats.hardHitPercent,
-          avg: result.pitcherStats.avg,
-        }}
+        batterId={result.batterId}
+        batterName={result.batterName}
+        pitcherId={result.pitcherId}
+        pitcherName={result.pitcherName}
       />
 
       {/* Rerun button */}

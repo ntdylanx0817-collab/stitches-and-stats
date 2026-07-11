@@ -24,7 +24,10 @@ import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton 
 interface ScheduleGame {
   gamePk: number;
   gameDate: string;
-  status: { abstractGameState: string; detailedState: string; statusCode: string };
+  gameDay?: string;
+  gameNumber?: number;
+  doubleHeader?: string;
+  status: { abstractGameState: string; detailedState: string; statusCode: string; reason?: string };
   venue?: { name: string };
   away: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
   home: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
@@ -132,7 +135,7 @@ export function LiveFeedView() {
                 const isDelayed = g.status?.detailedState?.includes("Delayed") || g.status?.detailedState?.includes("Postponed");
                 return (
                   <button
-                    key={g.gamePk}
+                    key={`${g.gamePk}-${g.gameDay}-${g.status.abstractGameState}`}
                     onClick={() => setSelectedGame(g.gamePk)}
                     className={cn(
                       "hover-lift relative flex min-w-[190px] shrink-0 flex-col gap-1 rounded-xl border p-2.5 text-left transition-all",
@@ -153,7 +156,10 @@ export function LiveFeedView() {
                         {isLive && <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
                         {isLive ? "LIVE" : isFinal ? "FINAL" : isDelayed ? "DELAYED" : startTime}
                       </span>
-                      <span className="text-slate-600 text-[8px]">{g.venue?.name?.split(" ").pop()}</span>
+                      <span className="text-slate-600 text-[8px]">
+                        {g.venue?.name?.split(" ").pop()}
+                        {g.doubleHeader === "Y" && g.gameNumber && g.gameNumber > 1 ? ` · G${g.gameNumber}` : ""}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-scoreboard font-semibold text-slate-200 truncate">{g.away.abbreviation ?? g.away.name}</span>

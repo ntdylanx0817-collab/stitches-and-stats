@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
       gamePk: g.gamePk,
       gameDate: g.gameDate,
       gameDay: day,
+      gameNumber: g.gameNumber || 1,
+      doubleHeader: g.doubleHeader || "N",
       status: g.status,
       gameType: g.gameType,
       dayNight: g.dayNight,

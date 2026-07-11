@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StrikeZone } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
 import { LineupChanges } from "@/components/lineup-changes";
+import { WinProbabilityChart } from "@/components/win-probability-chart";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -500,9 +501,10 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      {/* Left column: Score + Strike Zone + Lineup */}
+      {/* Left column: Score + Lineup + Win Prob + Strike Zone */}
       <div className="lg:col-span-4 space-y-4">
         <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
+        <WinProbabilityChart gamePk={gamePk} />
         <LineupChanges gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">

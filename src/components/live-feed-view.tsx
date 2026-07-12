@@ -15,6 +15,7 @@ import { StrikeZone } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
 import { LineupChanges } from "@/components/lineup-changes";
 import { WinProbabilityChart } from "@/components/win-probability-chart";
+import { HeroScoreboard } from "@/components/hero-scoreboard";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -507,9 +508,25 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      {/* Left column: Score + Lineup + Win Prob + Strike Zone */}
+      {/* Left column: Hero Scoreboard + Win Prob + Lineup + Strike Zone */}
       <div className="lg:col-span-4 space-y-4">
-        <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
+        {teams?.away?.id && teams?.home?.id ? (
+          <HeroScoreboard
+            gamePk={gamePk}
+            awayTeamId={teams.away.id}
+            homeTeamId={teams.home.id}
+            awayAbbr={teams.away.abbreviation ?? teams.away.name}
+            homeAbbr={teams.home.abbreviation ?? teams.home.name}
+            awayName={teams.away.name}
+            homeName={teams.home.name}
+            awayScore={linescore?.teams?.away?.runs ?? 0}
+            homeScore={linescore?.teams?.home?.runs ?? 0}
+            status={status}
+            linescore={linescore}
+          />
+        ) : (
+          <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
+        )}
         <WinProbabilityChart gamePk={gamePk} />
         <LineupChanges gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">

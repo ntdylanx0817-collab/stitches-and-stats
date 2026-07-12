@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Radio } from "lucide-react";
+import { useAnimatedValue } from "@/components/animated-counter";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 
@@ -154,7 +155,7 @@ export function HeroScoreboard({
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="font-scoreboard text-5xl sm:text-6xl font-black num text-chalk leading-none mt-1 sm:mt-0"
             >
-              {awayScore ?? 0}
+              <AnimatedScoreDisplay value={awayScore ?? 0} />
             </motion.div>
           </div>
 
@@ -181,7 +182,7 @@ export function HeroScoreboard({
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="font-scoreboard text-5xl sm:text-6xl font-black num text-chalk leading-none mb-1 sm:mb-0"
             >
-              {homeScore ?? 0}
+              <AnimatedScoreDisplay value={homeScore ?? 0} />
             </motion.div>
             <div className="text-center sm:text-left">
               <div
@@ -286,4 +287,10 @@ function BaseRunnerDiamond({ outs, balls, strikes }: { outs: number; balls: numb
       </div>
     </div>
   );
+}
+
+/** Score display that animates counting up */
+function AnimatedScoreDisplay({ value }: { value: number }) {
+  const display = useAnimatedValue(value, 0, 0.6);
+  return <>{display}</>;
 }

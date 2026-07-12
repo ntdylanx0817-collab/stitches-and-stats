@@ -16,6 +16,7 @@ import { PitchLogEntry } from "@/components/pitch-log-entry";
 import { LineupChanges } from "@/components/lineup-changes";
 import { WinProbabilityChart } from "@/components/win-probability-chart";
 import { HeroScoreboard } from "@/components/hero-scoreboard";
+import { StickyMiniScoreboard } from "@/components/sticky-mini-scoreboard";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -507,6 +508,25 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   }, [latestPitch]);
 
   return (
+    <div>
+      {/* Sticky mini-scoreboard (appears on scroll) */}
+      {teams?.away?.id && teams?.home?.id && (
+        <StickyMiniScoreboard
+          awayAbbr={teams.away.abbreviation ?? teams.away.name}
+          homeAbbr={teams.home.abbreviation ?? teams.home.name}
+          awayTeamId={teams.away.id}
+          homeTeamId={teams.home.id}
+          awayScore={linescore?.teams?.away?.runs ?? 0}
+          homeScore={linescore?.teams?.home?.runs ?? 0}
+          inning={status?.inning ?? 0}
+          inningState={status?.inningState ?? ""}
+          isLive={status?.abstractGameState === "Live"}
+          isFinal={status?.abstractGameState === "Final"}
+          outs={linescore?.outs ?? 0}
+          balls={linescore?.balls ?? 0}
+          strikes={linescore?.strikes ?? 0}
+        />
+      )}
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
       {/* Left column: Hero Scoreboard + Win Prob + Lineup + Strike Zone */}
       <div className="lg:col-span-4 space-y-4">
@@ -745,6 +765,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -30,6 +30,9 @@ export interface WinProbData {
   maxHomeWinProb: number;
   minHomeWinProb: number;
   largestShift: { playIndex: number; shift: number; event: string };
+  h2hInsight?: string;
+  preGameHomeWP?: number;
+  isPreGame?: boolean;
 }
 
 /**
@@ -129,13 +132,58 @@ export async function GET(req: NextRequest) {
     const allPlays = feed.liveData?.plays?.allPlays ?? [];
     const awayTeam = feed.gameData?.teams?.away?.name ?? "Away";
     const homeTeam = feed.gameData?.teams?.home?.name ?? "Home";
+    const awayTeamId = feed.gameData?.teams?.away?.id ?? 0;
+    const homeTeamId = feed.gameData?.teams?.home?.id ?? 0;
+
+    // Fetch H2H data for pre-game prediction (last 6 games between teams)
+    let h2hAdjustment = 0;
+    let h2hInsight = "";
+    let preGameHomeWP = 54; // Default home advantage
+
+    try {
+      const h2hUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${awayTeamId}&opponentId=${homeTeamId}&season=${new Date().getFullYear()}&gameType=R`;
+      // Use our own H2H API
+      const h2hRes = await fetch(`${req.nextUrl.origin}/api/h2h?team1Id=${awayTeamId}&team2Id=${homeTeamId}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (h2hRes.ok) {
+        const h2hData = await h2hRes.json();
+        if (h2hData.recentGames && h2hData.recentGames.length > 0) {
+          // H2H adjustment: away team's win prob vs home team
+          // preGameWinProb is from away team's perspective
+          const awayPreGameWP = h2hData.preGameWinProb;
+          h2hAdjustment = (awayPreGameWP - 50) * 0.3; // Scale down H2H effect
+          preGameHomeWP = 54 - h2hAdjustment;
+          preGameHomeWP = Math.max(20, Math.min(80, preGameHomeWP));
+          h2hInsight = h2hData.insight;
+        }
+      }
+    } catch {}
 
     const points: WinProbPoint[] = [];
-    let maxHomeWP = 50;
-    let minHomeWP = 50;
+    let maxHomeWP = preGameHomeWP;
+    let minHomeWP = preGameHomeWP;
     let largestShift = { playIndex: 0, shift: 0, event: "" };
 
-    let prevHomeWP = 50;
+    let prevHomeWP = preGameHomeWP;
+
+    // If no plays yet (preview game), return pre-game prediction
+    if (allPlays.length === 0) {
+      return {
+        gamePk,
+        awayTeam,
+        homeTeam,
+        points: [],
+        currentHomeWinProb: preGameHomeWP,
+        currentAwayWinProb: 100 - preGameHomeWP,
+        maxHomeWinProb: preGameHomeWP,
+        minHomeWinProb: preGameHomeWP,
+        largestShift: { playIndex: 0, shift: 0, event: "" },
+        h2hInsight: h2hInsight || undefined,
+        preGameHomeWP,
+        isPreGame: true,
+      };
+    }
 
     for (let i = 0; i < allPlays.length; i++) {
       const play = allPlays[i];
@@ -195,6 +243,8 @@ export async function GET(req: NextRequest) {
       maxHomeWinProb: maxHomeWP,
       minHomeWinProb: minHomeWP,
       largestShift,
+      h2hInsight: h2hInsight || undefined,
+      preGameHomeWP,
     } as WinProbData;
   });
 

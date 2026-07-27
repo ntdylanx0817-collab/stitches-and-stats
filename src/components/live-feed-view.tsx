@@ -19,6 +19,8 @@ import { HeroScoreboard } from "@/components/hero-scoreboard";
 import { StickyMiniScoreboard } from "@/components/sticky-mini-scoreboard";
 import { LiveGameThread } from "@/components/live-game-thread";
 import { WPALeaderboard } from "@/components/wpa-leaderboard";
+import { StreakTracker } from "@/components/streak-tracker";
+import { BullpenStatus } from "@/components/bullpen-status";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -551,6 +553,9 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         )}
         <WinProbabilityChart gamePk={gamePk} />
         <LineupChanges gamePk={gamePk} />
+        <StreakTracker />
+        {teams?.away?.id && <BullpenStatus teamId={teams.away.id} teamName={teams.away.abbreviation ?? teams.away.name} />}
+        {teams?.home?.id && <BullpenStatus teamId={teams.home.id} teamName={teams.home.abbreviation ?? teams.home.name} />}
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white">

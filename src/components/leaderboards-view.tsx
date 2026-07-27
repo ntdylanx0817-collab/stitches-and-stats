@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
+import { LeaderboardChart } from "@/components/leaderboard-chart";
 
 type SortDir = "asc" | "desc" | null;
 interface ColDef {
@@ -340,6 +341,11 @@ export function LeaderboardsView() {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard Chart (top 10 visualization) */}
+      {!isLoading && !error && rows.length > 0 && sortKey && sortDir && (
+        <LeaderboardChart rows={rows} sortKey={sortKey} sortDir={sortDir} isBatter={lbType === "batter"} />
+      )}
 
       {/* Table */}
       <div className="glass rounded-2xl overflow-hidden">

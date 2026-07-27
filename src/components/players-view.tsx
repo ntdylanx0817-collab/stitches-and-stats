@@ -24,6 +24,7 @@ import { GameLog } from "@/components/game-log";
 import { LeagueRanks } from "@/components/league-ranks";
 import { PitchMovement } from "@/components/pitch-movement";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { ExpectedVsActual } from "@/components/expected-vs-actual";
 
 interface FullPlayerData {
   player: {
@@ -271,6 +272,9 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
               </div>
             )}
           </div>
+
+          {/* Expected vs Actual */}
+          {isBatter && stats && <ExpectedVsActual stats={stats} />}
 
           {/* Season Stats */}
           {stats && (

@@ -9,6 +9,7 @@ import { NewsView } from "@/components/news-view";
 import { SimulatorView } from "@/components/simulator-view";
 import { CompareView } from "@/components/compare-view";
 import { HomeRunDerby } from "@/components/home-run-derby";
+import { DerbyTab } from "@/components/fastest-pitches";
 import { StandingsView } from "@/components/standings-view";
 import { TeamProfileView } from "@/components/team-profile-view";
 import { useSavantStore } from "@/lib/store";
@@ -33,11 +34,7 @@ export default function Home() {
             style={{ transformOrigin: "top center", perspective: 1000 }}
           >
             {view === "live" && <LiveFeedView />}
-            {view === "derby" && (
-              <div className="mx-auto max-w-[800px] px-4 py-5 sm:px-6">
-                <HomeRunDerby />
-              </div>
-            )}
+            {view === "derby" && <DerbyTab />}
             {view === "standings" && <StandingsView />}
             {view === "team" && selectedTeamId && (
               <TeamProfileView teamId={selectedTeamId} onClose={() => setView("standings")} />

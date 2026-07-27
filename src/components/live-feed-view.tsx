@@ -17,6 +17,8 @@ import { LineupChanges } from "@/components/lineup-changes";
 import { WinProbabilityChart } from "@/components/win-probability-chart";
 import { HeroScoreboard } from "@/components/hero-scoreboard";
 import { StickyMiniScoreboard } from "@/components/sticky-mini-scoreboard";
+import { LiveGameThread } from "@/components/live-game-thread";
+import { WPALeaderboard } from "@/components/wpa-leaderboard";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -669,8 +671,10 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         </div>
       </div>
 
-      {/* Right column: Latest pitch metrics + pitch mix */}
+      {/* Right column: WPA + Latest pitch metrics + pitch mix + Game Thread */}
       <div className="lg:col-span-4 space-y-4">
+        <WPALeaderboard gamePk={gamePk} />
+        <LiveGameThread gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white">

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Loader2, Radio, ChevronDown, X, Activity } from "lucide-react";
 import { useAnimatedValue } from "@/components/animated-counter";
 import { CountdownTimer } from "@/components/countdown-timer";
+import { OnBaseTrail } from "@/components/on-base-trail";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 
@@ -170,7 +171,12 @@ export function HeroScoreboard({
           <div className="flex flex-col items-center gap-2">
             <div className="font-scoreboard text-xs text-slate-600">VS</div>
             {state === "Live" ? (
-              <BaseRunnerDiamond outs={outs} balls={balls} strikes={strikes} />
+              <OnBaseTrail
+                gamePk={gamePk}
+                awayTeamColor={awayColor.primary === "#000000" || awayColor.primary === "#27251F" ? "#4DA3FF" : awayColor.primary}
+                homeTeamColor={homeColor.primary === "#000000" || homeColor.primary === "#27251F" ? "#3DDBA0" : homeColor.primary}
+                isTopInning={true}
+              />
             ) : odds ? (
               <div className="flex flex-col items-center gap-1 py-1">
                 <div className="font-scoreboard text-[9px] uppercase text-slate-500">Proj Total</div>

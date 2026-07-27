@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame } from "lucide-react";
+import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
   { key: "live", label: "Live", icon: Activity },
   { key: "derby", label: "Derby", icon: Flame },
+  { key: "standings", label: "Standings", icon: Trophy },
   { key: "players", label: "Players", icon: User },
   { key: "leaderboard", label: "Stats", icon: BarChart3 },
   { key: "compare", label: "Compare", icon: GitCompare },

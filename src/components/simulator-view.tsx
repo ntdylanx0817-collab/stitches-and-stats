@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 
 interface PlayerOption {
@@ -304,12 +305,7 @@ function PlayerSelector({
       {selectedPlayer ? (
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-              icon === "bat" ? "bg-gradient-to-br from-cobalt/30 to-crimson/20" : "bg-gradient-to-br from-mint/30 to-cobalt/20"
-            )}>
-              {selectedPlayer.player_name?.split(",").map((s) => s.trim()[0] ?? "").join("").slice(0, 2)}
-            </div>
+            <PlayerAvatar playerId={selectedPlayer.player_id} size={48} fallbackText={selectedPlayer.player_name} className="rounded-full" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold text-white">{selectedPlayer.player_name}</div>
               <div className="mt-1 flex flex-wrap gap-2 text-[10px]">

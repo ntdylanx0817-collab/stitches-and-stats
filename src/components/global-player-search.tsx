@@ -7,6 +7,7 @@ import { Search, X, Loader2, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useSavantStore } from "@/lib/store";
+import { PlayerAvatar } from "@/components/player-avatar";
 
 interface PlayerSearchResult {
   id: number;
@@ -119,9 +120,7 @@ export function GlobalPlayerSearch() {
                     i === activeIdx ? "bg-cobalt/15 text-white" : "hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-xs font-bold text-white">
-                    {p.primaryPosition ?? "—"}
-                  </div>
+                  <PlayerAvatar playerId={p.id} size={36} fallbackText={p.fullName} className="rounded-full" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-white">
                       {p.fullName}

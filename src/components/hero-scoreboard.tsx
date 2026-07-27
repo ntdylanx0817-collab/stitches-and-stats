@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Loader2, Radio, ChevronDown, X, Activity } from "lucide-react";
 import { useAnimatedValue } from "@/components/animated-counter";
+import { CountdownTimer } from "@/components/countdown-timer";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 
@@ -131,7 +132,7 @@ export function HeroScoreboard({
               <span className="font-scoreboard rounded-md bg-slate-700/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">FINAL</span>
             )}
             {state === "Preview" && startTime && (
-              <span className="font-scoreboard rounded-md bg-warning-track/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning-track">{startTime}</span>
+              <CountdownTimer gameDate={gameDate || new Date().toISOString()} className="rounded-md bg-warning-track/15 px-2 py-0.5" />
             )}
           </div>
           {isInning && (

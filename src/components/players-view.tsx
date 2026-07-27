@@ -23,6 +23,7 @@ import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 import { GameLog } from "@/components/game-log";
 import { LeagueRanks } from "@/components/league-ranks";
 import { PitchMovement } from "@/components/pitch-movement";
+import { PlayerAvatar } from "@/components/player-avatar";
 
 interface FullPlayerData {
   player: {
@@ -172,8 +173,8 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
       <div className="card-broadcast rounded-2xl p-5 mb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-warning-track/25 to-crimson/15 text-2xl font-bold text-chalk font-scoreboard">
-              {(p.fullName?.split(" ").map((n) => n[0]).slice(0, 2).join("") ?? "—")}
+            <div className="relative">
+              <PlayerAvatar playerId={p.id} size={80} fallbackText={p.fullName} className="rounded-xl" />
               {p.primaryNumber && (
                 <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-midnight text-xs font-bold text-warning-track border border-warning-track/40">
                   {p.primaryNumber}

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton, EmptyState, ErrorState } from "@/components/loading-states";
 import { SprayChart } from "@/components/spray-chart";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 
 interface PlayerRow {
@@ -169,12 +170,7 @@ function PlayerSearchPanel({
       {playerData?.player ? (
         <div className="rounded-lg border border-chalk bg-midnight/40 p-4">
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-xl font-bold text-chalk font-scoreboard"
-              style={{ background: `linear-gradient(135deg, ${accentColor}30, ${accentColor}15)` }}
-            >
-              {playerData.player.fullName?.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-            </div>
+            <PlayerAvatar playerId={playerData.player.id} size={64} fallbackText={playerData.player.fullName} className="rounded-lg" />
             <div className="min-w-0 flex-1">
               <div className="font-scoreboard text-lg font-bold text-chalk truncate">
                 {playerData.player.fullName}

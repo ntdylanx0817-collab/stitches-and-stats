@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby";
+export type ViewKey = "live" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
 
 interface SelectedPlayer {
   id: number;
@@ -19,6 +19,9 @@ interface SavantState {
 
   selectedPlayer: SelectedPlayer | null;
   setSelectedPlayer: (p: SelectedPlayer | null) => void;
+
+  selectedTeamId: number | null;
+  setSelectedTeamId: (id: number | null) => void;
 
   // leaderboard filters
   lbType: "batter" | "pitcher";
@@ -44,6 +47,9 @@ export const useSavantStore = create<SavantState>((set) => ({
 
   selectedPlayer: null,
   setSelectedPlayer: (selectedPlayer) => set({ selectedPlayer }),
+
+  selectedTeamId: null,
+  setSelectedTeamId: (selectedTeamId) => set({ selectedTeamId }),
 
   lbType: "batter",
   setLbType: (lbType) => set({ lbType }),

@@ -9,11 +9,15 @@ import { NewsView } from "@/components/news-view";
 import { SimulatorView } from "@/components/simulator-view";
 import { CompareView } from "@/components/compare-view";
 import { HomeRunDerby } from "@/components/home-run-derby";
+import { StandingsView } from "@/components/standings-view";
+import { TeamProfileView } from "@/components/team-profile-view";
 import { useSavantStore } from "@/lib/store";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
   const view = useSavantStore((s) => s.view);
+  const selectedTeamId = useSavantStore((s) => s.selectedTeamId);
+  const setView = useSavantStore((s) => s.setView);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -33,6 +37,10 @@ export default function Home() {
               <div className="mx-auto max-w-[800px] px-4 py-5 sm:px-6">
                 <HomeRunDerby />
               </div>
+            )}
+            {view === "standings" && <StandingsView />}
+            {view === "team" && selectedTeamId && (
+              <TeamProfileView teamId={selectedTeamId} onClose={() => setView("standings")} />
             )}
             {view === "players" && <PlayersView />}
             {view === "leaderboard" && <LeaderboardsView />}

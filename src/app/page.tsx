@@ -15,6 +15,7 @@ import { TeamProfileView } from "@/components/team-profile-view";
 import { useSavantStore } from "@/lib/store";
 import { Footer } from "@/components/footer";
 import { FunFactBanner } from "@/components/fun-fact-banner";
+import { ScoreTicker } from "@/components/score-ticker";
 
 export default function Home() {
   const view = useSavantStore((s) => s.view);
@@ -50,6 +51,8 @@ export default function Home() {
         </AnimatePresence>
       </main>
       <Footer />
+      <ScoreTicker />
     </div>
   );
 }
+

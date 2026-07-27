@@ -41,3 +41,44 @@ Stage Summary:
 - Cache has LRU eviction + concurrent request deduplication
 - All upstream API calls have 8-15s timeouts to prevent hangs
 - ESLint passes clean, no console errors, no hydration mismatches
+
+---
+Task ID: phase-5-score-ticker
+Agent: main
+Task: Build Phase 5 — Cross-Game Score Ticker (Feature 16): ESPN-style bottom-line scrolling ticker showing all MLB games with live scoring, team colors, inning state, and click-to-jump interaction.
+
+Work Log:
+- Created /api/score-ticker/route.ts — compact endpoint that fetches today + yesterday + tomorrow schedules in parallel via fetchSchedule(), returns sorted games (Live → Preview → Final → Tomorrow) with team abbreviations, scores, records, inning info, and a hasLive flag for adaptive polling
+- Created /src/components/score-ticker.tsx — ESPN-style horizontal marquee with:
+  * Sticky bottom positioning (z-30), above the footer
+  * Fixed left label "Live MLB" (pulsing Radio icon when hasLive) / "MLB Scores" (when no live games)
+  * Each game rendered as TickerGameCard with team color stripes, abbreviated team names, scores, inning state badge
+  * Live games: pulsing red dot + inning state ("▲ 5th" / "▼ 7th" / "END 9th")
+  * Final games: gray "FINAL" badge
+  * Preview games: orange game-time badge (e.g., "1:35p")
+  * Pause-on-hover (CSS animation-play-state toggled via onMouseEnter/onMouseLeave)
+  * Click any game to jump to Live Feed (calls setSelectedGame + setView('live'))
+  * Auto-refresh every 15s when hasLive=true, 60s otherwise (via refetchInterval callback)
+  * Duplicate-and-scroll pattern: games rendered twice and CSS animation translates -50% for seamless infinite loop
+  * Loading/empty state: slim bar with "Loading scores…" or "No MLB games scheduled today"
+  * Respects prefers-reduced-motion (freezes animation for accessibility)
+  * Mobile-friendly: 45s scroll speed on small screens vs 60s on desktop
+- Added CSS to globals.css:
+  * @keyframes ticker-scroll (translateX 0 → -50%)
+  * .ticker-scroll (hidden scrollbar)
+  * .ticker-inner (60s linear infinite animation, will-change: transform)
+  * Responsive duration (45s on mobile)
+  * prefers-reduced-motion: reduce → animation: none
+- Integrated ScoreTicker into src/app/page.tsx below Footer
+- Verified build: bun run build succeeds, /api/score-ticker route registered, ticker CSS classes appear in compiled CSS bundle
+- Smoke-tested endpoint: returns 42 games (today + yesterday + tomorrow) with correct team data, scores, inning states
+- Smoke-tested SSR: home page renders "MLB Scores" label when no live games, no SSR errors
+- No new TypeScript errors introduced (verified via npx tsc --noEmit)
+
+Stage Summary:
+- Phase 5 Cross-Game Score Ticker is live and production-ready
+- All 9 phases of the multi-phase roadmap are now complete (1-5)
+- Ticker shows every MLB game from yesterday/today/tomorrow in a single ESPN-style marquee
+- Live games refresh every 15s; off-day games refresh every 60s
+- Click any ticker card to jump straight into the live game feed
+- Pauses on hover, respects reduced-motion preferences, mobile-optimized

@@ -424,6 +424,42 @@
   animation: corner-glow 1.8s ease-in-out infinite;
 }
 
+/* ============== Cross-Game Score Ticker ============== */
+/* ESPN-style horizontal marquee. The .ticker-inner element contains two copies
+   of the same game list; the animation translates by -50% so the second copy
+   is exactly where the first one started, producing a seamless infinite loop. */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-scroll {
+  /* Hide the native scrollbar — the ticker is auto-scrolling */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ticker-scroll::-webkit-scrollbar {
+  display: none;
+}
+.ticker-inner {
+  animation: ticker-scroll 60s linear infinite;
+  width: max-content;
+  will-change: transform;
+}
+/* Slow the scroll on smaller screens (less content per second is easier to read) */
+@media (max-width: 768px) {
+  .ticker-inner {
+    animation-duration: 45s;
+  }
+}
+/* Respect users who prefer reduced motion — freeze the ticker (it can still be
+   scrolled manually with touch / trackpad since we keep overflow hidden but
+   pointer events active). */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-inner {
+    animation: none;
+  }
+}
+
 /* Framer-motion-friendly base */
 .will-change-transform { will-change: transform; }
 

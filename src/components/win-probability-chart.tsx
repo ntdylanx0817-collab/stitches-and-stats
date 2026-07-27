@@ -27,6 +27,11 @@ interface WinProbData {
   maxHomeWinProb: number;
   minHomeWinProb: number;
   largestShift: { playIndex: number; shift: number; event: string };
+  // Pre-game / H2H prediction fields (returned by the API for preview games
+  // and games that haven't recorded any plays yet).
+  h2hInsight?: string;
+  preGameHomeWP?: number;
+  isPreGame?: boolean;
 }
 
 const CHART_W = 800;
@@ -135,7 +140,73 @@ export function WinProbabilityChart({ gamePk }: { gamePk: number }) {
 
   const points = data.points;
   const totalPlays = points.length;
-  if (totalPlays < 2) return null;
+  // If we have only 0-1 plays, fall back to the pre-game prediction view
+  // (which is rendered above for the empty case). This covers the live-game
+  // edge case where the game has just started and only one play has been
+  // recorded — the user still sees the H2H-based prediction instead of nothing.
+  if (totalPlays < 2) {
+    const homeWP = data.currentHomeWinProb ?? data.preGameHomeWP ?? 54;
+    const awayWP = 100 - homeWP;
+    const homeLeading = homeWP > 50;
+    return (
+      <div className="card-broadcast rounded-2xl p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
+            <TrendingUp className="h-4 w-4 text-warning-track" />
+            {data.isPreGame ? "Pre-Game Prediction" : "Early Game"}
+          </h3>
+          <span className="font-scoreboard text-[9px] uppercase tracking-wide text-warning-track bg-warning-track/10 px-2 py-0.5 rounded-md">
+            {totalPlays === 0 ? "Waiting for first pitch" : `${totalPlays} play so far`}
+          </span>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className={cn("font-scoreboard text-sm font-bold", homeLeading ? "text-mint" : "text-slate-400")}>
+                {data.homeTeam.split(" ").slice(-1)[0]}
+              </span>
+              <span className={cn("font-scoreboard text-2xl font-black num", homeLeading ? "text-mint" : "text-slate-400")}>
+                {homeWP.toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-midnight">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${homeWP}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="h-full rounded-full bg-mint"
+                style={{ boxShadow: "0 0 8px rgba(61, 219, 160, 0.4)" }}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className={cn("font-scoreboard text-sm font-bold", !homeLeading ? "text-crimson" : "text-slate-400")}>
+                {data.awayTeam.split(" ").slice(-1)[0]}
+              </span>
+              <span className={cn("font-scoreboard text-2xl font-black num", !homeLeading ? "text-crimson" : "text-slate-400")}>
+                {awayWP.toFixed(0)}%
+              </span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-midnight">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${awayWP}%` }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                className="h-full rounded-full bg-crimson"
+                style={{ boxShadow: "0 0 8px rgba(255, 59, 92, 0.4)" }}
+              />
+            </div>
+          </div>
+        </div>
+        {data.h2hInsight && (
+          <div className="mt-3 rounded-lg border border-warning-track/20 bg-warning-track/5 p-2.5">
+            <p className="text-[11px] leading-relaxed text-slate-300">{data.h2hInsight}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Build SVG path for the win probability line
   const chartW = Math.min(CHART_W, totalPlays * 4 + CHART_PAD * 2);

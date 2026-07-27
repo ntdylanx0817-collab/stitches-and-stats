@@ -245,6 +245,7 @@ export async function GET(req: NextRequest) {
       largestShift,
       h2hInsight: h2hInsight || undefined,
       preGameHomeWP,
+      isPreGame: false,
     } as WinProbData;
   });
 

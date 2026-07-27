@@ -82,3 +82,37 @@ Stage Summary:
 - Live games refresh every 15s; off-day games refresh every 60s
 - Click any ticker card to jump straight into the live game feed
 - Pauses on hover, respects reduced-motion preferences, mobile-optimized
+
+---
+Task ID: phase-5-fixes
+Agent: main
+Task: Three user-reported bugs: (1) slow down the score ticker, (2) win probability sometimes doesn't show up for all games, (3) play-by-play function doesn't work for the selected game's score area.
+
+Work Log:
+- Investigated all three bugs via a thorough Explore subagent (no code changes during investigation)
+- BUG 1 — Ticker too fast: Updated /src/app/globals.css to slow the .ticker-inner animation from 60s → 120s on desktop and 45s → 90s on mobile. Kept the pause-on-hover and prefers-reduced-motion behaviors intact.
+- BUG 2 — Win probability not showing for some games: Root cause was the chart component's `if (totalPlays < 2) return null;` guard — any live game with exactly ONE play (game just started) fell through both the pre-game check (which required `points.length === 0`) and this guard, rendering nothing. Fixed in /src/components/win-probability-chart.tsx:
+  * Added the missing optional fields (h2hInsight?, preGameHomeWP?, isPreGame?) to the local WinProbData interface — this resolves the 4 pre-existing TS errors
+  * Replaced the silent `return null` with a full pre-game/early-game prediction render for the 0-1 plays case, including H2H insight
+  * Added a small badge showing "Waiting for first pitch" or "N plays so far"
+  * Updated /src/app/api/win-probability/route.ts to explicitly set `isPreGame: false` on the live/final branch so the field is always present in the response
+- BUG 3 — Play-by-play not working on selected game's score area: Root cause was that the StickyMiniScoreboard (which is what the user sees pinned at the top after scrolling past 400px) had NO click handler and NO modal — it was just static display. The HeroScoreboard (visible before scrolling) DID have a working modal trigger, but the user was clicking the sticky version after scrolling down. Fixed by:
+  * Extracted the inline ExpandedGameBreakdown modal + buildPlaysFromPitches helper from hero-scoreboard.tsx into a new shared component file /src/components/play-by-play-modal.tsx
+  * Refactored hero-scoreboard.tsx to import and use PlayByPlayModal (removed ~240 lines of duplicate code, cleaned up unused Loader2/Radio/X/Activity imports and unused useQueryClient import)
+  * Rewrote sticky-mini-scoreboard.tsx to:
+    - Make the entire scoreboard a <button> with onClick that opens the modal
+    - Add hover state (border-warning-track/40 + shadow)
+    - Add a small "PBP" badge with ChevronDown icon visible on md+ screens
+    - Render the PlayByPlayModal in an AnimatePresence wrapper
+    - Accept new props: gamePk, awayName, homeName, status
+  * Updated live-feed-view.tsx to pass the new required props (gamePk, awayName, homeName, status) to StickyMiniScoreboard
+- Verified TypeScript: no errors in any of the modified files (npx tsc --noEmit shows zero new errors)
+- Verified production build: bun run build succeeds
+- Smoke-tested: home page HTTP 200, win-probability API returns isPreGame + h2hInsight, score-ticker API returns 42 games
+
+Stage Summary:
+- Ticker scroll speed halved (60s→120s desktop, 45s→90s mobile) — much easier to read each card
+- Win probability now renders for ALL game states: pre-game (H2H prediction), early-game 1-play (H2H prediction with "1 play so far" badge), live multi-play (full SVG chart), and final (full SVG chart)
+- Play-by-play modal now opens from BOTH the hero scoreboard AND the sticky mini-scoreboard (which is what the user actually clicks after scrolling) — both share the same PlayByPlayModal component for consistency
+- Code is cleaner: ~240 lines of duplicated modal code extracted into one shared component
+- All builds pass, no new TypeScript errors, no SSR errors

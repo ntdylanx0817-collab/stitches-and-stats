@@ -441,14 +441,15 @@
   display: none;
 }
 .ticker-inner {
-  animation: ticker-scroll 60s linear infinite;
+  animation: ticker-scroll 120s linear infinite;
   width: max-content;
   will-change: transform;
 }
-/* Slow the scroll on smaller screens (less content per second is easier to read) */
+/* Slightly faster on smaller screens (less content per second is easier to read,
+   but still slow enough to actually read each card) */
 @media (max-width: 768px) {
   .ticker-inner {
-    animation-duration: 45s;
+    animation-duration: 90s;
   }
 }
 /* Respect users who prefer reduced motion — freeze the ticker (it can still be

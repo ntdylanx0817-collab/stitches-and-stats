@@ -516,8 +516,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       {/* Sticky mini-scoreboard (appears on scroll) */}
       {teams?.away?.id && teams?.home?.id && (
         <StickyMiniScoreboard
+          gamePk={gamePk}
           awayAbbr={teams.away.abbreviation ?? teams.away.name}
           homeAbbr={teams.home.abbreviation ?? teams.home.name}
+          awayName={teams.away.name}
+          homeName={teams.home.name}
           awayTeamId={teams.away.id}
           homeTeamId={teams.home.id}
           awayScore={linescore?.teams?.away?.runs ?? 0}
@@ -529,6 +532,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           outs={linescore?.outs ?? 0}
           balls={linescore?.balls ?? 0}
           strikes={linescore?.strikes ?? 0}
+          status={status}
         />
       )}
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">

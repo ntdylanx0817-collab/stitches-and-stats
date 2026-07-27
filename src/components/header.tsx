@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
@@ -22,6 +23,7 @@ export function Header() {
   const view = useSavantStore((s) => s.view);
   const setView = useSavantStore((s) => s.setView);
   const { connected } = useSocket();
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-40 w-full">
@@ -79,6 +81,15 @@ export function Header() {
           <div className="ml-auto flex-1 max-w-md hidden md:block">
             <GlobalPlayerSearch />
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="flex items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
+            title={theme === "dark" ? "Stadium Day Mode" : "Night Game Mode"}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
 
           {/* Live status indicator */}
           <div className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5">

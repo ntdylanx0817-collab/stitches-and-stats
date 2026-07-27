@@ -14,6 +14,7 @@ import { StandingsView } from "@/components/standings-view";
 import { TeamProfileView } from "@/components/team-profile-view";
 import { useSavantStore } from "@/lib/store";
 import { Footer } from "@/components/footer";
+import { FunFactBanner } from "@/components/fun-fact-banner";
 
 export default function Home() {
   const view = useSavantStore((s) => s.view);
@@ -23,6 +24,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
+      <FunFactBanner />
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div

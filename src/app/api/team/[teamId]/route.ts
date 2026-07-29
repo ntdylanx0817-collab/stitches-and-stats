@@ -7,6 +7,14 @@ export const revalidate = 300;
 
 const STATS_API = "https://statsapi.mlb.com/api";
 
+/** A `roster` entry from the MLB Stats API team-roster response. */
+interface RosterEntry {
+  person?: { id?: number; fullName?: string };
+  position?: { abbreviation?: string };
+  status?: { code?: string };
+  jerseyNumber?: string;
+}
+
 interface TeamGameResult {
   date: string;
   opponent: string;
@@ -79,7 +87,7 @@ export async function GET(
       const losses10 = last10.length - wins10;
 
       // Build roster
-      const roster = (rosterData?.roster ?? []).map((p: any) => ({
+      const roster = (rosterData?.roster ?? []).map((p: RosterEntry) => ({
         id: p.person?.id ?? 0,
         name: p.person?.fullName ?? "Unknown",
         position: p.position?.abbreviation ?? "?",

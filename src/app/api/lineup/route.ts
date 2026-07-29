@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-errors";
 import { fetchLiveFeed } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
+import type { LiveGameFeed } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -53,7 +54,7 @@ export interface LineupData {
  * - Pitching changes (multiple pitchers with gameStatus flags)
  * - Scratched players (status code "S")
  */
-function extractLineup(feed: any): LineupData | null {
+function extractLineup(feed: LiveGameFeed): LineupData | null {
   if (!feed?.liveData?.boxscore?.teams) return null;
 
   const teams = feed.liveData.boxscore.teams;
@@ -73,12 +74,12 @@ function extractLineup(feed: any): LineupData | null {
     const pitchers: LineupPlayer[] = [];
     let currentPitcher: LineupPlayer | undefined;
 
-    for (const [key, p] of Object.entries(teamData.players) as [string, any][]) {
+    for (const p of Object.values(teamData.players)) {
       const name = p.person?.fullName ?? "Unknown";
       const position = p.position?.abbreviation ?? "—";
       const battingOrder = p.battingOrder;
       const status = p.status?.code ?? "A";
-      const gameStatus = p.gameStatus || {};
+      const gameStatus = p.gameStatus ?? {};
 
       const player: LineupPlayer = {
         id: p.person?.id ?? 0,

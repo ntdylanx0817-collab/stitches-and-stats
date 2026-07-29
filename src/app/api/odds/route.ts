@@ -7,6 +7,16 @@ const log = routeLogger("/api/odds");
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
+/** A `teamRecords` entry from the MLB Stats API standings response. */
+interface StandingsTeamRecord {
+  team?: { id?: number; abbreviation?: string; name?: string };
+  wins?: number;
+  losses?: number;
+  runsScored?: number;
+  runsAllowed?: number;
+  gamesPlayed?: number;
+}
+
 interface TeamStats {
   id: number;
   abbr: string;
@@ -148,7 +158,7 @@ async function calculateOdds(awayTeamId: number, homeTeamId: number, gamePk: num
   }
 }
 
-function parseTeamStats(t: any): TeamStats {
+function parseTeamStats(t: StandingsTeamRecord): TeamStats {
   const rs = t.runsScored ?? 0;
   const ra = t.runsAllowed ?? 0;
   const gp = t.gamesPlayed ?? 1;

@@ -41,6 +41,12 @@ export interface MLBGame {
   gameType?: string;
   dayNight?: string;
   seriesDescription?: string;
+  /** Game number within a doubleheader (1 or 2). */
+  gameNumber?: number;
+  /** "N" = not a doubleheader, "S" = split, "Y" = traditional. */
+  doubleHeader?: string;
+  /** Present only when the schedule request hydrates `linescore`. */
+  linescore?: Linescore;
 }
 
 export interface MLBSchedule {
@@ -165,6 +171,39 @@ export interface Linescore {
   };
 }
 
+/**
+ * Per-player boxscore entry. The MLB feed nests season-to-date and in-game
+ * splits under `stats`, with a different key set for batters and pitchers, so
+ * the stat groups are modelled as optional numeric bags rather than enumerated.
+ */
+export interface BoxscoreStatGroup {
+  [stat: string]: number | string | undefined;
+}
+
+export interface BoxscorePlayer {
+  person: { id: number; fullName: string };
+  position?: { abbreviation: string };
+  /**
+   * Three digits: hundreds is the slot (1-9), the remainder marks
+   * substitutions ("501" is the second player to bat fifth).
+   */
+  battingOrder?: string;
+  status?: { code: string; description?: string };
+  gameStatus?: {
+    isCurrentBatter?: boolean;
+    isCurrentPitcher?: boolean;
+    isOnBench?: boolean;
+    isSubstitute?: boolean;
+    /** Present on pitchers; the feed does not always set isCurrentPitcher. */
+    isPitcher?: boolean;
+  };
+  stats?: {
+    batting?: BoxscoreStatGroup;
+    pitching?: BoxscoreStatGroup;
+    fielding?: BoxscoreStatGroup;
+  };
+}
+
 export interface LiveGameFeed {
   gamePk: number;
   gameData: {
@@ -194,8 +233,8 @@ export interface LiveGameFeed {
     };
     boxscore?: {
       teams?: {
-        away?: { players?: Record<string, { person: { id: number; fullName: string }; position?: { abbreviation: string }; stats?: any }> };
-        home?: { players?: Record<string, { person: { id: number; fullName: string }; position?: { abbreviation: string }; stats?: any }> };
+        away?: { players?: Record<string, BoxscorePlayer> };
+        home?: { players?: Record<string, BoxscorePlayer> };
       };
     };
   };
@@ -281,14 +320,43 @@ export interface SavantGameFeed {
   team_home?: string;
   team_away?: string;
   exit_velocity: StatcastPitch[];
-  home_runs?: any[];
-  hit_chart?: any[];
+  home_runs?: SavantHomeRun[];
+  hit_chart?: StatcastPitch[];
   players?: Record<string, { id: number; name: string; team?: string; position?: string }>;
-  home_batters?: any[];
-  away_batters?: any[];
-  home_pitchers?: any[];
-  away_pitchers?: any[];
-  boxscore?: any;
+  home_batters?: SavantBoxscoreLine[];
+  away_batters?: SavantBoxscoreLine[];
+  home_pitchers?: SavantBoxscoreLine[];
+  away_pitchers?: SavantBoxscoreLine[];
+  // Savant's own boxscore block duplicates the MLB feed and is not read by
+  // this app. Left opaque rather than modelled speculatively.
+  boxscore?: unknown;
+}
+
+/** Home run entry in Savant's game feed. */
+export interface SavantHomeRun {
+  play_id?: string;
+  batter_name?: string;
+  batter?: number;
+  pitcher_name?: string;
+  inning?: number;
+  hit_distance?: number;
+  launch_speed?: number;
+  launch_angle?: number;
+  team_batting?: string;
+  des?: string;
+}
+
+/**
+ * A batter/pitcher line in Savant's feed. Savant returns these as loosely
+ * shaped records whose stat keys vary by player type, so known identity
+ * fields are named and the rest stay permissive.
+ */
+export interface SavantBoxscoreLine {
+  personId?: number;
+  name?: string;
+  position?: string;
+  team_id?: number;
+  [stat: string]: number | string | undefined;
 }
 
 // Leaderboard / player search types
@@ -322,7 +390,10 @@ export interface LeaderboardRow {
   launch_angle_average?: number;
   poz_swing_percent?: number;
   oz_swing_percent?: number;
-  [key: string]: any;
+  // Savant's CSV leaderboard exposes far more columns than are enumerated
+  // above, and the selected set varies by request. Values arrive as strings
+  // and are coerced at the point of use.
+  [key: string]: number | string | undefined;
 }
 
 export interface MLBPlayer {
@@ -343,6 +414,8 @@ export interface MLBPlayer {
   primaryPosition?: { code: string; name: string; abbreviation: string };
   batSide?: { code: string; description: string };
   pitchHand?: { code: string; description: string };
+  draftYear?: number;
+  mlbDebutDate?: string;
 }
 
 export interface PercentileRankings {

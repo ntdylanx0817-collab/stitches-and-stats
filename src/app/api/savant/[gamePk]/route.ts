@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSavantGameFeed } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 30;
@@ -29,7 +30,7 @@ export async function GET(
       hit_chart: data.hit_chart ?? [],
       players: data.players ?? {},
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

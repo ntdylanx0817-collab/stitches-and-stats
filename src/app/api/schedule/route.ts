@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSchedule, ymd } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
+import type { MLBGame } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 30;
@@ -30,13 +32,13 @@ export async function GET(req: NextRequest) {
     const tomorrowGames = tomorrowSchedule?.dates?.[0]?.games ?? [];
 
     // If today AND tomorrow are both empty (e.g., All-Star break), check day after tomorrow
-    let dayAfterGames: any[] = [];
+    let dayAfterGames: MLBGame[] = [];
     if (todayGames.length === 0 && tomorrowGames.length === 0 && !requestedDate) {
       const dayAfterSchedule = await fetchSchedule(dayAfter);
       dayAfterGames = dayAfterSchedule.dates?.[0]?.games ?? [];
     }
 
-    const mapGame = (g: any, day: string) => ({
+    const mapGame = (g: MLBGame, day: string) => ({
       gamePk: g.gamePk,
       gameDate: g.gameDate,
       gameDay: day,
@@ -67,10 +69,10 @@ export async function GET(req: NextRequest) {
 
     // Build game list: yesterday's finals first, then today, then tomorrow, then day after
     const games = [
-      ...yesterdayGames.map((g: any) => mapGame(g, "yesterday")),
-      ...todayGames.map((g: any) => mapGame(g, "today")),
-      ...tomorrowGames.map((g: any) => mapGame(g, "tomorrow")),
-      ...dayAfterGames.map((g: any) => mapGame(g, "upcoming")),
+      ...yesterdayGames.map((g) => mapGame(g, "yesterday")),
+      ...todayGames.map((g) => mapGame(g, "today")),
+      ...tomorrowGames.map((g) => mapGame(g, "tomorrow")),
+      ...dayAfterGames.map((g) => mapGame(g, "upcoming")),
     ];
 
     return NextResponse.json({
@@ -80,7 +82,7 @@ export async function GET(req: NextRequest) {
       totalGames: games.length,
       games,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

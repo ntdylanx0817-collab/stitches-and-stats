@@ -314,17 +314,14 @@ export function parseLeaderboardCSV(csv: string): LeaderboardRow[] {
   const rows: LeaderboardRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCSVLine(lines[i]);
-    const row: any = {};
+    const row: Record<string, number | string> = {};
     for (let j = 0; j < header.length; j++) {
       const key = header[j];
-      let value: any = cells[j] ?? "";
-      // Strip surrounding quotes
-      if (typeof value === "string") value = value.replace(/^"|"$/g, "");
-      // Convert numbers
-      if (value !== "" && value != null && !isNaN(Number(value)) && /^-?[\d.]+$/.test(value)) {
-        value = Number(value);
-      }
-      row[key] = value;
+      // Strip surrounding quotes, then coerce anything purely numeric so
+      // downstream comparisons and formatting do not operate on strings.
+      const raw = (cells[j] ?? "").replace(/^"|"$/g, "");
+      const isNumeric = raw !== "" && /^-?[\d.]+$/.test(raw) && !isNaN(Number(raw));
+      row[key] = isNumeric ? Number(raw) : raw;
     }
     // Normalize: ensure player_id is a number
     if (row.player_id != null) {
@@ -405,7 +402,12 @@ export function computePercentiles(
   leaderboard: LeaderboardRow[],
   type: "batter" | "pitcher" = "batter"
 ): Array<{ key: string; label: string; value: number | string; percentile: number; display?: string; higherIsBetter: boolean }> {
-  const metricDefs: Array<{ key: string; label: string; higherIsBetter: boolean; format?: (v: any) => string }> =
+  const metricDefs: Array<{
+    key: string;
+    label: string;
+    higherIsBetter: boolean;
+    format?: (v: number | string) => string;
+  }> =
     type === "batter"
       ? [
           { key: "xwoba", label: "xwOBA", higherIsBetter: true, format: (v) => Number(v).toFixed(3).replace(/^0/, "") },

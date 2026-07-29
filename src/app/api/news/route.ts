@@ -23,6 +23,29 @@ export interface NewsArticle {
   imageUrl?: string;
 }
 
+/**
+ * One entry from an RSS `<item>` or Atom `<entry>`. fast-xml-parser yields
+ * either a bare string or an object with "#text"/"@_href" depending on
+ * whether the element carried attributes, so each field allows both.
+ */
+export type RssText = string | { "#text"?: string; "@_href"?: string };
+
+interface RssItem {
+  title?: RssText;
+  link?: RssText;
+  description?: RssText;
+  summary?: RssText;
+  pubDate?: string;
+  published?: string;
+  "dc:date"?: string;
+  guid?: RssText;
+  id?: string;
+  category?: RssText | RssText[];
+  enclosure?: { "@_url"?: string };
+  "media:content"?: { "@_url"?: string };
+  "media:thumbnail"?: { "@_url"?: string };
+}
+
 interface NewsSource {
   name: string;
   slug: string;
@@ -148,6 +171,25 @@ function extractImage(desc: string): string | undefined {
   return match?.[1];
 }
 
+/**
+ * Read an RSS/Atom field that may be a bare string or an attributed object.
+ * Previously this was done inline with `x?.["#text"] ?? x`, which fell back to
+ * the object itself when it had no "#text" and stringified to "[object
+ * Object]" downstream.
+ */
+export function rssText(value: RssText | undefined): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  return value["#text"] ?? "";
+}
+
+/** Atom puts the URL on an href attribute; RSS uses the element text. */
+export function rssHref(value: RssText | undefined): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  return value["@_href"] ?? value["#text"] ?? "";
+}
+
 /** Parse a date string into a timestamp. */
 function parseDate(dateStr: string): number {
   if (!dateStr) return 0;
@@ -176,7 +218,7 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
     const channel = parsed.rss?.channel ?? parsed.feed;
     if (!channel) return [];
 
-    let items: any[] = [];
+    let items: RssItem[] = [];
     if (Array.isArray(channel.item)) items = channel.item;
     else if (Array.isArray(channel.entry)) items = channel.entry;
     else if (channel.item) items = [channel.item];
@@ -185,31 +227,31 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
     const isGeneralSports = ["deadspin", "sportsnaut", "essentially", "fansided"].includes(source.slug);
 
     return items
-      .map((item: any): NewsArticle | null => {
-        const title = item.title?.["#text"] ?? item.title ?? "";
-        const link = item.link?.["@_href"] ?? item.link ?? "";
-        const description = item.description?.["#text"] ?? item.description ?? item.summary?.["#text"] ?? item.summary ?? "";
+      .map((item): NewsArticle | null => {
+        const title = rssText(item.title);
+        const link = rssHref(item.link);
+        const description = rssText(item.description) || rssText(item.summary);
         const pubDate = item.pubDate ?? item.published ?? item["dc:date"] ?? "";
-        const id = item.guid?.["#text"] ?? item.guid ?? item.id ?? link ?? title;
+        const id = rssText(item.guid) || item.id || link || title;
 
         if (!title || !link) return null;
 
         // Filter general sports feeds to baseball-relevant articles only
-        if (isGeneralSports && !isBaseballRelevant(String(title), String(description))) {
+        if (isGeneralSports && !isBaseballRelevant(title, description)) {
           return null;
         }
 
         return {
-          id: String(id),
-          title: String(title).trim(),
-          link: String(link),
-          description: cleanDescription(String(description)),
-          publishedAt: String(pubDate),
-          publishedTimestamp: parseDate(String(pubDate)),
+          id,
+          title: title.trim(),
+          link,
+          description: cleanDescription(description),
+          publishedAt: pubDate,
+          publishedTimestamp: parseDate(pubDate),
           source: source.name,
           sourceSlug: source.slug,
           sourceColor: source.color,
-          imageUrl: extractImage(String(description)),
+          imageUrl: extractImage(description),
         };
       })
       .filter((a): a is NewsArticle => a !== null);

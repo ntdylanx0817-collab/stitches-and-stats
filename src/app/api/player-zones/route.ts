@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
-import { assertOk } from "@/lib/api-errors";
+import { assertOk, errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -213,7 +213,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No zone data found for this player" }, { status: 404 });
     }
     return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

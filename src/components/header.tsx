@@ -31,7 +31,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full">
       <div className="card-broadcast border-b border-chalk">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-1.5 px-3 py-2.5 sm:gap-4 sm:px-6">
           {/* Logo */}
           <button
             onClick={() => setView("live")}
@@ -63,7 +63,7 @@ export function Header() {
                   onClick={() => setView(item.key)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    "relative flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
                     active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -75,7 +75,7 @@ export function Header() {
                     />
                   )}
                   <Icon className="relative h-3.5 w-3.5" />
-                  <span className="relative hidden lg:inline">{item.label}</span>
+                  <span className="relative hidden xl:inline">{item.label}</span>
                   {active && (
                     <motion.span
                       layoutId="nav-underline"
@@ -89,7 +89,7 @@ export function Header() {
           </nav>
 
           {/* Search */}
-          <div className="ml-auto flex-1 max-w-md hidden md:block">
+          <div className="ml-auto flex-1 max-w-md hidden lg:block">
             <GlobalPlayerSearch />
           </div>
 
@@ -102,9 +102,12 @@ export function Header() {
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          {/* Live status indicator */}
+          {/* Live status indicator — hidden below lg, where the header's nav
+              icons alone already fill the available width. Per-view badges
+              (e.g. the pitch feed's Live/Polling badge) cover this on mobile
+              and tablet. */}
           <div
-            className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5"
+            className="hidden items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5 lg:flex"
             title={connected ? "Connected — receiving live updates" : "Reconnecting to the live update server…"}
           >
             <span className={cn(
@@ -127,7 +130,7 @@ export function Header() {
         </div>
 
         {/* Mobile search */}
-        <div className="border-t border-chalk px-4 py-2 md:hidden">
+        <div className="border-t border-chalk px-4 py-2 lg:hidden">
           <GlobalPlayerSearch />
         </div>
       </div>

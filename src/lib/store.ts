@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
+export type ViewKey = "live" | "live-at-bat" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
 
 interface SelectedPlayer {
   id: number;
@@ -16,6 +16,12 @@ interface SavantState {
 
   selectedGamePk: number | null;
   setSelectedGame: (pk: number | null) => void;
+
+  selectedAtBatIndex: number | null;
+  setSelectedAtBatIndex: (idx: number | null) => void;
+
+  atBatAutoAdvanceEnabled: boolean;
+  setAtBatAutoAdvanceEnabled: (b: boolean) => void;
 
   selectedPlayer: SelectedPlayer | null;
   setSelectedPlayer: (p: SelectedPlayer | null) => void;
@@ -44,6 +50,12 @@ export const useSavantStore = create<SavantState>((set) => ({
 
   selectedGamePk: null,
   setSelectedGame: (selectedGamePk) => set({ selectedGamePk }),
+
+  selectedAtBatIndex: null,
+  setSelectedAtBatIndex: (selectedAtBatIndex) => set({ selectedAtBatIndex }),
+
+  atBatAutoAdvanceEnabled: true,
+  setAtBatAutoAdvanceEnabled: (atBatAutoAdvanceEnabled) => set({ atBatAutoAdvanceEnabled }),
 
   selectedPlayer: null,
   setSelectedPlayer: (selectedPlayer) => set({ selectedPlayer }),

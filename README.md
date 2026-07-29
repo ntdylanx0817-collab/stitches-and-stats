@@ -8,8 +8,9 @@ An immersive, production-grade baseball analytics platform inspired by [MLB's Ba
 
 ### Live 'Savant' Gamefeed
 - **Real-time pitch-by-pitch tracking** via WebSocket (with REST polling fallback every 5s)
-- **High-fidelity SVG strike zone** showing every pitch colored by type (4-Seam, Sinker, Slider, Curveball, Cutter, Sweeper, Changeup), with glow rings on the latest pitch, click-to-select, and a 3×3 sub-zone grid
+- **High-fidelity SVG strike zone** showing every pitch colored by type (4-Seam, Sinker, Slider, Curveball, Cutter, Sweeper, Changeup), with glow rings on the latest pitch, click-to-select, hover tooltips, and a 3×3 sub-zone grid
 - **Pitch log** with expandable cards showing 11+ Statcast metrics per pitch (Exit Velocity, Launch Angle, Hit Distance, xBA, Spin Rate, Bat Speed, Break X/Z, Induced Vertical Break, Extension, Plate Time, Plate Location, Zone)
+- **At-Bat Details modal** (Gameday-style) — open the full at-bat from any pitch log entry: batter/pitcher matchup cards, a live balls/strikes/outs count, every pitch numbered on the strike zone, and the full pitch-by-pitch sequence with type, velocity, and result. Updates live as new pitches arrive.
 - **Live metric cards** for the latest pitch with barrel detection
 - **Pitch mix distribution** bars with average speed per pitch type
 - **Scoreboard** with inning-by-inning linescore, R/H/E totals, and live game state

@@ -26,6 +26,9 @@ import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, Linescore, GameStatus, FeedTeam } from "@/lib/types";
 
+/** How many pitch rows the log renders at once. */
+const PITCH_LOG_LIMIT = 80;
+
 /** One inning row in the linescore. */
 type InningLine = Linescore["innings"][number];
 
@@ -88,20 +91,24 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // - Scoring plays / RBIs
   // - 2 outs with runners on
   const displayPitches = useMemo(() => {
-    if (!highLeverageOnly) return mergedPitches;
-    return mergedPitches.filter((p) => {
-      // Full count (3-2)
-      if (p.balls >= 3 && p.strikes >= 2) return true;
-      // Late innings (7+)
-      if (p.inning >= 7) return true;
-      // In-play with RBI potential
-      if (p.isInPlay && (p.exitVelocity ?? 0) >= 95) return true;
-      // Barrel (hard-hit ball)
-      if (p.isBarrel) return true;
-      // 2 outs (pressure situation)
-      if (p.outs >= 2 && (p.balls >= 2 || p.strikes >= 1)) return true;
-      return false;
-    });
+    const matching = highLeverageOnly
+      ? mergedPitches.filter((p) => {
+          // Full count (3-2)
+          if (p.balls >= 3 && p.strikes >= 2) return true;
+          // Late innings (7+)
+          if (p.inning >= 7) return true;
+          // In-play with RBI potential
+          if (p.isInPlay && (p.exitVelocity ?? 0) >= 95) return true;
+          // Barrel (hard-hit ball)
+          if (p.isBarrel) return true;
+          // 2 outs (pressure situation)
+          if (p.outs >= 2 && (p.balls >= 2 || p.strikes >= 1)) return true;
+          return false;
+        })
+      : mergedPitches;
+    // The log animates a row per pitch, so it renders a window of the most
+    // recent ones rather than the whole game the hook now hands over.
+    return matching.slice(0, PITCH_LOG_LIMIT);
   }, [mergedPitches, highLeverageOnly]);
 
   const latestPitch = displayPitches[0] ?? mergedPitches[0] ?? null;

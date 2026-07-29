@@ -54,6 +54,27 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
 
   const groups = useMemo(() => groupPitchesByAtBat(pitches), [pitches]);
 
+  // Arrow keys step through at-bats. Registered before the early returns so the
+  // hook order stays fixed; `groups`/`position` are read fresh inside.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      // Don't steal arrow keys from the player search or any other field.
+      const el = e.target as HTMLElement | null;
+      if (el?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName ?? "")) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const from = groups.findIndex((g) => g.atBatIndex === (selectedAtBatIndex ?? latestAtBatIndex(pitches)));
+      if (from < 0) return;
+      const target = pinTargetForStep(groups, from, e.key === "ArrowLeft" ? -1 : 1, latestAtBatIndex(pitches));
+      if (target === undefined) return;
+      e.preventDefault();
+      setSelectedAtBatIndex(target);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [groups, pitches, selectedAtBatIndex, setSelectedAtBatIndex]);
+
   // A null selection means "follow the live at-bat", so the view advances on
   // its own as new plate appearances start — no timers, no auto-advance state.
   // The gap between at-bats leaves the finished one on screen with its result.
@@ -84,14 +105,15 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
     );
   }
 
-  // The feed keeps a bounded window of recent pitches, so an at-bat pinned a
-  // long time ago can age out of it. Say so instead of rendering nothing.
+  // Safety net: a pinned index with no matching at-bat would otherwise render
+  // an empty page with no way out. Shouldn't happen now that the feed keeps the
+  // whole game, but "nothing at all" is the worst possible failure here.
   if (!atBat) {
     return (
       <EmptyState
         icon={Target}
-        title="That at-bat is no longer loaded"
-        description="Only recent at-bats are kept in memory for a live game."
+        title="That at-bat isn't in this game's feed"
+        description="It may have been from a different game."
         action={
           <button
             onClick={() => setSelectedAtBatIndex(null)}
@@ -156,7 +178,7 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
       />
 
       <div className="flex items-center justify-between gap-2">
-        <NavButton onClick={() => step(-1)} disabled={position <= 0} label="Previous at-bat">
+        <NavButton onClick={() => step(-1)} disabled={position <= 0} label="Previous at-bat" hint="Previous at-bat (left arrow)">
           <ChevronLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Previous</span>
         </NavButton>
@@ -175,7 +197,7 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
           </button>
         )}
 
-        <NavButton onClick={() => step(1)} disabled={position >= groups.length - 1} label="Next at-bat">
+        <NavButton onClick={() => step(1)} disabled={position >= groups.length - 1} label="Next at-bat" hint="Next at-bat (right arrow)">
           <span className="hidden sm:inline">Next</span>
           <ChevronRight className="h-4 w-4" />
         </NavButton>
@@ -184,10 +206,12 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
   );
 }
 
-function NavButton({ onClick, disabled, label, children }: {
+function NavButton({ onClick, disabled, label, hint, children }: {
   onClick: () => void;
   disabled: boolean;
   label: string;
+  /** Tooltip — carries the keyboard shortcut, which is otherwise invisible. */
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -195,6 +219,7 @@ function NavButton({ onClick, disabled, label, children }: {
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
+      title={hint ?? label}
       className="font-scoreboard flex items-center gap-1 rounded-lg border border-chalk bg-midnight/40 px-2.5 py-1.5 text-[10px] uppercase tracking-wide text-slate-300 transition-colors hover:border-chalk/60 hover:text-chalk disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-slate-300 sm:px-3"
     >
       {children}

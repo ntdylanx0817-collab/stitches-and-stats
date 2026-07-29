@@ -209,7 +209,10 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
       setLivePitches((prev) => {
         const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
         if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
-        return [normaliseLivePitch(pitch), ...prev].slice(0, 60);
+        // Bounded well past a full game (~300 pitches) purely as a leak guard —
+        // snapshots carry the same pitches, so this buffer only has to cover
+        // the gap since the last one.
+        return [normaliseLivePitch(pitch), ...prev].slice(0, 600);
       });
     });
     return () => {
@@ -245,6 +248,10 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
   }, [snapshot, restData]);
 
   // WS pitches win over the same pitch from a snapshot/REST payload.
+  //
+  // Deliberately uncapped: this is the whole game, and the At-Bat tab steps
+  // back through it. Truncating here is what limited that to the last ~20
+  // plate appearances. Views that render a row per pitch cap it themselves.
   const pitches = useMemo(() => {
     if (livePitches.length === 0) return allPitches;
     const seen = new Set<string>();
@@ -255,7 +262,7 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
       seen.add(k);
       result.push(p);
     }
-    return result.slice(0, 80);
+    return result;
   }, [livePitches, allPitches]);
 
   const status = snapshot?.status ?? restData?.status ?? null;

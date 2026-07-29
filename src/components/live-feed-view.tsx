@@ -41,6 +41,16 @@ interface ScheduleGame {
   home: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
 }
 
+/** Format an elapsed duration as a short "updated Xs/Xm ago" label. */
+function updatedAgoLabel(lastUpdated: number | null, now: number): string | null {
+  if (!lastUpdated) return null;
+  const secs = Math.max(0, Math.floor((now - lastUpdated) / 1000));
+  if (secs < 3) return "Updated just now";
+  if (secs < 60) return `Updated ${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  return `Updated ${mins}m ago`;
+}
+
 export function LiveFeedView() {
   const selectedGamePk = useSavantStore((s) => s.selectedGamePk);
   const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
@@ -202,6 +212,15 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
   const [highLeverageOnly, setHighLeverageOnly] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Re-render once a second so the "updated Xs ago" label stays fresh without
+  // needing a fetch — it's purely a clock tick against `lastUpdated`.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
   useEffect(() => {
@@ -209,6 +228,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     const offSnap = onSnapshot((snap) => {
       if (snap.gamePk !== gamePk) return;
       setSnapshot(snap);
+      setLastUpdated(Date.now());
       // NOTE: Do NOT push snap.latestPitch into livePitches here.
       // The server's latestPitch is a raw object with nested fields (batter, pitcher,
       // call, count are objects, not flattened strings/numbers). Pushing it raw
@@ -221,6 +241,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     // game:pitch fires immediately when a new pitch key is detected).
     const offPitch = onPitch((pitch: LivePitchEvent) => {
       if (!pitch || pitch.atBatIndex == null || pitch.pitchNumber == null) return;
+      setLastUpdated(Date.now());
       setLivePitches((prev) => {
         const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
         if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
@@ -294,7 +315,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // Fallback: if WS not connected, fetch via REST periodically.
   // For Preview (not-yet-started) games, only fetch once — no point polling.
   // For Live/Final games, poll every 5s for near-real-time updates.
-  const { data: restData, isLoading: restLoading } = useQuery<{
+  const { data: restData, isLoading: restLoading, dataUpdatedAt: restUpdatedAt } = useQuery<{
     pitches: EnrichedPitch[];
     linescore: Linescore | null;
     status: GameStatus | null;
@@ -319,6 +340,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     },
     retry: 2,
   });
+
+  // Freshness reflects whichever source — WS push or REST fallback — last
+  // actually delivered data, computed at render time rather than synced into
+  // state via an effect.
+  const effectiveLastUpdated = Math.max(lastUpdated ?? 0, restUpdatedAt || 0) || null;
 
   // Use WS data if available, else REST
   const allPitches = useMemo<EnrichedPitch[]>(() => {
@@ -609,7 +635,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       {/* Middle column: Pitch Log */}
       <div className="lg:col-span-4 space-y-4">
         <div className="glass rounded-2xl p-3">
-          <div className="mb-3 flex items-center justify-between px-1 gap-2">
+          <div className="mb-1 flex items-center justify-between px-1 gap-2">
             <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
               <Activity className="h-4 w-4 text-mint" />
               Pitch Feed
@@ -645,6 +671,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
               </Badge>
             </div>
           </div>
+          {updatedAgoLabel(effectiveLastUpdated, now) && (
+            <div className="mb-2 px-1 text-[10px] text-slate-500">
+              {updatedAgoLabel(effectiveLastUpdated, now)}
+            </div>
+          )}
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
             <div className="space-y-1.5">
               <AnimatePresence initial={false}>
@@ -672,7 +703,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                 ) : (
                   displayPitches.map((p, idx) => (
                     <PitchLogEntry
-                      key={`${p.atBatIndex}-${p.pitchNumber}-${idx}`}
+                      key={`${p.atBatIndex}-${p.pitchNumber}`}
                       pitch={p}
                       index={idx}
                       isSelected={selectedPitch?.atBatIndex === p.atBatIndex && selectedPitch?.pitchNumber === p.pitchNumber}

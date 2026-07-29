@@ -1,0 +1,4 @@
+# bun defaults to registry.npmjs.com; pin the canonical .org host so lockfile
+# tarball URLs resolve consistently across environments and CI.
+[install]
+registry = "https://registry.npmjs.org"

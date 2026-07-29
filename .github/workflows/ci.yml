@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Allow running by hand from the Actions tab.
+  workflow_dispatch:
+
+# A newer push to the same branch makes an in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, test, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        # --frozen-lockfile fails rather than silently updating bun.lock, so a
+        # lockfile that drifts from package.json is caught here.
+        run: bun install --frozen-lockfile
+
+      - name: Install live-feed service dependencies
+        # Its own package, needed so the service typechecks.
+        working-directory: mini-services/live-feed
+        run: bun install --frozen-lockfile
+
+      # Each step runs even if an earlier one failed, so a single push reports
+      # every problem at once instead of one per round trip.
+      - name: Typecheck
+        if: '!cancelled()'
+        run: bun run typecheck
+
+      - name: Test
+        if: '!cancelled()'
+        run: bun run test
+
+      - name: Lint
+        if: '!cancelled()'
+        run: bun run lint
+
+      - name: Build
+        if: '!cancelled()'
+        run: bun run build

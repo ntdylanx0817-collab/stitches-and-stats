@@ -2,7 +2,7 @@
 
 An immersive, production-grade baseball analytics platform inspired by [MLB's Baseball Savant](https://baseballsavant.mlb.com/), redesigned with a modern, ultra-clean dark-mode aesthetic. Built with Next.js 16, TypeScript, and real-time WebSocket pitch tracking.
 
-![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
+[![CI](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml) ![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -231,7 +231,8 @@ This project is for educational/demonstration purposes and is not affiliated wit
 
 ## Tech Notes
 
-- **No `ignoreBuildErrors`**: `next build` type-checks the app and fails on type errors. Run `npm run lint` for the ESLint pass — there is no CI wiring these up yet, so run them before pushing
+- **CI**: `.github/workflows/ci.yml` runs typecheck, tests, lint, and build on every push to `main` and every pull request. The steps are independent, so one push reports every failure at once
+- **No `ignoreBuildErrors`**: `next build` type-checks the app and fails on type errors
 - **Tests**: `npm test` runs the suite via `bun test` (built into Bun — no extra dependency, and it reads TypeScript directly). Covers the cache's TTL/eviction/deduplication behaviour, API error mapping, and the logger
 - **Typecheck**: `npm run typecheck` covers all three TypeScript projects — the app, the tests (which need Bun's globals), and the live-feed service
 - **Structured logging**: `src/lib/logger.ts` emits JSON lines in production and pretty output in development; set `LOG_LEVEL` to `debug`/`info`/`warn`/`error`/`silent`

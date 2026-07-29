@@ -80,16 +80,9 @@ export function getOrSet<T>(key: string, ttlMs: number, fn: () => Promise<T>): P
   return p;
 }
 
+/** Drop every entry whose key starts with `prefix`. */
 export function clearCachePrefix(prefix: string): void {
   for (const k of store.keys()) {
     if (k.startsWith(prefix)) store.delete(k);
   }
-}
-
-export function cacheStats() {
-  return {
-    size: store.size,
-    inflight: inflight.size,
-    keys: Array.from(store.keys()),
-  };
 }

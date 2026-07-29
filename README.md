@@ -128,22 +128,26 @@ stitches-and-stats/
 │   ├── lib/
 │   │   ├── mlb-api.ts              # MLB + Savant API client with cache
 │   │   ├── cache.ts                # In-memory TTL cache with LRU + dedup
+│   │   ├── api-errors.ts           # Shared API error shape + status mapping
+│   │   ├── logger.ts               # Structured JSON logger
+│   │   ├── rate-limit.ts           # Sliding-window limiter (see middleware)
 │   │   ├── store.ts                # Zustand store (view, game, filters)
 │   │   ├── types.ts                # TypeScript types
-│   │   ├── db.ts                   # Prisma client
-│   │   └── utils.ts                # cn() utility
-│   └── hooks/
+│   │   ├── utils.ts                # cn() + season helpers
+│   │   └── __tests__/              # bun test suites
+│   ├── hooks/
+│   └── middleware.ts               # Rate limiting for /api/*
 ├── mini-services/
 │   └── live-feed/                  # Socket.io WebSocket service (port 3003)
 │       ├── index.ts                # Service entry point
 │       ├── package.json
 │       ├── supervisor.sh           # Auto-restart supervisor
 │       └── keepalive.sh            # Health-check respawner
-├── prisma/
-│   └── schema.prisma               # Database schema (SQLite by default)
+├── .github/workflows/ci.yml        # Typecheck, test, lint, build
 ├── public/
 ├── .env.example                    # Environment variable template
 ├── .gitignore
+├── bunfig.toml                     # Pins the npm registry for bun installs
 ├── Caddyfile                       # Caddy reverse proxy config (reference)
 ├── next.config.ts                  # Next.js config (standalone output)
 ├── package.json

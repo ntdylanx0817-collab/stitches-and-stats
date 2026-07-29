@@ -2,13 +2,16 @@
 
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon } from "lucide-react";
+import {
+  Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon,
+  type LucideIcon,
+} from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
+const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "live", label: "Live", icon: Activity },
   { key: "derby", label: "Derby", icon: Flame },
   { key: "standings", label: "Standings", icon: Trophy },
@@ -28,7 +31,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full">
       <div className="card-broadcast border-b border-chalk">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-1.5 px-3 py-2.5 sm:gap-4 sm:px-6">
           {/* Logo */}
           <button
             onClick={() => setView("live")}
@@ -40,17 +43,20 @@ export function Header() {
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-midnight" />
             </div>
             <div className="hidden flex-col leading-none sm:flex">
-              <span className="font-scoreboard text-base font-bold tracking-wide text-chalk uppercase">
-                Stitches <span className="text-warning-track">& Stats</span>
+              <span className="font-scoreboard text-lg font-black tracking-wide text-chalk uppercase">
+                Stitches <span className="text-warning-track text-glow-warning">& Stats</span>
               </span>
-              <span className="text-[8px] uppercase tracking-[0.25em] text-slate-500 font-scoreboard">
+              <span className="label-xs text-slate-500 font-scoreboard">
                 Pro Broadcast Analytics
               </span>
             </div>
           </button>
 
-          {/* Nav tabs */}
-          <nav className="flex items-center gap-0.5 rounded-lg border border-chalk bg-midnight/60 p-0.5">
+          {/* Nav tabs. min-w-0 lets this shrink below its content width inside
+              the flex row so it scrolls internally on very narrow viewports
+              (below ~320px) instead of pushing the theme toggle or connection
+              badge off-screen with no way to reach them. */}
+          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-subtle bg-gradient-to-b from-midnight-2/70 to-midnight/70 p-0.5 scrollbar-thin">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
@@ -58,9 +64,10 @@ export function Header() {
                 <button
                   key={item.key}
                   onClick={() => setView(item.key)}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
-                    active ? "text-chalk" : "text-slate-400 hover:text-slate-200"
+                    "relative flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
                   {active && (
@@ -71,28 +78,41 @@ export function Header() {
                     />
                   )}
                   <Icon className="relative h-3.5 w-3.5" />
-                  <span className="relative hidden lg:inline">{item.label}</span>
+                  <span className="relative hidden xl:inline">{item.label}</span>
+                  {active && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
                 </button>
               );
             })}
           </nav>
 
           {/* Search */}
-          <div className="ml-auto flex-1 max-w-md hidden md:block">
+          <div className="ml-auto flex-1 max-w-md hidden lg:block">
             <GlobalPlayerSearch />
           </div>
 
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
+            className="flex shrink-0 items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
             title={theme === "dark" ? "Stadium Day Mode" : "Night Game Mode"}
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          {/* Live status indicator */}
-          <div className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5">
+          {/* Live status indicator — hidden below lg, where the header's nav
+              icons alone already fill the available width. Per-view badges
+              (e.g. the pitch feed's Live/Polling badge) cover this on mobile
+              and tablet. */}
+          <div
+            className="hidden shrink-0 items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5 lg:flex"
+            title={connected ? "Connected — receiving live updates" : "Reconnecting to the live update server…"}
+          >
             <span className={cn(
               "relative flex h-2 w-2",
               connected && "animate-live-dot"
@@ -107,13 +127,13 @@ export function Header() {
               )} />
             </span>
             <span className="hidden text-[10px] font-bold uppercase tracking-wide text-slate-400 font-scoreboard sm:inline">
-              {connected ? "Live" : "REST"}
+              {connected ? "Live" : "Reconnecting"}
             </span>
           </div>
         </div>
 
         {/* Mobile search */}
-        <div className="border-t border-chalk px-4 py-2 md:hidden">
+        <div className="border-t border-chalk px-4 py-2 lg:hidden">
           <GlobalPlayerSearch />
         </div>
       </div>

@@ -1,5 +1,4 @@
 import {
-  MLBGame,
   MLBSchedule,
   LiveGameFeed,
   SavantGameFeed,
@@ -8,6 +7,7 @@ import {
   MLBPlayer,
 } from "./types";
 import { getOrSet, getCached, setCached } from "./cache";
+import { assertOk } from "./api-errors";
 
 const STATS_API = "https://statsapi.mlb.com/api";
 const SAVANT_API = "https://baseballsavant.mlb.com";
@@ -39,7 +39,7 @@ export async function fetchSchedule(dateStr?: string): Promise<MLBSchedule> {
       next: { revalidate: 30 },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) throw new Error(`schedule fetch failed: ${res.status}`);
+    await assertOk(res, "schedule");
     return (await res.json()) as MLBSchedule;
   });
 }
@@ -55,7 +55,7 @@ export async function fetchLiveFeed(gamePk: number): Promise<LiveGameFeed> {
     next: { revalidate: 10 },
     signal: AbortSignal.timeout(10_000),
   });
-  if (!res.ok) throw new Error(`live feed fetch failed: ${res.status}`);
+  await assertOk(res, "live feed");
   const data = (await res.json()) as LiveGameFeed;
   const state = data.gameData?.status?.abstractGameState ?? "Final";
   const ttl = state === "Live" ? ONE_MINUTE : ONE_HOUR;
@@ -80,7 +80,7 @@ export async function fetchSavantGameFeed(gamePk: number): Promise<SavantGameFee
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
       },
     });
-    if (!res.ok) throw new Error(`savant fetch failed: ${res.status}`);
+    await assertOk(res, "savant");
     return (await res.json()) as SavantGameFeed;
   });
 }
@@ -297,7 +297,7 @@ export async function fetchLeaderboard(opts: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
       },
     });
-    if (!res.ok) throw new Error(`leaderboard fetch failed: ${res.status}`);
+    await assertOk(res, "leaderboard");
     const csv = await res.text();
     return parseLeaderboardCSV(csv);
   });
@@ -313,17 +313,14 @@ export function parseLeaderboardCSV(csv: string): LeaderboardRow[] {
   const rows: LeaderboardRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCSVLine(lines[i]);
-    const row: any = {};
+    const row: Record<string, number | string> = {};
     for (let j = 0; j < header.length; j++) {
       const key = header[j];
-      let value: any = cells[j] ?? "";
-      // Strip surrounding quotes
-      if (typeof value === "string") value = value.replace(/^"|"$/g, "");
-      // Convert numbers
-      if (value !== "" && value != null && !isNaN(Number(value)) && /^-?[\d.]+$/.test(value)) {
-        value = Number(value);
-      }
-      row[key] = value;
+      // Strip surrounding quotes, then coerce anything purely numeric so
+      // downstream comparisons and formatting do not operate on strings.
+      const raw = (cells[j] ?? "").replace(/^"|"$/g, "");
+      const isNumeric = raw !== "" && /^-?[\d.]+$/.test(raw) && !isNaN(Number(raw));
+      row[key] = isNumeric ? Number(raw) : raw;
     }
     // Normalize: ensure player_id is a number
     if (row.player_id != null) {
@@ -370,7 +367,7 @@ export async function searchPlayers(query: string, limit = 12): Promise<MLBPlaye
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) throw new Error(`players fetch failed: ${res.status}`);
+    await assertOk(res, "players");
     const data = await res.json();
     return data.people as MLBPlayer[];
   });
@@ -404,7 +401,12 @@ export function computePercentiles(
   leaderboard: LeaderboardRow[],
   type: "batter" | "pitcher" = "batter"
 ): Array<{ key: string; label: string; value: number | string; percentile: number; display?: string; higherIsBetter: boolean }> {
-  const metricDefs: Array<{ key: string; label: string; higherIsBetter: boolean; format?: (v: any) => string }> =
+  const metricDefs: Array<{
+    key: string;
+    label: string;
+    higherIsBetter: boolean;
+    format?: (v: number | string) => string;
+  }> =
     type === "batter"
       ? [
           { key: "xwoba", label: "xwOBA", higherIsBetter: true, format: (v) => Number(v).toFixed(3).replace(/^0/, "") },

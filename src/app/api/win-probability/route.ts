@@ -141,7 +141,6 @@ export async function GET(req: NextRequest) {
     let preGameHomeWP = 54; // Default home advantage
 
     try {
-      const h2hUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${awayTeamId}&opponentId=${homeTeamId}&season=${new Date().getFullYear()}&gameType=R`;
       // Use our own H2H API
       const h2hRes = await fetch(`${req.nextUrl.origin}/api/h2h?team1Id=${awayTeamId}&team2Id=${homeTeamId}`, {
         signal: AbortSignal.timeout(15_000),

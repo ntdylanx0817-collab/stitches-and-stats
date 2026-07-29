@@ -4,7 +4,10 @@
 // This was previously imported from "@/lib/types" but the type was only defined in
 // mlb-api.ts — with noImplicitAny: false, TypeScript silently treated it as `any`,
 // which hid the server/client shape mismatch that caused the React crash.
-export type { EnrichedPitch } from "./mlb-api";
+// Imported as well as re-exported: the re-export makes it available to
+// consumers, but GameSnapshot below needs it in local scope too.
+import type { EnrichedPitch } from "./mlb-api";
+export type { EnrichedPitch };
 
 export interface MLBTeam {
   id: number;
@@ -41,6 +44,12 @@ export interface MLBGame {
   gameType?: string;
   dayNight?: string;
   seriesDescription?: string;
+  /** Game number within a doubleheader (1 or 2). */
+  gameNumber?: number;
+  /** "N" = not a doubleheader, "S" = split, "Y" = traditional. */
+  doubleHeader?: string;
+  /** Present only when the schedule request hydrates `linescore`. */
+  linescore?: Linescore;
 }
 
 export interface MLBSchedule {
@@ -148,11 +157,32 @@ export interface Play {
   playEndTime?: string;
 }
 
+/**
+ * Occupancy block on a live linescore. The MLB feed reports base runners
+ * under both `offense` and `defense`; each slot is a player reference.
+ */
+export interface LinescoreSide {
+  first?: { id: number; fullName?: string };
+  second?: { id: number; fullName?: string };
+  third?: { id: number; fullName?: string };
+  batter?: { id: number; fullName?: string };
+  pitcher?: { id: number; fullName?: string };
+  inHole?: { id: number; fullName?: string };
+  onDeck?: { id: number; fullName?: string };
+}
+
 export interface Linescore {
   currentInning?: number;
   currentInningOrdinal?: string;
   inningState?: string;
   isTopInning?: boolean;
+  /** Live count, present while a game is in progress. */
+  balls?: number;
+  strikes?: number;
+  outs?: number;
+  /** Current batter/runner occupancy, present while a game is in progress. */
+  offense?: LinescoreSide;
+  defense?: LinescoreSide;
   innings: Array<{
     num: number;
     ordinalNum: string;
@@ -162,6 +192,39 @@ export interface Linescore {
   teams?: {
     away?: { runs: number; hits: number; errors: number; leftOnBase: number };
     home?: { runs: number; hits: number; errors: number; leftOnBase: number };
+  };
+}
+
+/**
+ * Per-player boxscore entry. The MLB feed nests season-to-date and in-game
+ * splits under `stats`, with a different key set for batters and pitchers, so
+ * the stat groups are modelled as optional numeric bags rather than enumerated.
+ */
+export interface BoxscoreStatGroup {
+  [stat: string]: number | string | undefined;
+}
+
+export interface BoxscorePlayer {
+  person: { id: number; fullName: string };
+  position?: { abbreviation: string };
+  /**
+   * Three digits: hundreds is the slot (1-9), the remainder marks
+   * substitutions ("501" is the second player to bat fifth).
+   */
+  battingOrder?: string;
+  status?: { code: string; description?: string };
+  gameStatus?: {
+    isCurrentBatter?: boolean;
+    isCurrentPitcher?: boolean;
+    isOnBench?: boolean;
+    isSubstitute?: boolean;
+    /** Present on pitchers; the feed does not always set isCurrentPitcher. */
+    isPitcher?: boolean;
+  };
+  stats?: {
+    batting?: BoxscoreStatGroup;
+    pitching?: BoxscoreStatGroup;
+    fielding?: BoxscoreStatGroup;
   };
 }
 
@@ -194,8 +257,8 @@ export interface LiveGameFeed {
     };
     boxscore?: {
       teams?: {
-        away?: { players?: Record<string, { person: { id: number; fullName: string }; position?: { abbreviation: string }; stats?: any }> };
-        home?: { players?: Record<string, { person: { id: number; fullName: string }; position?: { abbreviation: string }; stats?: any }> };
+        away?: { players?: Record<string, BoxscorePlayer> };
+        home?: { players?: Record<string, BoxscorePlayer> };
       };
     };
   };
@@ -281,14 +344,43 @@ export interface SavantGameFeed {
   team_home?: string;
   team_away?: string;
   exit_velocity: StatcastPitch[];
-  home_runs?: any[];
-  hit_chart?: any[];
+  home_runs?: SavantHomeRun[];
+  hit_chart?: StatcastPitch[];
   players?: Record<string, { id: number; name: string; team?: string; position?: string }>;
-  home_batters?: any[];
-  away_batters?: any[];
-  home_pitchers?: any[];
-  away_pitchers?: any[];
-  boxscore?: any;
+  home_batters?: SavantBoxscoreLine[];
+  away_batters?: SavantBoxscoreLine[];
+  home_pitchers?: SavantBoxscoreLine[];
+  away_pitchers?: SavantBoxscoreLine[];
+  // Savant's own boxscore block duplicates the MLB feed and is not read by
+  // this app. Left opaque rather than modelled speculatively.
+  boxscore?: unknown;
+}
+
+/** Home run entry in Savant's game feed. */
+export interface SavantHomeRun {
+  play_id?: string;
+  batter_name?: string;
+  batter?: number;
+  pitcher_name?: string;
+  inning?: number;
+  hit_distance?: number;
+  launch_speed?: number;
+  launch_angle?: number;
+  team_batting?: string;
+  des?: string;
+}
+
+/**
+ * A batter/pitcher line in Savant's feed. Savant returns these as loosely
+ * shaped records whose stat keys vary by player type, so known identity
+ * fields are named and the rest stay permissive.
+ */
+export interface SavantBoxscoreLine {
+  personId?: number;
+  name?: string;
+  position?: string;
+  team_id?: number;
+  [stat: string]: number | string | undefined;
 }
 
 // Leaderboard / player search types
@@ -322,7 +414,10 @@ export interface LeaderboardRow {
   launch_angle_average?: number;
   poz_swing_percent?: number;
   oz_swing_percent?: number;
-  [key: string]: any;
+  // Savant's CSV leaderboard exposes far more columns than are enumerated
+  // above, and the selected set varies by request. Values arrive as strings
+  // and are coerced at the point of use.
+  [key: string]: number | string | undefined;
 }
 
 export interface MLBPlayer {
@@ -334,6 +429,7 @@ export interface MLBPlayer {
   birthDate?: string;
   currentAge?: number;
   birthCity?: string;
+  birthStateProvince?: string;
   birthCountry?: string;
   height?: string;
   weight?: number;
@@ -342,6 +438,8 @@ export interface MLBPlayer {
   primaryPosition?: { code: string; name: string; abbreviation: string };
   batSide?: { code: string; description: string };
   pitchHand?: { code: string; description: string };
+  draftYear?: number;
+  mlbDebutDate?: string;
 }
 
 export interface PercentileRankings {
@@ -354,4 +452,102 @@ export interface PercentileRankings {
     percentile: number;
     display?: string;
   }>;
+}
+
+/** Game status block from the MLB live feed's `gameData`. */
+export type GameStatus = LiveGameFeed["gameData"]["status"];
+
+/** Team identity block from the live feed's `gameData`. */
+export type FeedTeam = LiveGameFeed["gameData"]["teams"]["away"];
+
+/**
+ * A play as relayed by the live-feed WebSocket service. The service trims each
+ * play to the fields the client renders and adds a precomputed pitch count, so
+ * this is a subset of `Play` rather than the whole thing.
+ */
+export interface SnapshotPlay extends Omit<Play, "pitchIndex"> {
+  pitchCount?: number;
+}
+
+/**
+ * Full game state pushed over the WebSocket (`game:snapshot`), and also the
+ * shape the REST polling fallback is normalised into.
+ */
+export interface GameSnapshot {
+  gamePk: number;
+  status: GameStatus | null;
+  linescore: Linescore | null;
+  teams: { away?: FeedTeam; home?: FeedTeam };
+  allPlays: SnapshotPlay[];
+  currentPlay: SnapshotPlay | null;
+  playCount: number;
+  savant: SavantGameFeed | null;
+  latestPitch: EnrichedPitch | null;
+  isNewPlay: boolean;
+  timestamp: number;
+}
+
+/**
+ * The `game:pitch` payload from the live-feed WebSocket service.
+ *
+ * Deliberately NOT `EnrichedPitch`. The service emits its own wire shape —
+ * nested `batter`/`pitcher`/`call` objects, `coordinates`, string-coded
+ * `batterSide` — which the client normalises into an `EnrichedPitch` on
+ * receipt. Conflating the two is what the note at the top of this file
+ * refers to: while `noImplicitAny` was off, the mismatch was invisible.
+ */
+export interface LivePitchEvent {
+  key: string;
+  inning: number;
+  halfInning: "top" | "bottom";
+  atBatIndex: number;
+  abNumber: number;
+  pitchNumber: number;
+  playId?: string;
+  batter?: { id: number; fullName: string };
+  pitcher?: { id: number; fullName: string };
+  batterSide?: string;
+  pitchHand?: string;
+  description?: string;
+  call?: { code: string; description: string };
+  isStrike?: boolean;
+  isBall?: boolean;
+  isInPlay?: boolean;
+  coordinates?: PitchCoordinates;
+  startSpeed: number | null;
+  endSpeed?: number | null;
+  spinRate: number | null;
+  breakX: number | null;
+  breakZ: number | null;
+  inducedBreakZ?: number | null;
+  extension: number | null;
+  plateTime: number | null;
+  szTop: number | null;
+  szBot: number | null;
+  pX: number | null;
+  pZ: number | null;
+  zone?: number;
+  pitchType?: string;
+  pitchName?: string;
+  exitVelocity: number | null;
+  launchAngle: number | null;
+  hitDistance: number | null;
+  xBA: number | null;
+  isBarrel?: boolean;
+  isSword?: boolean;
+  batSpeed?: number | null;
+  result?: string;
+  resultDescription?: string;
+  homeScore?: number;
+  awayScore?: number;
+  count?: { balls: number; strikes: number; outs: number };
+  timestamp?: string;
+}
+
+/** Response body of `GET /api/game/[gamePk]`, shared by the components that poll it. */
+export interface GameFeedResponse {
+  pitches: EnrichedPitch[];
+  linescore: Linescore | null;
+  status: GameStatus | null;
+  teams: { away?: FeedTeam; home?: FeedTeam } | null;
 }

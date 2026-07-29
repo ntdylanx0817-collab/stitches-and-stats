@@ -4,16 +4,17 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import type { LeaderboardRow } from "@/lib/types";
 
 interface LeaderboardChartProps {
-  rows: any[];
+  rows: LeaderboardRow[];
   sortKey: string;
   sortDir: "asc" | "desc" | null;
   isBatter: boolean;
   className?: string;
 }
 
-export function LeaderboardChart({ rows, sortKey, sortDir, isBatter, className }: LeaderboardChartProps) {
+export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, className }: LeaderboardChartProps) {
   const top10 = useMemo(() => {
     if (!sortKey || !sortDir) return [];
     const sorted = [...rows].sort((a, b) => {

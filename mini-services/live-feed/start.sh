@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Persistent start script for the live-feed service.
 # Runs the service directly (no supervisor) with auto-restart.
-SERVICE_DIR="/home/z/my-project/mini-services/live-feed"
+# Resolve the service directory from this script's own location so it works
+# from any checkout path.
+SERVICE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SERVICE_DIR"
 
 while true; do

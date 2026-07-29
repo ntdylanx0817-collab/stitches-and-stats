@@ -182,7 +182,7 @@ export function ScoreTicker() {
   const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
   const setView = useSavantStore((s) => s.setView);
 
-  const { data, isLoading } = useQuery<TickerResponse>({
+  const { data, isLoading, error } = useQuery<TickerResponse>({
     queryKey: ["score-ticker"],
     queryFn: async () => {
       const res = await fetch("/api/score-ticker");
@@ -197,7 +197,7 @@ export function ScoreTicker() {
     staleTime: 10_000,
   });
 
-  const games = data?.games ?? [];
+  const games = useMemo(() => data?.games ?? [], [data?.games]);
 
   // Duplicate games for seamless infinite scroll
   // (the CSS animation translates by -50% so the second copy lines up)
@@ -213,13 +213,13 @@ export function ScoreTicker() {
   };
 
   if (isLoading || games.length === 0) {
-    // Render a slim bar with "Loading scores..." or "No games today"
+    // Render a slim bar with "Loading scores...", "Scores unavailable", or "No games today"
     return (
       <div className="border-t border-chalk bg-midnight/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-1.5 sm:px-6">
           <TickerLabel live={false} />
           <p className="text-[11px] font-scoreboard uppercase tracking-wide text-slate-500">
-            {isLoading ? "Loading scores…" : "No MLB games scheduled today"}
+            {isLoading ? "Loading scores…" : error ? "Scores unavailable — retrying…" : "No MLB games scheduled today"}
           </p>
         </div>
       </div>

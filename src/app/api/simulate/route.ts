@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLeaderboard } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -122,8 +123,6 @@ export async function GET(req: NextRequest) {
     const bBarrel = Number(batter.barrel_brea) || 7;
     const bHardHit = Number(batter.hard_hit_percent) || 38;
     const bExitVelo = Number(batter.avg_hit_speed) || 88;
-    const bHR = Number(batter.home_run) || 0;
-    const bPA = Number(batter.pa) || 1;
 
     // Extract pitcher stats (note: pitcher fields don't use p_ prefix for most stats)
     const pK = Number(pitcher.k_percent) || 22;
@@ -153,8 +152,6 @@ export async function GET(req: NextRequest) {
     const combinedAVG = (Number(bAVG) + Number(pAVG)) / 2;
     // Combined barrel % (batter's barrel tendency vs pitcher's barrel allowance)
     const combinedBarrel = Math.sqrt((bBarrel * pBarrel) / 100) * 100;
-    // Combined hard-hit %
-    const combinedHardHit = Math.sqrt((bHardHit * pHardHit) / 100) * 100;
     // Combined exit velocity
     const combinedExitVelo = (bExitVelo + pExitVelo) / 2;
 
@@ -172,7 +169,6 @@ export async function GET(req: NextRequest) {
     const singleOnContact = Math.max(0, hitOnContact - hrOnContact - doubleOnContact - tripleOnContact);
 
     // Out rate on contact = 100% - all hit types
-    const outOnContact = Math.max(0, 100 - singleOnContact - doubleOnContact - tripleOnContact - hrOnContact);
 
     // ===== CONVERT TO PER-PA PROBABILITIES =====
     // All rates above are "per contact". Multiply by contactRate/100 to get per-PA.
@@ -184,7 +180,6 @@ export async function GET(req: NextRequest) {
     const pDouble = (doubleOnContact / 100) * contactFrac;
     const pTriple = (tripleOnContact / 100) * contactFrac;
     const pHomeRun = (hrOnContact / 100) * contactFrac;
-    const pOut = (outOnContact / 100) * contactFrac;
 
     // ===== MONTE CARLO SIMULATION =====
     const outcomes = {
@@ -248,7 +243,6 @@ export async function GET(req: NextRequest) {
 
     // ===== MATCHUP INSIGHT =====
     let insight = "";
-    const batterAdvantage = expectedOPS - (Number(bOBP) + Number(bSLG));
     if (expK > 28) {
       insight = `This is a strikeout-heavy matchup. ${pitcher.player_name} and ${batter.player_name} combine for a ${(expK).toFixed(1)}% strikeout rate — expect a lot of swings and misses.`;
     } else if (expectedOPS > 0.850) {
@@ -307,7 +301,7 @@ export async function GET(req: NextRequest) {
     };
 
     return NextResponse.json(result);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

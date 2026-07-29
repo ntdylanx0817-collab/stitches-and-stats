@@ -3,10 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, Activity, Target, TrendingUp, TrendingDown, Radio,
+  Zap, Activity, Target, TrendingUp, Radio,
   Loader2, Flame,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { EnrichedPitch, GameFeedResponse } from "@/lib/types";
 
 interface PlayData {
   atBatIndex: number;
@@ -32,7 +34,7 @@ interface PlayData {
 interface CommentaryEntry {
   id: string;
   type: "home_run" | "strikeout" | "walk" | "hit" | "out" | "scoring" | "barrel" | "info";
-  icon: any;
+  icon: LucideIcon;
   color: string;
   bgColor: string;
   text: string;
@@ -41,7 +43,7 @@ interface CommentaryEntry {
 }
 
 export function LiveGameThread({ gamePk }: { gamePk: number }) {
-  const { data, isLoading } = useQuery<{ pitches: any[]; linescore: any; status: any; teams: any }>({
+  const { data, isLoading } = useQuery<GameFeedResponse>({
     queryKey: ["game-thread", gamePk],
     queryFn: async () => {
       const res = await fetch(`/api/game/${gamePk}`);
@@ -124,7 +126,7 @@ export function LiveGameThread({ gamePk }: { gamePk: number }) {
   );
 }
 
-function generateCommentary(pitches: any[]): CommentaryEntry[] {
+function generateCommentary(pitches: EnrichedPitch[]): CommentaryEntry[] {
   if (!pitches || pitches.length === 0) return [];
 
   // Group pitches by at-bat

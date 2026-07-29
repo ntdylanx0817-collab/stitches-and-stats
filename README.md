@@ -2,14 +2,15 @@
 
 An immersive, production-grade baseball analytics platform inspired by [MLB's Baseball Savant](https://baseballsavant.mlb.com/), redesigned with a modern, ultra-clean dark-mode aesthetic. Built with Next.js 16, TypeScript, and real-time WebSocket pitch tracking.
 
-![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
+[![CI](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml) ![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
 ### Live 'Savant' Gamefeed
 - **Real-time pitch-by-pitch tracking** via WebSocket (with REST polling fallback every 5s)
-- **High-fidelity SVG strike zone** showing every pitch colored by type (4-Seam, Sinker, Slider, Curveball, Cutter, Sweeper, Changeup), with glow rings on the latest pitch, click-to-select, and a 3×3 sub-zone grid
+- **High-fidelity SVG strike zone** showing every pitch colored by type (4-Seam, Sinker, Slider, Curveball, Cutter, Sweeper, Changeup), with glow rings on the latest pitch, click-to-select, hover tooltips, and a 3×3 sub-zone grid
 - **Pitch log** with expandable cards showing 11+ Statcast metrics per pitch (Exit Velocity, Launch Angle, Hit Distance, xBA, Spin Rate, Bat Speed, Break X/Z, Induced Vertical Break, Extension, Plate Time, Plate Location, Zone)
+- **At-Bat Details modal** (Gameday-style) — open the full at-bat from any pitch log entry: batter/pitcher matchup cards, a live balls/strikes/outs count, every pitch numbered on the strike zone, and the full pitch-by-pitch sequence with type, velocity, and result. Updates live as new pitches arrive.
 - **Live metric cards** for the latest pitch with barrel detection
 - **Pitch mix distribution** bars with average speed per pitch type
 - **Scoreboard** with inning-by-inning linescore, R/H/E totals, and live game state
@@ -128,22 +129,26 @@ stitches-and-stats/
 │   ├── lib/
 │   │   ├── mlb-api.ts              # MLB + Savant API client with cache
 │   │   ├── cache.ts                # In-memory TTL cache with LRU + dedup
+│   │   ├── api-errors.ts           # Shared API error shape + status mapping
+│   │   ├── logger.ts               # Structured JSON logger
+│   │   ├── rate-limit.ts           # Sliding-window limiter (see middleware)
 │   │   ├── store.ts                # Zustand store (view, game, filters)
 │   │   ├── types.ts                # TypeScript types
-│   │   ├── db.ts                   # Prisma client
-│   │   └── utils.ts                # cn() utility
-│   └── hooks/
+│   │   ├── utils.ts                # cn() + season helpers
+│   │   └── __tests__/              # bun test suites
+│   ├── hooks/
+│   └── middleware.ts               # Rate limiting for /api/*
 ├── mini-services/
 │   └── live-feed/                  # Socket.io WebSocket service (port 3003)
 │       ├── index.ts                # Service entry point
 │       ├── package.json
 │       ├── supervisor.sh           # Auto-restart supervisor
 │       └── keepalive.sh            # Health-check respawner
-├── prisma/
-│   └── schema.prisma               # Database schema (SQLite by default)
+├── .github/workflows/ci.yml        # Typecheck, test, lint, build
 ├── public/
 ├── .env.example                    # Environment variable template
 ├── .gitignore
+├── bunfig.toml                     # Pins the npm registry for bun installs
 ├── Caddyfile                       # Caddy reverse proxy config (reference)
 ├── next.config.ts                  # Next.js config (standalone output)
 ├── package.json
@@ -231,7 +236,12 @@ This project is for educational/demonstration purposes and is not affiliated wit
 
 ## Tech Notes
 
-- **No `ignoreBuildErrors`**: TypeScript and ESLint are enforced in CI
+- **CI**: `.github/workflows/ci.yml` runs typecheck, tests, lint, and build on every push to `main` and every pull request. The steps are independent, so one push reports every failure at once
+- **No `ignoreBuildErrors`**: `next build` type-checks the app and fails on type errors
+- **Tests**: `npm test` runs the suite via `bun test` (built into Bun — no extra dependency, and it reads TypeScript directly). Covers the cache's TTL/eviction/deduplication behaviour, API error mapping, and the logger
+- **Typecheck**: `npm run typecheck` covers all three TypeScript projects — the app, the tests (which need Bun's globals), and the live-feed service
+- **Structured logging**: `src/lib/logger.ts` emits JSON lines in production and pretty output in development; set `LOG_LEVEL` to `debug`/`info`/`warn`/`error`/`silent`
+- **Rate limiting**: `src/middleware.ts` throttles `/api/*` with a sliding window — 120 req/min generally, 20 req/min for the endpoints that pull large Statcast CSVs. Tune with `RATE_LIMIT_*` (see `.env.example`). **This is a soft cap:** counters live in process memory, so on serverless each instance has its own and the effective limit multiplies by instance count. Use a shared store if you need a real guarantee
 - **Error boundary**: Catches render errors so a single broken component doesn't crash the app
 - **Loading states**: Shimmer skeletons for all async views
 - **Empty/error states**: Graceful handling for API failures, missing data, and preview games

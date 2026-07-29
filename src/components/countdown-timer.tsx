@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Keepalive: check every 3s if the service is running, restart if not.
-SERVICE_DIR="/home/z/my-project/mini-services/live-feed"
+# Resolve the service directory from this script's own location so the
+# keepalive works from any checkout path.
+SERVICE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIDFILE="$SERVICE_DIR/service.pid"
 
 while true; do

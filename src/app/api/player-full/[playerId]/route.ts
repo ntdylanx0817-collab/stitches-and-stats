@@ -1,9 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchPlayer, fetchLeaderboard, computePercentiles } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
+import { errorResponse } from "@/lib/api-errors";
+import type { LeaderboardRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
+
+/** A single batted-ball event plotted on the spray chart. */
+interface SprayChartPoint {
+  x: number;
+  y: number;
+  launchSpeed: number | null;
+  launchAngle: number | null;
+  distance: number | null;
+  event: string;
+  isBarrel: boolean;
+  estimatedBA: number | null;
+  estimatedWOBA: number | null;
+}
+
+/** One pitch type in a pitcher's arsenal, aggregated over the season. */
+interface PitchMixEntry {
+  name: string;
+  count: number;
+  percentage: number;
+  avgSpeed: number;
+  avgSpin: number;
+  avgPfxX: number;
+  avgPfxZ: number;
+  avgReleaseX: number;
+  avgReleaseZ: number;
+}
+
+/** Batted-ball quality summary. */
+interface BarrelData {
+  totalBIP: number;
+  totalBarrels: number;
+  barrelPercent: number;
+  avgEV: number;
+  maxEV: number;
+  maxLaunchAngle: number;
+  avgDistance: number;
+  sweetSpotPercent: number;
+  hardHitPercent: number;
+}
+
+/** One game in the player's recent game log. */
+interface GameLogEntry {
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  stat: Record<string, number | string | undefined>;
+}
+
+/**
+ * A `splits` entry from the MLB Stats API game-log hydration. The `stat` bag
+ * carries a different key set for hitting and pitching, so it stays permissive.
+ */
+interface StatsApiSplit {
+  date?: string;
+  home?: boolean;
+  opponent?: { name?: string };
+  stat?: Record<string, number | string | undefined>;
+}
 
 /**
  * Comprehensive player data endpoint that aggregates ALL available data:
@@ -42,8 +102,8 @@ export async function GET(
     if (!player) return NextResponse.json({ error: "player not found" }, { status: 404 });
 
     // 2. Find season stats
-    let playerRow: any = null;
-    let leaderboard: any[] = [];
+    let playerRow: LeaderboardRow | null = null;
+    let leaderboard: LeaderboardRow[] = [];
     let year = yearsToTry[0];
     for (const y of yearsToTry) {
       const lb = await fetchLeaderboard({ type, year: y, min: 1 });
@@ -73,15 +133,6 @@ export async function GET(
     // 5. Fetch game-by-game log from MLB Stats API
     const gameLog = await fetchGameLog(playerId, type, year);
 
-    // 6. For pitchers: fetch pitch movement data from statcast_search
-    let pitchMovement: any[] = [];
-    if (type === "pitcher") {
-      pitchMovement = pbpData.pitchMix.map((p: any) => ({
-        ...p,
-        // The pbp data already has pitch-level data; extract movement from it
-      }));
-    }
-
     return NextResponse.json({
       player: {
         id: player.id,
@@ -98,8 +149,8 @@ export async function GET(
         batSide: player.batSide,
         pitchHand: player.pitchHand,
         currentTeam: player.currentTeam,
-        draftYear: (player as any).draftYear,
-        mlbDebutDate: (player as any).mlbDebutDate,
+        draftYear: player.draftYear,
+        mlbDebutDate: player.mlbDebutDate,
       },
       stats: playerRow ?? null,
       percentiles,
@@ -112,36 +163,36 @@ export async function GET(
       totalPitches: pbpData.totalPitches,
       gameLog,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }
 
 /**
  * Compute league ranks for key stats (e.g., "xwOBA: .415 — ranks 3rd in MLB").
  */
-function computeLeagueRanks(playerRow: any, leaderboard: any[], type: "batter" | "pitcher"): Array<{ label: string; value: string; rank: number; total: number }> {
+function computeLeagueRanks(playerRow: LeaderboardRow | null, leaderboard: LeaderboardRow[], type: "batter" | "pitcher"): Array<{ label: string; value: string; rank: number; total: number }> {
   if (!playerRow) return [];
 
   const statsToRank = type === "batter"
     ? [
-        { key: "xwoba", label: "xwOBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
-        { key: "woba", label: "wOBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
-        { key: "xba", label: "xBA", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
-        { key: "batting_avg", label: "AVG", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
-        { key: "slg_percent", label: "SLG", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
-        { key: "home_run", label: "HR", format: (v: any) => String(v), higherIsBetter: true },
-        { key: "barrel_brea", label: "Barrel%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
-        { key: "hard_hit_percent", label: "HardHit%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
-        { key: "avg_hit_speed", label: "Avg EV", format: (v: any) => `${Number(v).toFixed(1)}`, higherIsBetter: true },
+        { key: "xwoba", label: "xwOBA", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "woba", label: "wOBA", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "xba", label: "xBA", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "batting_avg", label: "AVG", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "slg_percent", label: "SLG", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+        { key: "home_run", label: "HR", format: (v: number | string) => String(v), higherIsBetter: true },
+        { key: "barrel_brea", label: "Barrel%", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "hard_hit_percent", label: "HardHit%", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "avg_hit_speed", label: "Avg EV", format: (v: number | string) => `${Number(v).toFixed(1)}`, higherIsBetter: true },
       ]
     : [
-        { key: "p_era", label: "ERA", format: (v: any) => Number(v).toFixed(2), higherIsBetter: false },
-        { key: "k_percent", label: "K%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
-        { key: "whiff_percent", label: "Whiff%", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
-        { key: "barrel_brea", label: "Barrel% Allowed", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
-        { key: "hard_hit_percent", label: "HardHit% Allowed", format: (v: any) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
-        { key: "xwoba", label: "xwOBA Allowed", format: (v: any) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: false },
+        { key: "p_era", label: "ERA", format: (v: number | string) => Number(v).toFixed(2), higherIsBetter: false },
+        { key: "k_percent", label: "K%", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "whiff_percent", label: "Whiff%", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: true },
+        { key: "barrel_brea", label: "Barrel% Allowed", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
+        { key: "hard_hit_percent", label: "HardHit% Allowed", format: (v: number | string) => `${Number(v).toFixed(1)}%`, higherIsBetter: false },
+        { key: "xwoba", label: "xwOBA Allowed", format: (v: number | string) => Number(v).toFixed(3).replace(/^0/, ""), higherIsBetter: false },
       ];
 
   const results: Array<{ label: string; value: string; rank: number; total: number }> = [];
@@ -161,7 +212,7 @@ function computeLeagueRanks(playerRow: any, leaderboard: any[], type: "batter" |
     }
     results.push({
       label: stat.label,
-      value: stat.format(playerRow[stat.key]),
+      value: stat.format(playerVal),
       rank,
       total,
     });
@@ -172,7 +223,7 @@ function computeLeagueRanks(playerRow: any, leaderboard: any[], type: "batter" |
 /**
  * Fetch game-by-game log from MLB Stats API.
  */
-async function fetchGameLog(playerId: number, type: "batter" | "pitcher", season: number): Promise<any[]> {
+async function fetchGameLog(playerId: number, type: "batter" | "pitcher", season: number): Promise<GameLogEntry[]> {
   try {
     const group = type === "batter" ? "hitting" : "pitching";
     const url = `https://statsapi.mlb.com/api/v1/people/${playerId}?hydrate=stats(group=%5B${group}%5D,type=%5BgameLog%5D,season=${season})`;
@@ -186,8 +237,8 @@ async function fetchGameLog(playerId: number, type: "batter" | "pitcher", season
     if (!stats || stats.length === 0) return [];
     const splits = stats[0]?.splits ?? [];
     // Return last 15 games (most recent first)
-    return splits.slice(-15).reverse().map((s: any) => ({
-      date: s.date,
+    return (splits as StatsApiSplit[]).slice(-15).reverse().map((s) => ({
+      date: s.date ?? "",
       opponent: s.opponent?.name ?? "Unknown",
       isHome: s.home || false,
       stat: {
@@ -222,9 +273,9 @@ async function fetchGameLog(playerId: number, type: "batter" | "pitcher", season
  * Fetch pitch-by-pitch data from Baseball Savant's statcast_search CSV endpoint.
  */
 async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", season: number): Promise<{
-  sprayChart: any[];
-  pitchMix: any[];
-  barrelData: any;
+  sprayChart: SprayChartPoint[];
+  pitchMix: PitchMixEntry[];
+  barrelData: BarrelData | null;
   totalPitches: number;
 }> {
   const lookupParam = type === "batter" ? "batters_lookup%5B%5D" : "pitchers_lookup%5B%5D";
@@ -249,7 +300,7 @@ async function fetchStatcastPBP(playerId: number, type: "batter" | "pitcher", se
     return { sprayChart: [], pitchMix: [], barrelData: null, totalPitches: 0 };
   }
 
-  const sprayChart: any[] = [];
+  const sprayChart: SprayChartPoint[] = [];
   const pitchTypeMap = new Map<string, { count: number; speeds: number[]; spins: number[]; pfxX: number[]; pfxZ: number[]; releaseX: number[]; releaseZ: number[] }>();
   let totalBIP = 0;
   let totalBarrels = 0;

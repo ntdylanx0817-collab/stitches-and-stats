@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, Gauge, Loader2 } from "lucide-react";
+import { Gauge, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HomeRunDerby } from "@/components/home-run-derby";
 

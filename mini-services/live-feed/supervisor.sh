@@ -2,7 +2,9 @@
 # Supervisor for the Stitches and Stats live-feed WebSocket mini-service.
 # Restarts the service on crash with a 2-second back-off.
 
-SERVICE_DIR="/home/z/my-project/mini-services/live-feed"
+# Resolve the service directory from this script's own location so the
+# supervisor works from any checkout path.
+SERVICE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STDOUT_LOG="$SERVICE_DIR/stdout.log"
 PIDFILE="$SERVICE_DIR/supervisor.pid"
 

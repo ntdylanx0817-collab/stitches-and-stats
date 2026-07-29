@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchPlayers } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
         weight: p.weight,
       })),
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

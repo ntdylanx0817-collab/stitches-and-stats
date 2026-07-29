@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EnrichedPitch } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,8 @@ interface StrikeZoneProps {
   className?: string;
   showLabels?: boolean;
   maxPitches?: number;
+  /** Show the pitch-sequence number on every dot instead of just the latest few. */
+  numberAll?: boolean;
 }
 
 // Pitch-type → color map (Baseball Savant-inspired)
@@ -41,6 +43,19 @@ function getPitchColor(pitchType?: string): string {
   return PITCH_COLORS[pitchType.toUpperCase()] ?? "#94A3B8";
 }
 
+/** Short result label for the hover tooltip. Kept local (not imported from
+ * pitch-log-entry) since that module imports getPitchColor from here. */
+function tooltipResultLabel(p: EnrichedPitch): string {
+  if (p.isInPlay) return p.playResult || "In Play";
+  const callCode = typeof p.call === "string" ? p.call : undefined;
+  if (callCode === "B" || p.isBall) return "Ball";
+  if (callCode === "C") return "Called Strike";
+  if (callCode === "S") return "Swinging Strike";
+  if (callCode === "F") return "Foul";
+  if (callCode === "H") return "HBP";
+  return callCode || (p.isStrike ? "Strike" : "—");
+}
+
 // Strike zone dimensions in SVG coordinates
 const ZONE_LEFT = -8.5 / 12; // -0.708 ft (half of 17 inches)
 const ZONE_RIGHT = 8.5 / 12;
@@ -54,14 +69,13 @@ const SVG_PADDING = 36;
  * We'll fit a 4ft tall × 4ft wide area centered on the zone.
  * Guards against non-number inputs (strings, objects, NaN) to prevent SVG crashes.
  */
-function pitchToSVG(pX: unknown, pZ: unknown, szTop: number = 3.5, szBot: number = 1.5) {
+function pitchToSVG(pX: unknown, pZ: unknown, _szTop: number = 3.5, _szBot: number = 1.5) {
   if (pX == null || pZ == null) return null;
   const x = typeof pX === "number" ? pX : Number(pX);
   const z = typeof pZ === "number" ? pZ : Number(pZ);
   if (isNaN(x) || isNaN(z)) return null;
   // Map pX (-2.5..2.5 ft) to SVG x
   const xRange = 4.0; // 4 ft wide visible area
-  const xScale = (SVG_SIZE - SVG_PADDING * 2) / xRange;
   const svgX = SVG_PADDING + ((x + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
 
   // Map pZ (0..5 ft) to SVG y (inverted)
@@ -90,39 +104,19 @@ export function StrikeZone({
   className,
   showLabels = true,
   maxPitches = 50,
+  numberAll = false,
 }: StrikeZoneProps) {
   // Ensure szTop/szBot are valid numbers (savant sometimes returns strings)
   const safeSzTop = typeof szTop === "number" && !isNaN(szTop) ? szTop : 3.5;
   const safeSzBot = typeof szBot === "number" && !isNaN(szBot) ? szBot : 1.5;
   const recentPitches = useMemo(() => pitches.slice(-maxPitches), [pitches, maxPitches]);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const zone = zoneLineToSVG(safeSzTop, safeSzBot);
   const zoneW = zone.rightX - zone.leftX;
   const zoneH = zone.topY - zone.botY;
 
   // Group pitches into the 9 standard sub-zones for cell coloring
-  const zone3x3 = useMemo(() => {
-    const cells: Array<{ zone: number; pitches: EnrichedPitch[] }> = [];
-    const colW = zoneW / 3;
-    const rowH = zoneH / 3;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        const zoneNum = row * 3 + col + 1;
-        const x0 = zone.leftX + col * colW;
-        const y0 = zone.topY + row * rowH; // top of cell
-        const y1 = y0 + rowH;
-        const x1 = x0 + colW;
-        const cellPitches = recentPitches.filter((p) => {
-          if (p.pX == null || p.pZ == null) return false;
-          const sp = pitchToSVG(p.pX, p.pZ, szTop, szBot);
-          if (!sp) return false;
-          return sp.x >= x0 && sp.x < x1 && sp.y >= y0 && sp.y < y1;
-        });
-        cells.push({ zone: zoneNum, pitches: cellPitches });
-      }
-    }
-    return cells;
-  }, [recentPitches, zoneW, zoneH, zone.leftX, zone.topY, szTop, szBot]);
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>
@@ -286,6 +280,8 @@ export function StrikeZone({
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ type: "spring", stiffness: 360, damping: 22, delay: isLatest ? 0 : Math.min(idx * 0.01, 0.3) }}
                 onClick={() => onSelectPitch?.(p)}
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx((cur) => (cur === idx ? null : cur))}
                 style={{ cursor: "pointer" }}
               >
                 {/* Glow ring on latest */}
@@ -344,8 +340,8 @@ export function StrikeZone({
                     strokeWidth="1.5"
                   />
                 )}
-                {/* Pitch number for the latest few */}
-                {idx >= recentPitches.length - 5 && (
+                {/* Pitch number for the latest few (or all, when numberAll) */}
+                {(numberAll || idx >= recentPitches.length - 5) && (
                   <text
                     x={pos.x + size + 2}
                     y={pos.y - size - 2}
@@ -379,6 +375,26 @@ export function StrikeZone({
           </>
         )}
       </svg>
+
+      {/* Hover tooltip */}
+      {hoveredIdx != null && recentPitches[hoveredIdx] && (() => {
+        const p = recentPitches[hoveredIdx];
+        const pos = pitchToSVG(p.pX, p.pZ, szTop, szBot);
+        if (!pos) return null;
+        const speed = typeof p.startSpeed === "number" ? p.startSpeed.toFixed(1) : null;
+        return (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-white/10 bg-midnight-2/95 px-2.5 py-1.5 text-[11px] shadow-lg"
+            style={{ left: `${(pos.x / SVG_SIZE) * 100}%`, top: `${(pos.y / SVG_SIZE) * 100}%`, marginTop: -10 }}
+          >
+            <div className="font-semibold text-chalk">
+              {p.pitchName ?? p.pitchType ?? "Pitch"}
+              {speed && ` · ${speed} mph`}
+            </div>
+            <div className="text-slate-400">{tooltipResultLabel(p)}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

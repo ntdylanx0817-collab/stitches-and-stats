@@ -4,14 +4,12 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  GitCompare, Search, Loader2, X, TrendingUp, TrendingDown,
-  Zap, Target, Activity, Award,
+  GitCompare, Search, Loader2, X,
+  Target, Award,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton, EmptyState, ErrorState } from "@/components/loading-states";
-import { SprayChart } from "@/components/spray-chart";
+import { SprayChart, type SprayPoint } from "@/components/spray-chart";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 
@@ -144,12 +142,14 @@ function PlayerSearchPanel({
     staleTime: 5 * 60_000,
   });
 
-  const batters = lbData?.rows ?? [];
   const filtered = useMemo(() => {
+    // The `?? []` is inside the memo: as a separate statement it produced a
+    // new array identity every render, so the memo never actually hit.
+    const batters = lbData?.rows ?? [];
     if (!search.trim()) return batters.slice(0, 30);
     const q = search.toLowerCase();
     return batters.filter((b) => b.player_name?.toLowerCase().includes(q)).slice(0, 30);
-  }, [batters, search]);
+  }, [lbData?.rows, search]);
 
   const accentColor = accent === "cobalt" ? "#4DA3FF" : "#FF3B5C";
 
@@ -250,7 +250,7 @@ function PlayerSearchPanel({
 }
 
 function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player2Id: number }) {
-  const { data: data1, isLoading: loading1 } = useQuery<PlayerData>({
+  const { data: data1, isLoading: loading1, refetch: refetch1 } = useQuery<PlayerData>({
     queryKey: ["player-profile", player1Id, "batter"],
     queryFn: async () => {
       const res = await fetch(`/api/player/${player1Id}?type=batter`);
@@ -260,7 +260,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
     staleTime: 5 * 60_000,
   });
 
-  const { data: data2, isLoading: loading2 } = useQuery<PlayerData>({
+  const { data: data2, isLoading: loading2, refetch: refetch2 } = useQuery<PlayerData>({
     queryKey: ["player-profile", player2Id, "batter"],
     queryFn: async () => {
       const res = await fetch(`/api/player/${player2Id}?type=batter`);
@@ -281,7 +281,10 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
   if (!data1?.player || !data2?.player) {
     return (
       <div className="mt-4">
-        <ErrorState title="Couldn't load comparison data" />
+        <ErrorState
+          title="Couldn't load comparison data"
+          onRetry={() => { refetch1(); refetch2(); }}
+        />
       </div>
     );
   }
@@ -293,11 +296,17 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 
   if (!s1 || !s2) return null;
 
-  const comparisonRows: Array<{ label: string; v1: any; v2: any; format: (v: any) => string; higherIsBetter: boolean }> = [
+  const comparisonRows: Array<{
+    label: string;
+    v1: number | string | undefined;
+    v2: number | string | undefined;
+    format: (v: number | string | undefined) => string;
+    higherIsBetter: boolean;
+  }> = [
     { label: "AVG", v1: s1.batting_avg, v2: s2.batting_avg, format: fmtAvg, higherIsBetter: true },
     { label: "OBP", v1: s1.on_base_percent, v2: s2.on_base_percent, format: fmtAvg, higherIsBetter: true },
     { label: "SLG", v1: s1.slg_percent, v2: s2.slg_percent, format: fmtAvg, higherIsBetter: true },
-    { label: "OPS", v1: ops(s1), v2: ops(s2), format: (v) => v.toFixed(3).replace(/^0/, ""), higherIsBetter: true },
+    { label: "OPS", v1: ops(s1), v2: ops(s2), format: (v) => Number(v ?? 0).toFixed(3).replace(/^0/, ""), higherIsBetter: true },
     { label: "wOBA", v1: s1.woba, v2: s2.woba, format: fmtAvg, higherIsBetter: true },
     { label: "xwOBA", v1: s1.xwoba, v2: s2.xwoba, format: fmtAvg, higherIsBetter: true },
     { label: "xBA", v1: s1.xba, v2: s2.xba, format: fmtAvg, higherIsBetter: true },
@@ -332,7 +341,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 
       {/* Comparison rows */}
       <div className="divide-y divide-white/5">
-        {comparisonRows.map((row, idx) => {
+        {comparisonRows.map((row, _idx) => {
           const v1 = row.v1;
           const v2 = row.v2;
           const n1 = typeof v1 === "number" ? v1 : parseFloat(String(v1));
@@ -405,7 +414,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 }
 
 function PercentileBattle({
-  name1, name2, percentiles1, percentiles2,
+  name1: _name1, name2: _name2, percentiles1, percentiles2,
 }: {
   name1: string;
   name2: string;
@@ -495,13 +504,13 @@ function fmtNum(v: unknown, decimals: number = 0): string {
   if (isNaN(n)) return "—";
   return n.toFixed(decimals);
 }
-function ops(s: any): number {
+function ops(s: PlayerRow): number {
   const slg = parseFloat(String(s.slg_percent));
   const obp = parseFloat(String(s.on_base_percent));
   if (isNaN(slg) || isNaN(obp)) return 0;
   return slg + obp;
 }
-function fmtOps(s: any): string {
+function fmtOps(s: PlayerRow): string {
   const o = ops(s);
   if (o === 0) return "—";
   return o.toFixed(3).replace(/^0/, "");
@@ -511,7 +520,7 @@ function fmtOps(s: any): string {
 function SprayChartComparison({ player1Id, player2Id, name1, name2 }: {
   player1Id: number; player2Id: number; name1: string; name2: string;
 }) {
-  const { data: data1, isLoading: loading1 } = useQuery<{ sprayChart: any[]; player: { batSide?: { code: string } } }>({
+  const { data: data1, isLoading: loading1 } = useQuery<{ sprayChart: SprayPoint[]; player: { batSide?: { code: string } } }>({
     queryKey: ["player-full", player1Id, "batter", null],
     queryFn: async () => {
       const res = await fetch(`/api/player-full/${player1Id}?type=batter`);
@@ -521,7 +530,7 @@ function SprayChartComparison({ player1Id, player2Id, name1, name2 }: {
     staleTime: 5 * 60_000,
   });
 
-  const { data: data2, isLoading: loading2 } = useQuery<{ sprayChart: any[]; player: { batSide?: { code: string } } }>({
+  const { data: data2, isLoading: loading2 } = useQuery<{ sprayChart: SprayPoint[]; player: { batSide?: { code: string } } }>({
     queryKey: ["player-full", player2Id, "batter", null],
     queryFn: async () => {
       const res = await fetch(`/api/player-full/${player2Id}?type=batter`);

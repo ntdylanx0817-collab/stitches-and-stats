@@ -15,8 +15,10 @@ interface CacheEntry<T> {
   fetchedAt: number;
 }
 
-const store = new Map<string, CacheEntry<any>>();
-const inflight = new Map<string, Promise<any>>();
+// `unknown` rather than `any`: the store is genuinely heterogeneous, and the
+// generic accessors below are the single place the caller's type is asserted.
+const store = new Map<string, CacheEntry<unknown>>();
+const inflight = new Map<string, Promise<unknown>>();
 
 const MAX_ENTRIES = 1000;
 
@@ -78,16 +80,9 @@ export function getOrSet<T>(key: string, ttlMs: number, fn: () => Promise<T>): P
   return p;
 }
 
+/** Drop every entry whose key starts with `prefix`. */
 export function clearCachePrefix(prefix: string): void {
   for (const k of store.keys()) {
     if (k.startsWith(prefix)) store.delete(k);
   }
-}
-
-export function cacheStats() {
-  return {
-    size: store.size,
-    inflight: inflight.size,
-    keys: Array.from(store.keys()),
-  };
 }

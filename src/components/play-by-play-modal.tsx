@@ -5,6 +5,28 @@ import { motion } from "framer-motion";
 import { Loader2, X, Activity } from "lucide-react";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import type { EnrichedPitch, GameFeedResponse, GameStatus, Linescore } from "@/lib/types";
+
+/** One inning row in the linescore. */
+type InningLine = Linescore["innings"][number];
+
+/** An at-bat reconstructed from the flat pitch list. */
+interface BuiltPlay {
+  atBatIndex: number;
+  inning: number;
+  halfInning: "top" | "bottom";
+  batterName: string;
+  description: string;
+  awayScore: number;
+  homeScore: number;
+  outs: number;
+  isScoringPlay: boolean;
+  exitVelocity: number | null;
+  launchAngle: number | null;
+  hitDistance: number | null;
+  pitchType: string | null;
+  startSpeed: number | null;
+}
 
 interface PlayByPlayModalProps {
   gamePk: number;
@@ -16,7 +38,7 @@ interface PlayByPlayModalProps {
   homeTeamId: number;
   awayScore: number;
   homeScore: number;
-  status: any;
+  status: GameStatus | null | undefined;
   onClose: () => void;
 }
 
@@ -40,12 +62,7 @@ export function PlayByPlayModal({
   status,
   onClose,
 }: PlayByPlayModalProps) {
-  const { data, isLoading } = useQuery<{
-    pitches: any[];
-    linescore: any;
-    status: any;
-    teams: any;
-  }>({
+  const { data, isLoading } = useQuery<GameFeedResponse>({
     queryKey: ["game-feed-rest", gamePk],
     queryFn: async () => {
       const res = await fetch(`/api/game/${gamePk}`);
@@ -143,7 +160,7 @@ export function PlayByPlayModal({
                 <div className="font-scoreboard text-[8px] text-slate-600 h-3.5 flex items-center">{awayAbbr}</div>
                 <div className="font-scoreboard text-[8px] text-slate-600 h-3.5 flex items-center">{homeAbbr}</div>
               </div>
-              {linescore.innings.map((inn: any) => (
+              {linescore.innings.map((inn: InningLine) => (
                 <div key={inn.num} className="flex flex-col items-center gap-px">
                   <div className="font-scoreboard text-[8px] text-slate-600 w-5 text-center">{inn.num}</div>
                   <div className="font-scoreboard text-[10px] text-slate-300 w-5 text-center num">{inn.away?.runs ?? 0}</div>
@@ -260,13 +277,14 @@ export function PlayByPlayModal({
 }
 
 /** Build a list of plays (at-bats) from enriched pitch data */
-function buildPlaysFromPitches(pitches: any[]): any[] {
+function buildPlaysFromPitches(pitches: EnrichedPitch[]): BuiltPlay[] {
   if (!pitches || pitches.length === 0) return [];
-  const playMap = new Map<number, any>();
+  const playMap = new Map<number, BuiltPlay>();
   for (const p of pitches) {
     const idx = p.atBatIndex;
-    if (!playMap.has(idx)) {
-      playMap.set(idx, {
+    let play = playMap.get(idx);
+    if (!play) {
+      play = {
         atBatIndex: idx,
         inning: p.inning ?? 0,
         halfInning: p.halfInning ?? "top",
@@ -281,9 +299,9 @@ function buildPlaysFromPitches(pitches: any[]): any[] {
         hitDistance: null,
         pitchType: null,
         startSpeed: null,
-      });
+      };
+      playMap.set(idx, play);
     }
-    const play = playMap.get(idx);
     if (p.exitVelocity != null) play.exitVelocity = p.exitVelocity;
     if (p.launchAngle != null) play.launchAngle = p.launchAngle;
     if (p.hitDistance != null) play.hitDistance = p.hitDistance;

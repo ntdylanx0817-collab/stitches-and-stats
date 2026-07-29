@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLeaderboard, computePercentiles } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
+import type { LeaderboardRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
       ? [requestedYear]
       : [fallbackYear, fallbackYear - 1, fallbackYear - 2];
 
-    let rows: any[] = [];
+    let rows: LeaderboardRow[] = [];
     let year = yearsToTry[0];
     for (const y of yearsToTry) {
       const r = await fetchLeaderboard({ type, year: y, min, position, team, gameType });
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest) {
       type,
       rows,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

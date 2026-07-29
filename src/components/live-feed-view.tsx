@@ -4,15 +4,15 @@ import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Calendar, ChevronRight, Clock, Filter, Loader2, Radio,
-  TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight, Search,
-  AlertCircle, Trophy,
+  Activity, Calendar, Clock, Loader2, Radio,
+  TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight,
+  type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StrikeZone } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
+import { AtBatDetailsModal } from "@/components/at-bat-details-modal";
 import { LineupChanges } from "@/components/lineup-changes";
 import { WinProbabilityChart } from "@/components/win-probability-chart";
 import { HeroScoreboard } from "@/components/hero-scoreboard";
@@ -24,8 +24,11 @@ import { BullpenStatus } from "@/components/bullpen-status";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { EnrichedPitch } from "@/lib/types";
-import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton } from "@/components/loading-states";
+import type { EnrichedPitch, LivePitchEvent, Linescore, GameStatus, FeedTeam, StatcastPitch } from "@/lib/types";
+
+/** One inning row in the linescore. */
+type InningLine = Linescore["innings"][number];
+import { EmptyState, ErrorState, Skeleton } from "@/components/loading-states";
 
 interface ScheduleGame {
   gamePk: number;
@@ -37,6 +40,16 @@ interface ScheduleGame {
   venue?: { name: string };
   away: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
   home: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
+}
+
+/** Format an elapsed duration as a short "updated Xs/Xm ago" label. */
+function updatedAgoLabel(lastUpdated: number | null, now: number): string | null {
+  if (!lastUpdated) return null;
+  const secs = Math.max(0, Math.floor((now - lastUpdated) / 1000));
+  if (secs < 3) return "Updated just now";
+  if (secs < 60) return `Updated ${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  return `Updated ${mins}m ago`;
 }
 
 export function LiveFeedView() {
@@ -54,18 +67,18 @@ export function LiveFeedView() {
     retry: 2,
   });
 
-  const allGames = scheduleData?.games ?? [];
-
   // Sort games: Live first, then Preview, then Final
-  // This way you see live games immediately without scrolling
+  // This way you see live games immediately without scrolling.
+  // The `?? []` lives inside the memo: as a separate statement it produced a
+  // new array identity on every render, so the memo never actually hit.
   const games = useMemo(() => {
-    return [...allGames].sort((a, b) => {
-      const order = { Live: 0, Preview: 1, Final: 2 };
+    const order = { Live: 0, Preview: 1, Final: 2 };
+    return [...(scheduleData?.games ?? [])].sort((a, b) => {
       const aOrder = order[a.status.abstractGameState as keyof typeof order] ?? 3;
       const bOrder = order[b.status.abstractGameState as keyof typeof order] ?? 3;
       return aOrder - bOrder;
     });
-  }, [allGames]);
+  }, [scheduleData?.games]);
 
   // Auto-pick the first live game if none selected.
   // Priority: Live > Final (has pitch data) > Preview (today's upcoming)
@@ -199,7 +212,17 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
+  const [viewAtBatIndex, setViewAtBatIndex] = useState<number | null>(null);
   const [highLeverageOnly, setHighLeverageOnly] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Re-render once a second so the "updated Xs ago" label stays fresh without
+  // needing a fetch — it's purely a clock tick against `lastUpdated`.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
   useEffect(() => {
@@ -207,6 +230,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     const offSnap = onSnapshot((snap) => {
       if (snap.gamePk !== gamePk) return;
       setSnapshot(snap);
+      setLastUpdated(Date.now());
       // NOTE: Do NOT push snap.latestPitch into livePitches here.
       // The server's latestPitch is a raw object with nested fields (batter, pitcher,
       // call, count are objects, not flattened strings/numbers). Pushing it raw
@@ -217,8 +241,9 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     // Also subscribe to the granular game:pitch event for snappier UI feedback
     // when a new pitch arrives mid-at-bat (the snapshot polls every 8s, but
     // game:pitch fires immediately when a new pitch key is detected).
-    const offPitch = onPitch((pitch: any) => {
+    const offPitch = onPitch((pitch: LivePitchEvent) => {
       if (!pitch || pitch.atBatIndex == null || pitch.pitchNumber == null) return;
+      setLastUpdated(Date.now());
       setLivePitches((prev) => {
         const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
         if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
@@ -239,23 +264,27 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           pitchHand: pitch.pitchHand,
           description: pitch.description ?? "",
           playResult: pitch.result ?? "",
-          call: pitch.call?.code ?? pitch.call,
+          // `call` arrives as { code, description }; the old form fell back to
+          // the object itself when code was absent.
+          call: pitch.call?.code,
           callDescription: pitch.call?.description,
           pitchType: pitch.pitchType,
           pitchName: pitch.pitchName,
-          startSpeed: pitch.startSpeed,
-          endSpeed: pitch.endSpeed,
-          spinRate: pitch.spinRate,
-          breakX: pitch.breakX,
-          breakZ: pitch.breakZ,
-          inducedBreakZ: pitch.inducedBreakZ,
-          extension: pitch.extension,
-          plateTime: pitch.plateTime,
+          // The wire shape uses null for "no reading"; EnrichedPitch uses
+          // undefined, so these are narrowed rather than passed straight on.
+          startSpeed: pitch.startSpeed ?? undefined,
+          endSpeed: pitch.endSpeed ?? undefined,
+          spinRate: pitch.spinRate ?? undefined,
+          breakX: pitch.breakX ?? undefined,
+          breakZ: pitch.breakZ ?? undefined,
+          inducedBreakZ: pitch.inducedBreakZ ?? undefined,
+          extension: pitch.extension ?? undefined,
+          plateTime: pitch.plateTime ?? undefined,
           pX: pitch.pX ?? pitch.coordinates?.pX,
           pZ: pitch.pZ ?? pitch.coordinates?.pZ,
           zone: pitch.zone,
-          szTop: pitch.szTop,
-          szBot: pitch.szBot,
+          szTop: pitch.szTop ?? undefined,
+          szBot: pitch.szBot ?? undefined,
           isStrike: !!pitch.isStrike,
           isBall: !!pitch.isBall,
           isInPlay: !!pitch.isInPlay,
@@ -288,11 +317,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // Fallback: if WS not connected, fetch via REST periodically.
   // For Preview (not-yet-started) games, only fetch once — no point polling.
   // For Live/Final games, poll every 5s for near-real-time updates.
-  const { data: restData, isLoading: restLoading } = useQuery<{
+  const { data: restData, isLoading: restLoading, dataUpdatedAt: restUpdatedAt } = useQuery<{
     pitches: EnrichedPitch[];
-    linescore: any;
-    status: any;
-    teams: any;
+    linescore: Linescore | null;
+    status: GameStatus | null;
+    teams: { away?: FeedTeam; home?: FeedTeam };
   }>({
     queryKey: ["game-feed-rest", gamePk],
     queryFn: async () => {
@@ -302,7 +331,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     },
     enabled: !connected || !snapshot,
     // TanStack Query passes the Query object; use query.state.data to avoid TDZ
-    refetchInterval: (query: any) => {
+    refetchInterval: (query) => {
       const data = query.state?.data;
       const state = data?.status?.abstractGameState;
       // Stop polling for Preview games (they haven't started)
@@ -314,6 +343,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     retry: 2,
   });
 
+  // Freshness reflects whichever source — WS push or REST fallback — last
+  // actually delivered data, computed at render time rather than synced into
+  // state via an effect.
+  const effectiveLastUpdated = Math.max(lastUpdated ?? 0, restUpdatedAt || 0) || null;
+
   // Use WS data if available, else REST
   const allPitches = useMemo<EnrichedPitch[]>(() => {
     if (snapshot?.savant?.exit_velocity?.length) {
@@ -321,7 +355,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       // in each play (not just the last one) so the strike zone and pitch log
       // show every pitch of every at-bat.
       const pitches: EnrichedPitch[] = [];
-      const savantMap = new Map<string, any>();
+      const savantMap = new Map<string, StatcastPitch>();
       for (const sp of snapshot.savant.exit_velocity) {
         const k = `${sp.inning}-${sp.half_inning}-${sp.ab_number}-${sp.pitch_number ?? 0}`;
         savantMap.set(k, sp);
@@ -423,6 +457,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     return result.slice(0, 80);
   }, [livePitches, allPitches]);
 
+  const viewAtBatPitches = useMemo(
+    () => (viewAtBatIndex != null ? mergedPitches.filter((p) => p.atBatIndex === viewAtBatIndex) : []),
+    [mergedPitches, viewAtBatIndex]
+  );
+
   // High-leverage filter: only show critical game situations
   // - Bases loaded (2+ runners)
   // - Full count (3-2)
@@ -474,7 +513,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // Highlight metrics for the latest pitch
   const latestMetrics = useMemo(() => {
     if (!latestPitch) return [];
-    const m: Array<{ label: string; value: string; tone?: string; icon?: any }> = [];
+    const m: Array<{ label: string; value: string; tone?: string; icon?: LucideIcon }> = [];
     const num = (v: unknown): number | null => {
       if (v == null) return null;
       const n = typeof v === "number" ? v : Number(v);
@@ -588,7 +627,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             }).map(([code, name]) => {
               const has = pitchTypeStats.some((p) => p.type === code);
               if (!has) return null;
-              const color = (PITCH_COLOR_LEGEND as any)[code] ?? "#94A3B8";
+              const color = PITCH_COLOR_LEGEND[code] ?? "#94A3B8";
               return (
                 <span key={code} className="inline-flex items-center gap-1 rounded-full bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-300">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
@@ -603,7 +642,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       {/* Middle column: Pitch Log */}
       <div className="lg:col-span-4 space-y-4">
         <div className="glass rounded-2xl p-3">
-          <div className="mb-3 flex items-center justify-between px-1 gap-2">
+          <div className="mb-1 flex items-center justify-between px-1 gap-2">
             <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
               <Activity className="h-4 w-4 text-mint" />
               Pitch Feed
@@ -623,6 +662,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
               </button>
               <Badge
                 variant="outline"
+                title={connected ? "Receiving live pitch-by-pitch updates" : "Live connection unavailable — falling back to periodic polling"}
                 className={cn(
                   "text-[10px]",
                   connected
@@ -634,10 +674,15 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                   "mr-1 h-1.5 w-1.5 rounded-full",
                   connected ? "animate-live-dot bg-mint" : "bg-warning-track"
                 )} />
-                {connected ? "WS" : "REST"}
+                {connected ? "Live" : "Polling"}
               </Badge>
             </div>
           </div>
+          {updatedAgoLabel(effectiveLastUpdated, now) && (
+            <div className="mb-2 px-1 text-[10px] text-slate-500">
+              {updatedAgoLabel(effectiveLastUpdated, now)}
+            </div>
+          )}
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
             <div className="space-y-1.5">
               <AnimatePresence initial={false}>
@@ -665,12 +710,13 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                 ) : (
                   displayPitches.map((p, idx) => (
                     <PitchLogEntry
-                      key={`${p.atBatIndex}-${p.pitchNumber}-${idx}`}
+                      key={`${p.atBatIndex}-${p.pitchNumber}`}
                       pitch={p}
                       index={idx}
                       isSelected={selectedPitch?.atBatIndex === p.atBatIndex && selectedPitch?.pitchNumber === p.pitchNumber}
                       onSelect={() => setSelectedPitch(p)}
                       isLatest={idx === 0}
+                      onViewAtBat={setViewAtBatIndex}
                     />
                   ))
                 )}
@@ -747,7 +793,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           </h3>
           <div className="space-y-2">
             {pitchTypeStats.slice(0, 8).map((p) => {
-              const color = (PITCH_COLOR_LEGEND as any)[p.type] ?? "#94A3B8";
+              const color = PITCH_COLOR_LEGEND[p.type] ?? "#94A3B8";
               const pct = mergedPitches.length > 0 ? (p.count / mergedPitches.length) * 100 : 0;
               return (
                 <div key={p.type}>
@@ -779,11 +825,26 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         </div>
       </div>
     </div>
+    <AnimatePresence>
+      {viewAtBatIndex != null && viewAtBatPitches.length > 0 && (
+        <AtBatDetailsModal
+          pitches={viewAtBatPitches}
+          awayTeamId={teams?.away?.id}
+          homeTeamId={teams?.home?.id}
+          onClose={() => setViewAtBatIndex(null)}
+        />
+      )}
+    </AnimatePresence>
     </div>
   );
 }
 
-function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; status: any; teams: any; gamePk: number }) {
+function Scoreboard({ linescore, status, teams, gamePk }: {
+  linescore: Linescore | null;
+  status: GameStatus | null;
+  teams: { away?: FeedTeam; home?: FeedTeam } | null;
+  gamePk: number;
+}) {
   const innings = linescore?.innings ?? [];
   const away = linescore?.teams?.away;
   const home = linescore?.teams?.home;
@@ -829,7 +890,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
             <thead>
               <tr className="text-[10px] uppercase text-slate-500">
                 <th className="text-left py-1 pr-2 sticky left-0 bg-transparent"></th>
-                {innings.map((inn: any) => (
+                {innings.map((inn: InningLine) => (
                   <th key={inn.num} className="px-1.5 py-1 text-center min-w-[20px]">{inn.num}</th>
                 ))}
                 {(away || home) && (
@@ -849,7 +910,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
                     <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
                   </div>
                 </td>
-              {innings.map((inn: any) => (
+              {innings.map((inn: InningLine) => (
                 <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
                   {inn.away.runs ?? 0}
                 </td>
@@ -869,7 +930,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
                   <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{homeName.split(" ").slice(-1)[0]}</span>
                 </div>
               </td>
-              {innings.map((inn: any) => (
+              {innings.map((inn: InningLine) => (
                 <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
                   {inn.home.runs ?? 0}
                 </td>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { Loader2, Target } from "lucide-react";
 
@@ -108,9 +107,6 @@ export function MatchupStrikeZone({
   const isLoading = batterLoading || pitcherLoading;
   const szTop = SZ_TOP_DEFAULT;
   const szBot = SZ_BOT_DEFAULT;
-  const zoneLines = zoneLineToSVG(szTop, szBot);
-  const zoneW = zoneLines.rightX - zoneLines.leftX;
-  const zoneH = zoneLines.topY - zoneLines.botY;
 
   // Find the batter's hottest zone
   const hottestBatterZone = useMemo(() => {

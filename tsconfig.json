@@ -10,7 +10,6 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "noImplicitAny": false,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -37,6 +36,9 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "examples",
+    "mini-services",
+    "src/**/__tests__/**"
   ]
 }

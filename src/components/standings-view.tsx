@@ -7,6 +7,7 @@ import { Trophy, Loader2, Flame, Snowflake } from "lucide-react";
 import { getTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { ErrorState } from "@/components/loading-states";
 
 interface TeamStanding {
   id: number;
@@ -42,7 +43,7 @@ interface StandingsData {
 export function StandingsView() {
   const [tab, setTab] = useState<"divisions" | "wildcard" | "playoff">("divisions");
 
-  const { data, isLoading } = useQuery<StandingsData>({
+  const { data, isLoading, error, refetch } = useQuery<StandingsData>({
     queryKey: ["standings"],
     queryFn: async () => {
       const res = await fetch("/api/standings");
@@ -63,29 +64,40 @@ export function StandingsView() {
     );
   }
 
-  if (!data) return null;
+  if (error || !data) {
+    return (
+      <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
+        <ErrorState
+          title="Couldn't load standings"
+          description="The MLB Stats API may be temporarily unavailable."
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-scoreboard flex items-center gap-2 text-lg font-bold text-chalk uppercase tracking-wide">
-          <Trophy className="h-5 w-5 text-warning-track" />
+          <Trophy className="h-5 w-5 text-amber drop-shadow-[0_0_6px_rgba(255,181,71,0.5)]" />
           Standings
         </h2>
         <span className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{data.season} Season</span>
       </div>
+      <div className="mb-4 h-px bg-gradient-to-r from-warning-track/40 via-warning-track/10 to-transparent" />
 
       {/* Tab toggle */}
       <div className="mb-4 flex rounded-lg border border-chalk bg-midnight/40 p-0.5 w-fit">
-        {[
+        {([
           { key: "divisions", label: "Divisions" },
           { key: "wildcard", label: "Wild Card" },
           { key: "playoff", label: "Playoff Picture" },
-        ].map((t) => (
+        ] as const).map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key as any)}
+            onClick={() => setTab(t.key)}
             className={cn(
               "font-scoreboard rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
               tab === t.key ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"
@@ -130,7 +142,7 @@ function DivisionCard({ division, index }: { division: DivisionStanding; index: 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.3) }}
-      className="glass rounded-xl p-3"
+      className="glass glass-hover rounded-xl p-3"
     >
       <h3 className="font-scoreboard mb-2 text-xs font-bold text-chalk uppercase tracking-wide border-b border-chalk pb-1.5">
         {division.division}
@@ -219,7 +231,7 @@ function TeamRow({
     <button
       onClick={() => { setSelectedTeamId(team.id); setView("team"); }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white/10 text-left",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-warning-track/10 text-left cursor-pointer",
         isDivisionLeader && "bg-mint/5",
         isInWildCard && "bg-cobalt/5"
       )}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
+import { routeLogger, serializeError } from "@/lib/logger";
+
+const log = routeLogger("/api/h2h");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -151,7 +154,7 @@ async function fetchH2H(team1Id: number, team2Id: number): Promise<H2HData | nul
       insight, preGameWinProb,
     };
   } catch (err) {
-    console.error("[h2h] Error:", err);
+    log.error("h2h computation failed", serializeError(err));
     return null;
   }
 }

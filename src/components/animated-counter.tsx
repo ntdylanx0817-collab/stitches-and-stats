@@ -81,7 +81,12 @@ export function useAnimatedValue(value: number, decimals: number = 0, duration: 
     };
 
     ref.current.raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(ref.current.raf);
+
+    // Capture the ref object itself for cleanup. Reading `ref.current` inside
+    // the returned function would read whatever it points at when cleanup
+    // runs, which is not necessarily the frame this effect scheduled.
+    const state = ref.current;
+    return () => cancelAnimationFrame(state.raf);
   }, [value, decimals, duration]);
 
   return display;

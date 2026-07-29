@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  BarChart3, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Search,
-  Filter, User, Hash, AlertCircle,
+  ArrowUpDown, ArrowUp, ArrowDown, Search,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +18,10 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSavantStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, statcastSeasons } from "@/lib/utils";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { LeaderboardChart } from "@/components/leaderboard-chart";
+import type { LeaderboardRow } from "@/lib/types";
 
 type SortDir = "asc" | "desc" | null;
 interface ColDef {
@@ -29,8 +30,8 @@ interface ColDef {
   short?: string;
   width?: number;
   align?: "left" | "right" | "center";
-  format?: (v: any) => string;
-  tone?: (v: any) => string;
+  format?: (v: number | string | undefined) => string;
+  tone?: (v: number | string | undefined) => string;
   group?: "standard" | "advanced";
 }
 
@@ -157,7 +158,7 @@ export function LeaderboardsView() {
     }
   }
 
-  const { data, isLoading, error, refetch } = useQuery<{ rows: any[]; total: number; year: number; type: string }>({
+  const { data, isLoading, error, refetch } = useQuery<{ rows: LeaderboardRow[]; total: number; year: number; type: string }>({
     queryKey: ["leaderboard", lbType, lbYear, lbMin, lbTeam, lbPosition],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -216,7 +217,7 @@ export function LeaderboardsView() {
     else setSortDir("desc");
   };
 
-  const openPlayer = (row: any) => {
+  const openPlayer = (row: LeaderboardRow) => {
     setSelectedPlayer({
       id: Number(row.player_id),
       name: String(row.player_name ?? ""),
@@ -230,13 +231,14 @@ export function LeaderboardsView() {
       {/* Filters bar */}
       <div className="glass rounded-2xl p-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Filter className="h-4 w-4 text-cobalt" /> Statcast Leaderboards
+          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-white">
+            <Filter className="h-4 w-4 text-cobalt drop-shadow-[0_0_6px_rgba(77,163,255,0.5)]" /> Statcast Leaderboards
           </h2>
           <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
             {data?.total ?? 0} players
           </Badge>
         </div>
+        <div className="mb-3 h-px bg-gradient-to-r from-cobalt/40 via-cobalt/10 to-transparent" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Type toggle */}
           <div>
@@ -267,7 +269,7 @@ export function LeaderboardsView() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
+                {statcastSeasons().map((y) => (
                   <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                 ))}
               </SelectContent>
@@ -426,7 +428,7 @@ export function LeaderboardsView() {
                     onClick={() => openPlayer(row)}
                   >
                     {visibleCols.map((col) => {
-                      let val: any;
+                      let val: number | string | undefined;
                       if (col.key === "rank") val = idx + 1;
                       else val = row[col.key];
                       const display = col.format ? col.format(val) : (val ?? "—");
@@ -443,7 +445,15 @@ export function LeaderboardsView() {
                           )}
                         >
                           {col.key === "rank" && (
-                            <span className="text-slate-500 font-mono">{idx + 1}</span>
+                            <span className={cn(
+                              "font-mono",
+                              idx === 0 ? "text-amber font-bold text-glow-warning"
+                                : idx === 1 ? "text-slate-300 font-bold"
+                                : idx === 2 ? "text-warning-track/80 font-bold"
+                                : "text-slate-500"
+                            )}>
+                              {idx + 1}
+                            </span>
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">

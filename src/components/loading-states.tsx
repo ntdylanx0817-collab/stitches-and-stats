@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
 
 /** Shimmer skeleton block for loading states */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
@@ -86,15 +87,20 @@ export function EmptyState({
   description,
   action,
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description?: string;
   action?: React.ReactNode;
 }) {
   return (
-    <div className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-        <Icon className="h-6 w-6 text-slate-400" />
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-10 text-center"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-warning-track/20 bg-warning-track/5">
+        <Icon className="h-6 w-6 text-warning-track/70" />
       </div>
       <div>
         <h3 className="mb-1 text-base font-semibold text-white">{title}</h3>
@@ -103,7 +109,7 @@ export function EmptyState({
         )}
       </div>
       {action}
-    </div>
+    </motion.div>
   );
 }
 
@@ -118,8 +124,13 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-8 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-crimson/15">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-8 text-center"
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-crimson/30 bg-crimson/15 shadow-lg shadow-crimson/20">
         <svg className="h-5 w-5 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
@@ -131,11 +142,11 @@ export function ErrorState({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="rounded-lg border border-cobalt/30 bg-cobalt/10 px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt/20 transition-colors"
+          className="rounded-lg border border-cobalt/30 bg-cobalt/10 px-3 py-1.5 text-xs font-medium text-cobalt transition-all duration-200 hover:scale-105 hover:border-cobalt/60 hover:bg-cobalt/20 hover:shadow-lg hover:shadow-cobalt/20 active:scale-95"
         >
           Try again
         </button>
       )}
-    </div>
+    </motion.div>
   );
 }

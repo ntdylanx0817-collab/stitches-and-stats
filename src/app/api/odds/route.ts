@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
+import { routeLogger, serializeError } from "@/lib/logger";
+
+const log = routeLogger("/api/odds");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
+
+/** A `teamRecords` entry from the MLB Stats API standings response. */
+interface StandingsTeamRecord {
+  team?: { id?: number; abbreviation?: string; name?: string };
+  wins?: number;
+  losses?: number;
+  runsScored?: number;
+  runsAllowed?: number;
+  gamesPlayed?: number;
+}
 
 interface TeamStats {
   id: number;
@@ -140,12 +153,12 @@ async function calculateOdds(awayTeamId: number, homeTeamId: number, gamePk: num
       insight,
     };
   } catch (err) {
-    console.error("[odds] Error:", err);
+    log.error("odds computation failed", serializeError(err));
     return null;
   }
 }
 
-function parseTeamStats(t: any): TeamStats {
+function parseTeamStats(t: StandingsTeamRecord): TeamStats {
   const rs = t.runsScored ?? 0;
   const ra = t.runsAllowed ?? 0;
   const gp = t.gamesPlayed ?? 1;

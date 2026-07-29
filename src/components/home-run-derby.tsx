@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, TrendingUp, Loader2, Gauge } from "lucide-react";
+import { Flame, Zap, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HomeRunEntry {

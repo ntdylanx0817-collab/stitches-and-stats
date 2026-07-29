@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchSchedule, ymd } from "@/lib/mlb-api";
+import { errorResponse } from "@/lib/api-errors";
+import type { MLBGame } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -35,7 +37,7 @@ interface TickerGame {
   };
 }
 
-function recordStr(r: any): string | undefined {
+function recordStr(r?: { wins: number; losses: number }): string | undefined {
   if (!r) return undefined;
   return `${r.wins ?? 0}-${r.losses ?? 0}`;
 }
@@ -54,10 +56,10 @@ export async function GET() {
       fetchSchedule(tomorrow),
     ]);
 
-    const mapGame = (g: any, day: TickerGame["gameDay"]): TickerGame => {
+    const mapGame = (g: MLBGame, day: TickerGame["gameDay"]): TickerGame => {
       const awayTeam = g.teams?.away?.team ?? {};
       const homeTeam = g.teams?.home?.team ?? {};
-      const linescore = g.linescore ?? {};
+      const linescore = g.linescore;
       return {
         gamePk: g.gamePk,
         gameDay: day,
@@ -68,9 +70,9 @@ export async function GET() {
         gameType: g.gameType,
         seriesDescription: g.seriesDescription,
         venue: g.venue?.name,
-        inning: linescore.currentInning,
-        inningState: linescore.inningState,
-        isTopInning: linescore.isTopInning,
+        inning: linescore?.currentInning,
+        inningState: linescore?.inningState,
+        isTopInning: linescore?.isTopInning,
         away: {
           id: awayTeam.id ?? 0,
           abbr: awayTeam.abbreviation ?? "???",
@@ -90,9 +92,9 @@ export async function GET() {
       };
     };
 
-    const todayGames = (todaySched.dates?.[0]?.games ?? []).map((g: any) => mapGame(g, "today"));
-    const yestGames = (yestSched.dates?.[0]?.games ?? []).map((g: any) => mapGame(g, "yesterday"));
-    const tomGames = (tomSched.dates?.[0]?.games ?? []).map((g: any) => mapGame(g, "tomorrow"));
+    const todayGames = (todaySched.dates?.[0]?.games ?? []).map((g) => mapGame(g, "today"));
+    const yestGames = (yestSched.dates?.[0]?.games ?? []).map((g) => mapGame(g, "yesterday"));
+    const tomGames = (tomSched.dates?.[0]?.games ?? []).map((g) => mapGame(g, "tomorrow"));
 
     // Sort: Live first, then Preview (today), then Final (yesterday), then tomorrow
     const order = (g: TickerGame): number => {
@@ -114,7 +116,7 @@ export async function GET() {
       hasLive,
       games,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message, games: [], hasLive: false }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

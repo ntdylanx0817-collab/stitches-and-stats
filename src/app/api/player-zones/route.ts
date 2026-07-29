@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
+import { assertOk, errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -52,9 +53,7 @@ async function fetchPlayerZones(
       },
     });
 
-    if (!res.ok) {
-      throw new Error(`statcast fetch failed: ${res.status}`);
-    }
+    await assertOk(res, "statcast");
 
     const csv = await res.text();
     const rows = parseCSV(csv);
@@ -214,7 +213,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No zone data found for this player" }, { status: 404 });
     }
     return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

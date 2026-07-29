@@ -25,8 +25,17 @@ export function GlobalPlayerSearch() {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const view = useSavantStore((s) => s.view);
   const setView = useSavantStore((s) => s.setView);
   const setSelectedPlayer = useSavantStore((s) => s.setSelectedPlayer);
+
+  // Compare has its own two player-search boxes, so this global search is easy
+  // to mistake for filling one of those slots — clarify it opens a full profile
+  // instead. Everywhere else the default wording already covers the behavior.
+  const placeholder =
+    view === "compare"
+      ? "Search a player's full profile…"
+      : "Search players…  (e.g. Ohtani, Judge, Soto)";
 
   const { data, isLoading } = useQuery<{ players: PlayerSearchResult[] }>({
     queryKey: ["player-search", q],
@@ -85,7 +94,7 @@ export function GlobalPlayerSearch() {
           onChange={(e) => { setQ(e.target.value); setOpen(true); setActiveIdx(0); }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKey}
-          placeholder="Search players…  (e.g. Ohtani, Judge, Soto)"
+          placeholder={placeholder}
           className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-10 pr-10 text-sm placeholder:text-slate-500 focus-visible:border-cobalt/50 focus-visible:ring-cobalt/20"
         />
         {isLoading && (

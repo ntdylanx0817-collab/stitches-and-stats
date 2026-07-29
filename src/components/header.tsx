@@ -61,9 +61,10 @@ export function Header() {
                 <button
                   key={item.key}
                   onClick={() => setView(item.key)}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
-                    active ? "text-chalk" : "text-slate-400 hover:text-slate-200"
+                    "relative flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
                   {active && (
@@ -75,6 +76,13 @@ export function Header() {
                   )}
                   <Icon className="relative h-3.5 w-3.5" />
                   <span className="relative hidden lg:inline">{item.label}</span>
+                  {active && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
                 </button>
               );
             })}
@@ -95,7 +103,10 @@ export function Header() {
           </button>
 
           {/* Live status indicator */}
-          <div className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5">
+          <div
+            className="flex items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5"
+            title={connected ? "Connected — receiving live updates" : "Reconnecting to the live update server…"}
+          >
             <span className={cn(
               "relative flex h-2 w-2",
               connected && "animate-live-dot"
@@ -110,7 +121,7 @@ export function Header() {
               )} />
             </span>
             <span className="hidden text-[10px] font-bold uppercase tracking-wide text-slate-400 font-scoreboard sm:inline">
-              {connected ? "Live" : "REST"}
+              {connected ? "Live" : "Reconnecting"}
             </span>
           </div>
         </div>

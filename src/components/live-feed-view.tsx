@@ -629,6 +629,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
               </button>
               <Badge
                 variant="outline"
+                title={connected ? "Receiving live pitch-by-pitch updates" : "Live connection unavailable — falling back to periodic polling"}
                 className={cn(
                   "text-[10px]",
                   connected
@@ -640,7 +641,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                   "mr-1 h-1.5 w-1.5 rounded-full",
                   connected ? "animate-live-dot bg-mint" : "bg-warning-track"
                 )} />
-                {connected ? "WS" : "REST"}
+                {connected ? "Live" : "Polling"}
               </Badge>
             </div>
           </div>

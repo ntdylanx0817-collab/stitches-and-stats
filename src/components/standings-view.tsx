@@ -7,6 +7,7 @@ import { Trophy, Loader2, Flame, Snowflake } from "lucide-react";
 import { getTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { ErrorState } from "@/components/loading-states";
 
 interface TeamStanding {
   id: number;
@@ -42,7 +43,7 @@ interface StandingsData {
 export function StandingsView() {
   const [tab, setTab] = useState<"divisions" | "wildcard" | "playoff">("divisions");
 
-  const { data, isLoading } = useQuery<StandingsData>({
+  const { data, isLoading, error, refetch } = useQuery<StandingsData>({
     queryKey: ["standings"],
     queryFn: async () => {
       const res = await fetch("/api/standings");
@@ -63,7 +64,17 @@ export function StandingsView() {
     );
   }
 
-  if (!data) return null;
+  if (error || !data) {
+    return (
+      <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
+        <ErrorState
+          title="Couldn't load standings"
+          description="The MLB Stats API may be temporarily unavailable."
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">

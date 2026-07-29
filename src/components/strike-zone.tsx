@@ -15,6 +15,8 @@ interface StrikeZoneProps {
   className?: string;
   showLabels?: boolean;
   maxPitches?: number;
+  /** Show the pitch-sequence number on every dot instead of just the latest few. */
+  numberAll?: boolean;
 }
 
 // Pitch-type → color map (Baseball Savant-inspired)
@@ -89,6 +91,7 @@ export function StrikeZone({
   className,
   showLabels = true,
   maxPitches = 50,
+  numberAll = false,
 }: StrikeZoneProps) {
   // Ensure szTop/szBot are valid numbers (savant sometimes returns strings)
   const safeSzTop = typeof szTop === "number" && !isNaN(szTop) ? szTop : 3.5;
@@ -321,8 +324,8 @@ export function StrikeZone({
                     strokeWidth="1.5"
                   />
                 )}
-                {/* Pitch number for the latest few */}
-                {idx >= recentPitches.length - 5 && (
+                {/* Pitch number for the latest few (or all, when numberAll) */}
+                {(numberAll || idx >= recentPitches.length - 5) && (
                   <text
                     x={pos.x + size + 2}
                     y={pos.y - size - 2}

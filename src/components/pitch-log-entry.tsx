@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ChevronDown, Zap } from "lucide-react";
+import { ChevronDown, Zap, ListOrdered } from "lucide-react";
 import type { EnrichedPitch } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getPitchColor } from "@/components/strike-zone";
@@ -13,10 +13,11 @@ interface PitchLogEntryProps {
   isSelected?: boolean;
   onSelect?: () => void;
   isLatest?: boolean;
+  onViewAtBat?: (atBatIndex: number) => void;
 }
 
 /** Safely convert any value to a fixed-decimal string. Handles strings, numbers, null, undefined. */
-function safeToFixed(val: unknown, digits: number): string | null {
+export function safeToFixed(val: unknown, digits: number): string | null {
   if (val == null) return null;
   const n = typeof val === "number" ? val : Number(val);
   if (isNaN(n)) return null;
@@ -34,7 +35,7 @@ function extractCallCode(call: unknown): string | null {
   return null;
 }
 
-function formatCall(p: EnrichedPitch): { label: string; color: string } {
+export function formatCall(p: EnrichedPitch): { label: string; color: string } {
   if (p.isInPlay) {
     const result = typeof p.playResult === "string" && p.playResult ? p.playResult : "In Play";
     if (p.isBarrel) return { label: result, color: "text-crimson" };
@@ -51,7 +52,7 @@ function formatCall(p: EnrichedPitch): { label: string; color: string } {
   return { label: callCode || desc || "—", color: "text-slate-400" };
 }
 
-export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest }: PitchLogEntryProps) {
+export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, onViewAtBat }: PitchLogEntryProps) {
   const [expanded, setExpanded] = useState(false);
   const call = formatCall(pitch);
   const color = getPitchColor(pitch.pitchType);
@@ -191,8 +192,19 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest }: 
               )}
             </div>
             {typeof pitch.description === "string" && pitch.description && (
-              <div className="px-3 pb-3 text-xs text-slate-400 italic">
+              <div className="px-3 pb-1 text-xs text-slate-400 italic">
                 {pitch.description}
+              </div>
+            )}
+            {onViewAtBat && (
+              <div className="px-3 pb-3">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onViewAtBat(pitch.atBatIndex); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-warning-track/30 bg-warning-track/10 px-2.5 py-1.5 text-[11px] font-bold text-warning-track transition-all hover:border-warning-track/60 hover:bg-warning-track/20"
+                >
+                  <ListOrdered className="h-3 w-3" />
+                  View Full At-Bat
+                </button>
               </div>
             )}
           </motion.div>

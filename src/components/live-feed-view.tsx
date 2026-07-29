@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StrikeZone } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
+import { AtBatDetailsModal } from "@/components/at-bat-details-modal";
 import { LineupChanges } from "@/components/lineup-changes";
 import { WinProbabilityChart } from "@/components/win-probability-chart";
 import { HeroScoreboard } from "@/components/hero-scoreboard";
@@ -211,6 +212,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
+  const [viewAtBatIndex, setViewAtBatIndex] = useState<number | null>(null);
   const [highLeverageOnly, setHighLeverageOnly] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -454,6 +456,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     }
     return result.slice(0, 80);
   }, [livePitches, allPitches]);
+
+  const viewAtBatPitches = useMemo(
+    () => (viewAtBatIndex != null ? mergedPitches.filter((p) => p.atBatIndex === viewAtBatIndex) : []),
+    [mergedPitches, viewAtBatIndex]
+  );
 
   // High-leverage filter: only show critical game situations
   // - Bases loaded (2+ runners)
@@ -709,6 +716,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                       isSelected={selectedPitch?.atBatIndex === p.atBatIndex && selectedPitch?.pitchNumber === p.pitchNumber}
                       onSelect={() => setSelectedPitch(p)}
                       isLatest={idx === 0}
+                      onViewAtBat={setViewAtBatIndex}
                     />
                   ))
                 )}
@@ -817,6 +825,16 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         </div>
       </div>
     </div>
+    <AnimatePresence>
+      {viewAtBatIndex != null && viewAtBatPitches.length > 0 && (
+        <AtBatDetailsModal
+          pitches={viewAtBatPitches}
+          awayTeamId={teams?.away?.id}
+          homeTeamId={teams?.home?.id}
+          onClose={() => setViewAtBatIndex(null)}
+        />
+      )}
+    </AnimatePresence>
     </div>
   );
 }

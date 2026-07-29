@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { X, Target, ListOrdered } from "lucide-react";
 import { StrikeZone } from "@/components/strike-zone";
@@ -25,6 +25,14 @@ interface AtBatDetailsModalProps {
  */
 export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose }: AtBatDetailsModalProps) {
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const sortedPitches = useMemo(
     () => [...pitches].sort((a, b) => a.pitchNumber - b.pitchNumber),
@@ -64,10 +72,13 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose }: 
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="glass-strong rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="at-bat-details-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-chalk shrink-0">
-          <h2 className="font-scoreboard text-lg font-bold text-chalk uppercase tracking-wide">At-Bat Details</h2>
+          <h2 id="at-bat-details-title" className="font-scoreboard text-lg font-bold text-chalk uppercase tracking-wide">At-Bat Details</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 hover:bg-white/5 transition-colors"
@@ -87,7 +98,7 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose }: 
         )}
 
         {/* Matchup + count */}
-        <div className="flex items-center justify-between gap-3 border-b border-chalk px-4 py-4 shrink-0">
+        <div className="flex flex-col items-center gap-4 border-b border-chalk px-4 py-4 shrink-0 sm:flex-row sm:justify-between sm:gap-3">
           <PlayerCard
             playerId={firstPitch.pitcherId}
             name={firstPitch.pitcherName}
@@ -143,7 +154,7 @@ function StatBlock({ label, value, unit }: { label: string; value: string | null
   if (value == null) return <div />;
   return (
     <div className="text-center">
-      <div className="font-scoreboard text-xl font-black text-warning-track num">
+      <div className="font-scoreboard text-lg sm:text-xl font-black text-warning-track num">
         {value} <span className="text-xs font-medium text-slate-400">{unit}</span>
       </div>
       <div className="label-xs text-slate-500">{label}</div>

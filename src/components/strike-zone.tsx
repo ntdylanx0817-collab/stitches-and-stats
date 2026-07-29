@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EnrichedPitch } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,19 @@ const PITCH_COLORS: Record<string, string> = {
 function getPitchColor(pitchType?: string): string {
   if (!pitchType) return "#94A3B8";
   return PITCH_COLORS[pitchType.toUpperCase()] ?? "#94A3B8";
+}
+
+/** Short result label for the hover tooltip. Kept local (not imported from
+ * pitch-log-entry) since that module imports getPitchColor from here. */
+function tooltipResultLabel(p: EnrichedPitch): string {
+  if (p.isInPlay) return p.playResult || "In Play";
+  const callCode = typeof p.call === "string" ? p.call : undefined;
+  if (callCode === "B" || p.isBall) return "Ball";
+  if (callCode === "C") return "Called Strike";
+  if (callCode === "S") return "Swinging Strike";
+  if (callCode === "F") return "Foul";
+  if (callCode === "H") return "HBP";
+  return callCode || (p.isStrike ? "Strike" : "—");
 }
 
 // Strike zone dimensions in SVG coordinates
@@ -97,6 +110,7 @@ export function StrikeZone({
   const safeSzTop = typeof szTop === "number" && !isNaN(szTop) ? szTop : 3.5;
   const safeSzBot = typeof szBot === "number" && !isNaN(szBot) ? szBot : 1.5;
   const recentPitches = useMemo(() => pitches.slice(-maxPitches), [pitches, maxPitches]);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const zone = zoneLineToSVG(safeSzTop, safeSzBot);
   const zoneW = zone.rightX - zone.leftX;
@@ -266,6 +280,8 @@ export function StrikeZone({
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ type: "spring", stiffness: 360, damping: 22, delay: isLatest ? 0 : Math.min(idx * 0.01, 0.3) }}
                 onClick={() => onSelectPitch?.(p)}
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx((cur) => (cur === idx ? null : cur))}
                 style={{ cursor: "pointer" }}
               >
                 {/* Glow ring on latest */}
@@ -359,6 +375,26 @@ export function StrikeZone({
           </>
         )}
       </svg>
+
+      {/* Hover tooltip */}
+      {hoveredIdx != null && recentPitches[hoveredIdx] && (() => {
+        const p = recentPitches[hoveredIdx];
+        const pos = pitchToSVG(p.pX, p.pZ, szTop, szBot);
+        if (!pos) return null;
+        const speed = typeof p.startSpeed === "number" ? p.startSpeed.toFixed(1) : null;
+        return (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-white/10 bg-midnight-2/95 px-2.5 py-1.5 text-[11px] shadow-lg"
+            style={{ left: `${(pos.x / SVG_SIZE) * 100}%`, top: `${(pos.y / SVG_SIZE) * 100}%`, marginTop: -10 }}
+          >
+            <div className="font-semibold text-chalk">
+              {p.pitchName ?? p.pitchType ?? "Pitch"}
+              {speed && ` · ${speed} mph`}
+            </div>
+            <div className="text-slate-400">{tooltipResultLabel(p)}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

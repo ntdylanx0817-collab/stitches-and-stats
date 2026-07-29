@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test";
 import {
   atBatResult, isAtBatComplete, groupPitchesByAtBat, latestAtBatIndex, halfInningLabel,
+  pinTargetForStep,
 } from "@/lib/at-bat";
 import type { EnrichedPitch } from "@/lib/types";
 
@@ -147,5 +148,35 @@ describe("halfInningLabel", () => {
   test("abbreviates each half", () => {
     expect(halfInningLabel("top", 5)).toBe("Top 5");
     expect(halfInningLabel("bottom", 9)).toBe("Bot 9");
+  });
+});
+
+describe("pinTargetForStep", () => {
+  // Three at-bats, 7 being the live one.
+  const groups = groupPitchesByAtBat([
+    pitch({ atBatIndex: 5, playResult: "Strikeout" }),
+    pitch({ atBatIndex: 6, playResult: "Single" }),
+    pitch({ atBatIndex: 7 }),
+  ]);
+
+  test("stepping back pins the earlier at-bat", () => {
+    expect(pinTargetForStep(groups, 2, -1, 7)).toBe(6);
+  });
+
+  test("stepping forward onto the live at-bat resumes following instead of pinning", () => {
+    expect(pinTargetForStep(groups, 1, 1, 7)).toBeNull();
+  });
+
+  test("stepping forward short of the live at-bat still pins", () => {
+    expect(pinTargetForStep(groups, 0, 1, 7)).toBe(6);
+  });
+
+  test("a step off either end moves nothing", () => {
+    expect(pinTargetForStep(groups, 0, -1, 7)).toBeUndefined();
+    expect(pinTargetForStep(groups, 2, 1, 7)).toBeUndefined();
+  });
+
+  test("a finished game has no live at-bat, so the last at-bat pins normally", () => {
+    expect(pinTargetForStep(groups, 1, 1, null)).toBe(7);
   });
 });

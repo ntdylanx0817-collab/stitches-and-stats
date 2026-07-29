@@ -106,17 +106,18 @@ export function AtBatDisplay({
             <Target className="h-3.5 w-3.5 text-cobalt" />
             Pitch Locations
           </div>
-          <div className={cn(isPage && "mx-auto max-w-[400px]")}>
-            <StrikeZone
-              pitches={sortedPitches}
-              szTop={lastPitch.szTop}
-              szBot={lastPitch.szBot}
-              batterSide={firstPitch.batterSide}
-              selectedPitchId={selectedPitchId}
-              onSelectPitch={setSelectedPitch}
-              numberAll
-            />
-          </div>
+          <StrikeZone
+            pitches={sortedPitches}
+            szTop={lastPitch.szTop}
+            szBot={lastPitch.szBot}
+            batterSide={firstPitch.batterSide}
+            selectedPitchId={selectedPitchId}
+            onSelectPitch={setSelectedPitch}
+            numberAll
+            // The whole point of the tab is room to look at things, so let the
+            // plot grow well past the default cap when it has a column to itself.
+            className={isPage ? "max-w-[520px]" : undefined}
+          />
         </div>
         <div>
           <div className="mb-2 flex items-center gap-2 label-sm text-slate-400">

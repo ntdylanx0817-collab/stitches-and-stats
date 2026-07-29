@@ -90,3 +90,24 @@ export function latestAtBatIndex(pitches: EnrichedPitch[]): number | null {
 export function halfInningLabel(halfInning: string, inning: number): string {
   return `${halfInning === "top" ? "Top" : "Bot"} ${inning}`;
 }
+
+/**
+ * Where a step through the at-bat list should land the pin.
+ *
+ * Returns an at-bat index to pin, `null` to resume following the live at-bat,
+ * or `undefined` when the step runs off either end (so nothing moves).
+ *
+ * Stepping onto the newest at-bat resolves to `null` rather than pinning it:
+ * pinning the newest would silently freeze the view right as the next batter
+ * comes up, which is the opposite of what stepping forward asks for.
+ */
+export function pinTargetForStep(
+  groups: AtBatGroup[],
+  fromPosition: number,
+  step: -1 | 1,
+  liveIndex: number | null,
+): number | null | undefined {
+  const target = groups[fromPosition + step];
+  if (!target) return undefined;
+  return target.atBatIndex === liveIndex ? null : target.atBatIndex;
+}

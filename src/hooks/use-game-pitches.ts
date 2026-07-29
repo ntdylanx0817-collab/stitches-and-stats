@@ -185,7 +185,10 @@ function pitchesFromSnapshot(snapshot: GameSnapshot): EnrichedPitch[] {
  * and a 5s REST poll used whenever the socket is unavailable. Shared by the
  * live feed and the at-bat watcher so both see identical data.
  *
- * Safe to call with a changing `gamePk` — per-game state resets on switch.
+ * IMPORTANT: the caller must mount this behind `key={gamePk}` so React
+ * discards the accumulated pitch state on a game switch. Resetting inside an
+ * effect instead would leave one render showing the previous game's pitches
+ * under the new game's header.
  */
 export function useGamePitches(gamePk: number): GamePitchFeed {
   const { subscribeGame, unsubscribeGame, onSnapshot, onPitch, connected } = useSocket();
@@ -194,13 +197,6 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state on dependency change
-    setSnapshot(null);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state on dependency change
-    setLivePitches([]);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state on dependency change
-    setLastUpdated(null);
-
     subscribeGame(gamePk);
     const offSnap = onSnapshot((snap) => {
       if (snap.gamePk !== gamePk) return;

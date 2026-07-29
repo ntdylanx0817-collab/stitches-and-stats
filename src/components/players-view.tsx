@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  User, Loader2, ArrowLeft, TrendingUp, Activity,
-  MapPin, Weight, Ruler, Calendar, Hash,
+  User, ArrowLeft, TrendingUp, Activity,
+  MapPin, Weight, Ruler, Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

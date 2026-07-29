@@ -4,12 +4,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Calendar, ChevronRight, Clock, Filter, Loader2, Radio,
-  TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight, Search,
-  AlertCircle, Trophy,
+  Activity, Calendar, Clock, Loader2, Radio,
+  TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StrikeZone } from "@/components/strike-zone";
@@ -29,7 +27,7 @@ import type { EnrichedPitch, LivePitchEvent, Linescore, GameStatus, FeedTeam, St
 
 /** One inning row in the linescore. */
 type InningLine = Linescore["innings"][number];
-import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton } from "@/components/loading-states";
+import { EmptyState, ErrorState, Skeleton } from "@/components/loading-states";
 
 interface ScheduleGame {
   gamePk: number;
@@ -58,18 +56,18 @@ export function LiveFeedView() {
     retry: 2,
   });
 
-  const allGames = scheduleData?.games ?? [];
-
   // Sort games: Live first, then Preview, then Final
-  // This way you see live games immediately without scrolling
+  // This way you see live games immediately without scrolling.
+  // The `?? []` lives inside the memo: as a separate statement it produced a
+  // new array identity on every render, so the memo never actually hit.
   const games = useMemo(() => {
-    return [...allGames].sort((a, b) => {
-      const order = { Live: 0, Preview: 1, Final: 2 };
+    const order = { Live: 0, Preview: 1, Final: 2 };
+    return [...(scheduleData?.games ?? [])].sort((a, b) => {
       const aOrder = order[a.status.abstractGameState as keyof typeof order] ?? 3;
       const bOrder = order[b.status.abstractGameState as keyof typeof order] ?? 3;
       return aOrder - bOrder;
     });
-  }, [allGames]);
+  }, [scheduleData?.games]);
 
   // Auto-pick the first live game if none selected.
   // Priority: Live > Final (has pitch data) > Preview (today's upcoming)

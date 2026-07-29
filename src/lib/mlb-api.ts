@@ -1,5 +1,4 @@
 import {
-  MLBGame,
   MLBSchedule,
   LiveGameFeed,
   SavantGameFeed,

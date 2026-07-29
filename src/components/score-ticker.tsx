@@ -197,7 +197,7 @@ export function ScoreTicker() {
     staleTime: 10_000,
   });
 
-  const games = data?.games ?? [];
+  const games = useMemo(() => data?.games ?? [], [data?.games]);
 
   // Duplicate games for seamless infinite scroll
   // (the CSS animation translates by -50% so the second copy lines up)

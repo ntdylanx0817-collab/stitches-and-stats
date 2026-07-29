@@ -133,15 +133,6 @@ export async function GET(
     // 5. Fetch game-by-game log from MLB Stats API
     const gameLog = await fetchGameLog(playerId, type, year);
 
-    // 6. For pitchers: fetch pitch movement data from statcast_search
-    let pitchMovement: PitchMixEntry[] = [];
-    if (type === "pitcher") {
-      pitchMovement = pbpData.pitchMix.map((p) => ({
-        ...p,
-        // The pbp data already has pitch-level data; extract movement from it
-      }));
-    }
-
     return NextResponse.json({
       player: {
         id: player.id,

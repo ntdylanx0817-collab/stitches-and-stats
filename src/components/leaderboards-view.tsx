@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  BarChart3, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Search,
-  Filter, User, Hash, AlertCircle,
+  ArrowUpDown, ArrowUp, ArrowDown, Search,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

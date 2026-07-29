@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, Activity, Target, TrendingUp, TrendingDown, Radio,
+  Zap, Activity, Target, TrendingUp, Radio,
   Loader2, Flame,
   type LucideIcon,
 } from "lucide-react";

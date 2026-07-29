@@ -92,7 +92,6 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
   }, [filtered]);
 
   const totalHits = (stats.single || 0) + (stats.double || 0) + (stats.triple || 0) + (stats.home_run || 0);
-  const totalOuts = (stats.field_out || 0) + (stats.grounded_into_double_play || 0) + (stats.force_out || 0) + (stats.fielders_choice || 0) + (stats.fielders_choice_out || 0);
   const totalHR = stats.home_run || 0;
   const barrels = filtered.filter((d) => d.isBarrel).length;
 
@@ -106,12 +105,10 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
     for (let gx = 0; gx < FIELD_W; gx += gridSize) {
       for (let gy = 0; gy < FIELD_H; gy += gridSize) {
         let count = 0;
-        let totalEV = 0;
         for (const d of filtered) {
           const pos = savantToSVG(d.x, d.y);
           if (pos.x >= gx && pos.x < gx + gridSize && pos.y >= gy && pos.y < gy + gridSize) {
             count++;
-            if (d.launchSpeed) totalEV += d.launchSpeed;
           }
         }
         if (count > 0) {

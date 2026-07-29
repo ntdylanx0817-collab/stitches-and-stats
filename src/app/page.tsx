@@ -8,7 +8,6 @@ import { LeaderboardsView } from "@/components/leaderboards-view";
 import { NewsView } from "@/components/news-view";
 import { SimulatorView } from "@/components/simulator-view";
 import { CompareView } from "@/components/compare-view";
-import { HomeRunDerby } from "@/components/home-run-derby";
 import { DerbyTab } from "@/components/fastest-pitches";
 import { StandingsView } from "@/components/standings-view";
 import { TeamProfileView } from "@/components/team-profile-view";

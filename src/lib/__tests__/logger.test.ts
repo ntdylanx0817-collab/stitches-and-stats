@@ -7,6 +7,9 @@ import { logger, serializeError } from "@/lib/logger";
  */
 function capture(fn: () => void): string[] {
   const lines: string[] = [];
+  // Swapping console out is the point of this helper: it is how the logger's
+  // output is captured for assertion.
+  /* eslint-disable no-console -- test double for the logger's output sink */
   const original = { log: console.log, warn: console.warn, error: console.error };
   const sink = (...args: unknown[]) => void lines.push(args.map(String).join(" "));
   console.log = sink;
@@ -17,6 +20,7 @@ function capture(fn: () => void): string[] {
   } finally {
     Object.assign(console, original);
   }
+  /* eslint-enable no-console */
   return lines;
 }
 

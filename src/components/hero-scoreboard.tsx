@@ -47,39 +47,7 @@ export function HeroScoreboard({
   const [expanded, setExpanded] = useState(false);
   const state = status?.abstractGameState ?? "Preview";
   const isInning = status?.inning != null && state === "Live";
-  const inningLabel = isInning
-    ? `${status.inningState ?? ""} ${status.inning ?? ""}`
-    : state === "Final" ? "Final" : state === "Preview" ? "Preview" : state;
 
-  // Fetch live game state for base runners
-  const { data: liveState } = useQuery<{
-    onFirst: boolean; onSecond: boolean; onThird: boolean;
-    outs: number; balls: number; strikes: number;
-    inning: number; inningState: string; isTopInning: boolean;
-    currentBatter?: string; currentPitcher?: string;
-  }>({
-    queryKey: ["live-state", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
-      if (!res.ok) throw new Error("failed");
-      const d = await res.json();
-      const ls = d.linescore ?? {};
-      // Get base runners from the current play
-      const plays = d.status ? d : null;
-      return {
-        onFirst: false, onSecond: false, onThird: false, // Will be filled from snapshot
-        outs: ls.outs ?? 0,
-        balls: ls.balls ?? 0,
-        strikes: ls.strikes ?? 0,
-        inning: ls.currentInning ?? 0,
-        inningState: ls.inningState ?? "",
-        isTopInning: ls.isTopInning ?? true,
-      };
-    },
-    refetchInterval: state === "Live" ? 5_000 : false,
-    enabled: state === "Live",
-    staleTime: 3_000,
-  });
 
   // Fetch odds for preview games
   const { data: odds } = useQuery<GameOdds>({
@@ -99,10 +67,6 @@ export function HeroScoreboard({
   const startTime = gameDate
     ? new Date(gameDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
     : null;
-
-  const outs = liveState?.outs ?? 0;
-  const balls = liveState?.balls ?? 0;
-  const strikes = liveState?.strikes ?? 0;
 
   return (
     <>
@@ -286,47 +250,6 @@ export function HeroScoreboard({
       )}
     </AnimatePresence>
     </>
-  );
-}
-
-/** Compact base runner diamond with outs/balls/strikes display */
-function BaseRunnerDiamond({ outs, balls, strikes }: { outs: number; balls: number; strikes: number }) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      {/* Base runner diamond */}
-      <svg viewBox="0 0 60 50" className="w-12 h-10">
-        {/* Diamond outline */}
-        <polygon
-          points="30,5 55,25 30,45 5,25"
-          fill="rgba(248, 249, 250, 0.03)"
-          stroke="rgba(248, 249, 250, 0.08)"
-          strokeWidth="1"
-        />
-        {/* 2nd base (top) */}
-        <rect x="26" y="3" width="8" height="8" fill="rgba(248, 249, 250, 0.06)" transform="rotate(45 30 7)" />
-        {/* 3rd base (left) */}
-        <rect x="3" y="23" width="8" height="8" fill="rgba(248, 249, 250, 0.06)" transform="rotate(45 7 27)" />
-        {/* 1st base (right) */}
-        <rect x="49" y="23" width="8" height="8" fill="rgba(248, 249, 250, 0.06)" transform="rotate(45 53 27)" />
-        {/* Home plate (bottom) */}
-        <polygon points="26,43 34,43 34,47 30,49 26,47" fill="rgba(248, 249, 250, 0.06)" />
-      </svg>
-
-      {/* Count display */}
-      <div className="flex items-center gap-2 font-scoreboard text-[9px] text-slate-500">
-        <span className="flex items-center gap-0.5">
-          {[0, 1, 2].map(i => (
-            <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i < outs ? "bg-crimson" : "bg-slate-700")} />
-          ))}
-          <span className="ml-0.5">{outs} OUT</span>
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 font-scoreboard text-[10px]">
-        <span className={cn("font-bold num", balls >= 1 ? "text-cobalt" : "text-slate-700")}>{balls}</span>
-        <span className="text-slate-600">-</span>
-        <span className={cn("font-bold num", strikes >= 1 ? "text-crimson" : "text-slate-700")}>{strikes}</span>
-      </div>
-    </div>
   );
 }
 

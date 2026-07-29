@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { TrendingUp, Loader2 } from "lucide-react";
-import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 
 interface WinProbPoint {
@@ -224,13 +223,6 @@ export function WinProbabilityChart({ gamePk }: { gamePk: number }) {
     const y = yFor(p.homeWinProb);
     pathD += i === 0 ? `M ${x},${y}` : ` L ${x},${y}`;
   });
-
-  // Build the area fill path (below the line, split at 50%)
-  let areaD = `M ${xFor(0)},${yFor(50)}`;
-  points.forEach((p, i) => {
-    areaD += ` L ${xFor(i)},${yFor(p.homeWinProb)}`;
-  });
-  areaD += ` L ${xFor(totalPlays - 1)},${yFor(50)} Z`;
 
   // Inning markers (every full inning)
   const inningMarkers: Array<{ x: number; inning: number }> = [];

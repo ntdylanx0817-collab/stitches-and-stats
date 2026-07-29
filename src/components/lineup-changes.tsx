@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton, EmptyState } from "@/components/loading-states";
+import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 
 interface LineupPlayer {

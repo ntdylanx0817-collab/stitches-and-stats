@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Trophy, Skull, Loader2 } from "lucide-react";
+import { Trophy, Skull } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch } from "@/lib/types";
 

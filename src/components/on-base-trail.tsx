@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { GameStatus, Linescore } from "@/lib/types";
 
@@ -28,15 +28,11 @@ export function OnBaseTrail({ gamePk, awayTeamColor, homeTeamColor, isTopInning 
   });
 
   const linescore = data?.linescore;
-  const status = data?.status;
   const outs = linescore?.outs ?? 0;
   const balls = linescore?.balls ?? 0;
   const strikes = linescore?.strikes ?? 0;
-  const inning = linescore?.currentInning ?? 0;
-  const inningState = linescore?.inningState ?? "";
 
   // Base runner info from the offense field
-  const offense = linescore?.offense ?? {};
   const onFirst = !!linescore?.defense?.first?.id;
   const onSecond = !!linescore?.defense?.second?.id;
   const onThird = !!linescore?.defense?.third?.id;
@@ -111,7 +107,7 @@ export function OnBaseTrail({ gamePk, awayTeamColor, homeTeamColor, isTopInning 
   );
 }
 
-function BaseDiamond({ x, y, active, color, label }: { x: number; y: number; active: boolean; color: string; label: string }) {
+function BaseDiamond({ x, y, active, color, label: _label }: { x: number; y: number; active: boolean; color: string; label: string }) {
   return (
     <g>
       {/* Base square */}

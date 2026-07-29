@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, Trophy, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { getTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
@@ -88,8 +87,6 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
   }
 
   const t = data.team;
-  const batters = data.roster.filter(p => !["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"].includes(p.position) === false && p.position !== "P");
-  const pitchers = data.roster.filter(p => p.position === "P");
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">

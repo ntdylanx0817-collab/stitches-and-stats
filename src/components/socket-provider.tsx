@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
-import type { EnrichedPitch, GameSnapshot, LivePitchEvent } from "@/lib/types";
+import type { GameSnapshot, LivePitchEvent } from "@/lib/types";
 
 
 interface SocketCtx {

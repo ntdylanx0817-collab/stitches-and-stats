@@ -98,13 +98,6 @@ interface SavantFeed {
   game_status?: unknown
 }
 
-/** A scheduled game entry, narrowed to what this service reads. */
-interface ScheduleGame {
-  gamePk: number
-  status?: { abstractGameState?: string }
-  teams?: { away?: { team?: { name?: string } }; home?: { team?: { name?: string } } }
-}
-
 interface LiveGameState {
   gamePk: number
   status: string
@@ -116,8 +109,6 @@ interface LiveGameState {
 // ===== State =====
 const activeGameSubs = new Map<number, Set<string>>() // gamePk -> socket ids
 const liveGames = new Map<number, LiveGameState>()
-const gameDataCache = new Map<number, { fetchedAt: number; data: unknown }>()
-const GAME_TTL_MS = 30_000
 
 // ===== Helpers =====
 // File logging is opt-in via LOG_FILE. stdout is always written, so a process
@@ -157,38 +148,6 @@ async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-function ymd(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-/** Fetch the list of today's games (with status), pick live ones to monitor. */
-async function fetchLiveGamePks(): Promise<Array<{ gamePk: number; status: string; away?: string; home?: string }>> {
-  const date = ymd(new Date())
-  const url = `${STATS_API}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}`
-  try {
-    const data = await fetchJSON<{ dates?: Array<{ games?: ScheduleGame[] }> }>(url)
-    const games = data?.dates?.[0]?.games ?? []
-    return games
-      .filter((g: ScheduleGame) => {
-        const state = g?.status?.abstractGameState
-        // Live games OR recently final (within last hour) so users can still see final plays
-        return state === 'Live' || state === 'Final' || state === 'Preview'
-      })
-      .map((g: ScheduleGame) => ({
-        gamePk: g.gamePk,
-        status: g.status?.abstractGameState ?? 'Unknown',
-        away: g.teams?.away?.team?.name,
-        home: g.teams?.home?.team?.name,
-      }))
-  } catch (err) {
-    log(`Error fetching schedule: ${(err as Error).message}`)
-    return []
-  }
-}
-
 /** Fetch live feed for a game. */
 async function fetchLiveFeed(gamePk: number): Promise<LiveFeed | null> {
   try {
@@ -205,7 +164,7 @@ async function fetchSavantFeed(gamePk: number): Promise<SavantFeed | null> {
   try {
     const url = `${SAVANT_API}/gf?game_pk=${gamePk}`
     return await fetchJSON<SavantFeed>(url)
-  } catch (err) {
+  } catch {
     return null
   }
 }

@@ -4,11 +4,10 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Newspaper, ExternalLink, Clock, Loader2, Search, Filter,
-  Shield, TrendingUp, RefreshCw,
+  Newspaper, ExternalLink, Clock, Search, Filter,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";

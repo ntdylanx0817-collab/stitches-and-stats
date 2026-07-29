@@ -14,7 +14,7 @@ interface LeaderboardChartProps {
   className?: string;
 }
 
-export function LeaderboardChart({ rows, sortKey, sortDir, isBatter, className }: LeaderboardChartProps) {
+export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, className }: LeaderboardChartProps) {
   const top10 = useMemo(() => {
     if (!sortKey || !sortDir) return [];
     const sorted = [...rows].sort((a, b) => {

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { getTeamColor } from "@/lib/team-colors";
 import { PlayByPlayModal } from "@/components/play-by-play-modal";
-import { cn } from "@/lib/utils";
 import type { GameStatus } from "@/lib/types";
 
 interface StickyMiniScoreboardProps {

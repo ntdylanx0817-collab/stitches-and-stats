@@ -54,14 +54,13 @@ const SVG_PADDING = 36;
  * We'll fit a 4ft tall × 4ft wide area centered on the zone.
  * Guards against non-number inputs (strings, objects, NaN) to prevent SVG crashes.
  */
-function pitchToSVG(pX: unknown, pZ: unknown, szTop: number = 3.5, szBot: number = 1.5) {
+function pitchToSVG(pX: unknown, pZ: unknown, _szTop: number = 3.5, _szBot: number = 1.5) {
   if (pX == null || pZ == null) return null;
   const x = typeof pX === "number" ? pX : Number(pX);
   const z = typeof pZ === "number" ? pZ : Number(pZ);
   if (isNaN(x) || isNaN(z)) return null;
   // Map pX (-2.5..2.5 ft) to SVG x
   const xRange = 4.0; // 4 ft wide visible area
-  const xScale = (SVG_SIZE - SVG_PADDING * 2) / xRange;
   const svgX = SVG_PADDING + ((x + xRange / 2) / xRange) * (SVG_SIZE - SVG_PADDING * 2);
 
   // Map pZ (0..5 ft) to SVG y (inverted)
@@ -101,28 +100,6 @@ export function StrikeZone({
   const zoneH = zone.topY - zone.botY;
 
   // Group pitches into the 9 standard sub-zones for cell coloring
-  const zone3x3 = useMemo(() => {
-    const cells: Array<{ zone: number; pitches: EnrichedPitch[] }> = [];
-    const colW = zoneW / 3;
-    const rowH = zoneH / 3;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 3; col++) {
-        const zoneNum = row * 3 + col + 1;
-        const x0 = zone.leftX + col * colW;
-        const y0 = zone.topY + row * rowH; // top of cell
-        const y1 = y0 + rowH;
-        const x1 = x0 + colW;
-        const cellPitches = recentPitches.filter((p) => {
-          if (p.pX == null || p.pZ == null) return false;
-          const sp = pitchToSVG(p.pX, p.pZ, szTop, szBot);
-          if (!sp) return false;
-          return sp.x >= x0 && sp.x < x1 && sp.y >= y0 && sp.y < y1;
-        });
-        cells.push({ zone: zoneNum, pitches: cellPitches });
-      }
-    }
-    return cells;
-  }, [recentPitches, zoneW, zoneH, zone.leftX, zone.topY, szTop, szBot]);
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>

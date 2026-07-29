@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Swords, Search, Loader2, Zap, Target, TrendingUp, Activity,
-  ArrowRight, RefreshCw, X,
+  RefreshCw, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
+import { ErrorState, EmptyState } from "@/components/loading-states";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
@@ -116,23 +114,25 @@ export function SimulatorView() {
     staleTime: 5 * 60_000,
   });
 
-  const batters = batterData?.rows ?? [];
-  const pitchers = pitcherData?.rows ?? [];
   const season = batterData?.year ?? pitcherData?.year ?? new Date().getFullYear();
 
   // Filter batters by search
   const filteredBatters = useMemo(() => {
+    // The `?? []` is inside the memo: as a separate statement it produced a
+    // new array identity every render, so the memo never actually hit.
+    const batters = batterData?.rows ?? [];
     if (!batterSearch.trim()) return batters.slice(0, 50);
     const q = batterSearch.toLowerCase();
     return batters.filter((b) => b.player_name?.toLowerCase().includes(q)).slice(0, 50);
-  }, [batters, batterSearch]);
+  }, [batterData?.rows, batterSearch]);
 
   // Filter pitchers by search
   const filteredPitchers = useMemo(() => {
+    const pitchers = pitcherData?.rows ?? [];
     if (!pitcherSearch.trim()) return pitchers.slice(0, 50);
     const q = pitcherSearch.toLowerCase();
     return pitchers.filter((p) => p.player_name?.toLowerCase().includes(q)).slice(0, 50);
-  }, [pitchers, pitcherSearch]);
+  }, [pitcherData?.rows, pitcherSearch]);
 
   const canSimulate = selectedBatter && selectedPitcher;
 

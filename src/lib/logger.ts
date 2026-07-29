@@ -74,7 +74,10 @@ function write(level: LogLevel, msg: string, fields: LogFields): void {
   const record = { ts: new Date().toISOString(), level, msg, ...fields };
 
   // Route through console so Next.js server output and any platform log
-  // capture (Vercel, Docker) pick it up without extra wiring.
+  // capture (Vercel, Docker) pick it up without extra wiring. This module is
+  // the one place console is the intended sink — everywhere else should call
+  // this logger, which is what the no-console rule enforces.
+  // eslint-disable-next-line no-console -- deliberate output sink
   const sink = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
 
   if (isPretty()) {

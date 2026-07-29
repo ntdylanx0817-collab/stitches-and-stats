@@ -4,11 +4,9 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  GitCompare, Search, Loader2, X, TrendingUp, TrendingDown,
-  Zap, Target, Activity, Award,
+  GitCompare, Search, Loader2, X,
+  Target, Award,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton, EmptyState, ErrorState } from "@/components/loading-states";
 import { SprayChart, type SprayPoint } from "@/components/spray-chart";
@@ -144,12 +142,14 @@ function PlayerSearchPanel({
     staleTime: 5 * 60_000,
   });
 
-  const batters = lbData?.rows ?? [];
   const filtered = useMemo(() => {
+    // The `?? []` is inside the memo: as a separate statement it produced a
+    // new array identity every render, so the memo never actually hit.
+    const batters = lbData?.rows ?? [];
     if (!search.trim()) return batters.slice(0, 30);
     const q = search.toLowerCase();
     return batters.filter((b) => b.player_name?.toLowerCase().includes(q)).slice(0, 30);
-  }, [batters, search]);
+  }, [lbData?.rows, search]);
 
   const accentColor = accent === "cobalt" ? "#4DA3FF" : "#FF3B5C";
 
@@ -338,7 +338,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 
       {/* Comparison rows */}
       <div className="divide-y divide-white/5">
-        {comparisonRows.map((row, idx) => {
+        {comparisonRows.map((row, _idx) => {
           const v1 = row.v1;
           const v2 = row.v2;
           const n1 = typeof v1 === "number" ? v1 : parseFloat(String(v1));
@@ -411,7 +411,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 }
 
 function PercentileBattle({
-  name1, name2, percentiles1, percentiles2,
+  name1: _name1, name2: _name2, percentiles1, percentiles2,
 }: {
   name1: string;
   name2: string;

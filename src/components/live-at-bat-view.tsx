@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, Radio, Target } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, Clock, Radio, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AtBatDisplay } from "@/components/at-bat-display";
 import { GameSelectorStrip } from "@/components/game-selector-strip";
@@ -11,6 +11,7 @@ import { groupPitchesByAtBat, halfInningLabel, latestAtBatIndex, pinTargetForSte
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { FeedTeam, Linescore } from "@/lib/types";
+import type { AtBatGroup } from "@/lib/at-bat";
 
 /**
  * The Live At-Bat tab: pick a game, and the current plate appearance is right
@@ -131,6 +132,13 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
     if (target !== undefined) setSelectedAtBatIndex(target);
   };
 
+  // Jumping onto the half-inning that holds the live at-bat resumes following
+  // it, same as stepping onto it — landing on a pinned copy of the live
+  // at-bat would freeze the view right as the next pitch arrives.
+  const jumpToAtBat = (atBatIndex: number) => {
+    setSelectedAtBatIndex(atBatIndex === liveIndex ? null : atBatIndex);
+  };
+
   const freshness = updatedAgoLabel(lastUpdated, now);
 
   return (
@@ -169,6 +177,8 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
         </div>
       </div>
 
+      <InningJumpStrip groups={groups} shownIndex={shownIndex} onJump={jumpToAtBat} />
+
       <AtBatDisplay
         pitches={atBat.pitches}
         awayTeamId={teams?.away?.id}
@@ -202,6 +212,51 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
           <ChevronRight className="h-4 w-4" />
         </NavButton>
       </div>
+    </div>
+  );
+}
+
+/** One button per half-inning that has pitches, for jumping straight there. */
+function InningJumpStrip({ groups, shownIndex, onJump }: {
+  groups: AtBatGroup[];
+  shownIndex: number | null;
+  onJump: (atBatIndex: number) => void;
+}) {
+  const halfInnings = useMemo(() => {
+    const firstIndexByHalf = new Map<string, { inning: number; halfInning: "top" | "bottom"; atBatIndex: number }>();
+    for (const g of groups) {
+      const key = `${g.inning}-${g.halfInning}`;
+      if (!firstIndexByHalf.has(key)) firstIndexByHalf.set(key, { inning: g.inning, halfInning: g.halfInning, atBatIndex: g.atBatIndex });
+    }
+    return Array.from(firstIndexByHalf.values());
+  }, [groups]);
+
+  const shownHalf = groups.find((g) => g.atBatIndex === shownIndex);
+
+  if (halfInnings.length <= 1) return null;
+
+  return (
+    <div className="glass flex items-center gap-1.5 overflow-x-auto rounded-xl px-2 py-1.5 scrollbar-thin">
+      <CalendarRange className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+      {halfInnings.map((h) => {
+        const isCurrent = shownHalf != null && shownHalf.inning === h.inning && shownHalf.halfInning === h.halfInning;
+        return (
+          <button
+            key={`${h.inning}-${h.halfInning}`}
+            onClick={() => onJump(h.atBatIndex)}
+            aria-current={isCurrent}
+            title={`Jump to ${halfInningLabel(h.halfInning, h.inning)}`}
+            className={cn(
+              "font-scoreboard shrink-0 rounded-lg border px-2 py-1 text-[10px] font-bold uppercase tracking-wide transition-colors",
+              isCurrent
+                ? "border-warning-track/50 bg-warning-track/15 text-warning-track"
+                : "border-chalk bg-midnight/40 text-slate-400 hover:border-chalk/60 hover:text-chalk"
+            )}
+          >
+            {halfInningLabel(h.halfInning, h.inning)}
+          </button>
+        );
+      })}
     </div>
   );
 }

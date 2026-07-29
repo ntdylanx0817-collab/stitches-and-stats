@@ -22,6 +22,7 @@ import { StreakTracker } from "@/components/streak-tracker";
 import { BullpenStatus } from "@/components/bullpen-status";
 import { GameSelectorStrip } from "@/components/game-selector-strip";
 import { useGamePitches, updatedAgoLabel } from "@/hooks/use-game-pitches";
+import { latestAtBatIndex } from "@/lib/at-bat";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, Linescore, GameStatus, FeedTeam } from "@/lib/types";
@@ -54,6 +55,8 @@ export function LiveFeedView() {
 }
 
 function GameFeed({ gamePk }: { gamePk: number }) {
+  const setView = useSavantStore((s) => s.setView);
+  const setSelectedAtBatIndex = useSavantStore((s) => s.setSelectedAtBatIndex);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
   const [viewAtBatIndex, setViewAtBatIndex] = useState<number | null>(null);
   const [highLeverageOnly, setHighLeverageOnly] = useState(false);
@@ -83,6 +86,17 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     () => (viewAtBatIndex != null ? mergedPitches.filter((p) => p.atBatIndex === viewAtBatIndex) : []),
     [mergedPitches, viewAtBatIndex]
   );
+
+  // Deep-link into the Live At-Bat tab, pinned on whatever at-bat the modal was
+  // showing. Pinning the still-live at-bat would freeze the tab right as it's
+  // most interesting, so that case resolves to "follow live" instead.
+  const openAtBatInTab = () => {
+    if (viewAtBatIndex == null) return;
+    const liveIndex = latestAtBatIndex(mergedPitches);
+    setSelectedAtBatIndex(viewAtBatIndex === liveIndex ? null : viewAtBatIndex);
+    setView("live-at-bat");
+    setViewAtBatIndex(null);
+  };
 
   // High-leverage filter: only show critical game situations
   // - Bases loaded (2+ runners)
@@ -458,6 +472,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           awayTeamId={teams?.away?.id}
           homeTeamId={teams?.home?.id}
           onClose={() => setViewAtBatIndex(null)}
+          onOpenInTab={openAtBatInTab}
         />
       )}
     </AnimatePresence>

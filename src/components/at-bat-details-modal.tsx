@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Maximize2, X } from "lucide-react";
 import { AtBatDisplay } from "@/components/at-bat-display";
 import type { EnrichedPitch } from "@/lib/types";
 
@@ -12,13 +12,15 @@ interface AtBatDetailsModalProps {
   awayTeamId?: number;
   homeTeamId?: number;
   onClose: () => void;
+  /** When provided, shows a button that pins this at-bat in the Live At-Bat tab and switches to it. */
+  onOpenInTab?: () => void;
 }
 
 /**
  * Gameday-style "At Bat Details" pop-up — the modal chrome around
  * {@link AtBatDisplay}. The Live At-Bat tab renders the same body full-width.
  */
-export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose }: AtBatDetailsModalProps) {
+export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, onOpenInTab }: AtBatDetailsModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -52,13 +54,25 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose }: 
           <h2 id="at-bat-details-title" className="font-scoreboard text-lg font-bold uppercase tracking-wide text-chalk">
             At-Bat Details
           </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 transition-colors hover:bg-white/5"
-            aria-label="Close at-bat details"
-          >
-            <X className="h-5 w-5 text-slate-400" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onOpenInTab && (
+              <button
+                onClick={onOpenInTab}
+                className="rounded-lg p-1.5 transition-colors hover:bg-white/5"
+                title="Open in Live At-Bat tab"
+                aria-label="Open in Live At-Bat tab"
+              >
+                <Maximize2 className="h-4 w-4 text-slate-400" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 transition-colors hover:bg-white/5"
+              aria-label="Close at-bat details"
+            >
+              <X className="h-5 w-5 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         <AtBatDisplay

@@ -4,7 +4,10 @@
 // This was previously imported from "@/lib/types" but the type was only defined in
 // mlb-api.ts — with noImplicitAny: false, TypeScript silently treated it as `any`,
 // which hid the server/client shape mismatch that caused the React crash.
-export type { EnrichedPitch } from "./mlb-api";
+// Imported as well as re-exported: the re-export makes it available to
+// consumers, but GameSnapshot below needs it in local scope too.
+import type { EnrichedPitch } from "./mlb-api";
+export type { EnrichedPitch };
 
 export interface MLBTeam {
   id: number;
@@ -154,11 +157,32 @@ export interface Play {
   playEndTime?: string;
 }
 
+/**
+ * Occupancy block on a live linescore. The MLB feed reports base runners
+ * under both `offense` and `defense`; each slot is a player reference.
+ */
+export interface LinescoreSide {
+  first?: { id: number; fullName?: string };
+  second?: { id: number; fullName?: string };
+  third?: { id: number; fullName?: string };
+  batter?: { id: number; fullName?: string };
+  pitcher?: { id: number; fullName?: string };
+  inHole?: { id: number; fullName?: string };
+  onDeck?: { id: number; fullName?: string };
+}
+
 export interface Linescore {
   currentInning?: number;
   currentInningOrdinal?: string;
   inningState?: string;
   isTopInning?: boolean;
+  /** Live count, present while a game is in progress. */
+  balls?: number;
+  strikes?: number;
+  outs?: number;
+  /** Current batter/runner occupancy, present while a game is in progress. */
+  offense?: LinescoreSide;
+  defense?: LinescoreSide;
   innings: Array<{
     num: number;
     ordinalNum: string;
@@ -428,4 +452,102 @@ export interface PercentileRankings {
     percentile: number;
     display?: string;
   }>;
+}
+
+/** Game status block from the MLB live feed's `gameData`. */
+export type GameStatus = LiveGameFeed["gameData"]["status"];
+
+/** Team identity block from the live feed's `gameData`. */
+export type FeedTeam = LiveGameFeed["gameData"]["teams"]["away"];
+
+/**
+ * A play as relayed by the live-feed WebSocket service. The service trims each
+ * play to the fields the client renders and adds a precomputed pitch count, so
+ * this is a subset of `Play` rather than the whole thing.
+ */
+export interface SnapshotPlay extends Omit<Play, "pitchIndex"> {
+  pitchCount?: number;
+}
+
+/**
+ * Full game state pushed over the WebSocket (`game:snapshot`), and also the
+ * shape the REST polling fallback is normalised into.
+ */
+export interface GameSnapshot {
+  gamePk: number;
+  status: GameStatus | null;
+  linescore: Linescore | null;
+  teams: { away?: FeedTeam; home?: FeedTeam };
+  allPlays: SnapshotPlay[];
+  currentPlay: SnapshotPlay | null;
+  playCount: number;
+  savant: SavantGameFeed | null;
+  latestPitch: EnrichedPitch | null;
+  isNewPlay: boolean;
+  timestamp: number;
+}
+
+/**
+ * The `game:pitch` payload from the live-feed WebSocket service.
+ *
+ * Deliberately NOT `EnrichedPitch`. The service emits its own wire shape —
+ * nested `batter`/`pitcher`/`call` objects, `coordinates`, string-coded
+ * `batterSide` — which the client normalises into an `EnrichedPitch` on
+ * receipt. Conflating the two is what the note at the top of this file
+ * refers to: while `noImplicitAny` was off, the mismatch was invisible.
+ */
+export interface LivePitchEvent {
+  key: string;
+  inning: number;
+  halfInning: "top" | "bottom";
+  atBatIndex: number;
+  abNumber: number;
+  pitchNumber: number;
+  playId?: string;
+  batter?: { id: number; fullName: string };
+  pitcher?: { id: number; fullName: string };
+  batterSide?: string;
+  pitchHand?: string;
+  description?: string;
+  call?: { code: string; description: string };
+  isStrike?: boolean;
+  isBall?: boolean;
+  isInPlay?: boolean;
+  coordinates?: PitchCoordinates;
+  startSpeed: number | null;
+  endSpeed?: number | null;
+  spinRate: number | null;
+  breakX: number | null;
+  breakZ: number | null;
+  inducedBreakZ?: number | null;
+  extension: number | null;
+  plateTime: number | null;
+  szTop: number | null;
+  szBot: number | null;
+  pX: number | null;
+  pZ: number | null;
+  zone?: number;
+  pitchType?: string;
+  pitchName?: string;
+  exitVelocity: number | null;
+  launchAngle: number | null;
+  hitDistance: number | null;
+  xBA: number | null;
+  isBarrel?: boolean;
+  isSword?: boolean;
+  batSpeed?: number | null;
+  result?: string;
+  resultDescription?: string;
+  homeScore?: number;
+  awayScore?: number;
+  count?: { balls: number; strikes: number; outs: number };
+  timestamp?: string;
+}
+
+/** Response body of `GET /api/game/[gamePk]`, shared by the components that poll it. */
+export interface GameFeedResponse {
+  pitches: EnrichedPitch[];
+  linescore: Linescore | null;
+  status: GameStatus | null;
+  teams: { away?: FeedTeam; home?: FeedTeam } | null;
 }

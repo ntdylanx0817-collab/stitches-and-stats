@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
 
 /** Shimmer skeleton block for loading states */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
@@ -86,7 +87,7 @@ export function EmptyState({
   description,
   action,
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description?: string;
   action?: React.ReactNode;

@@ -4,9 +4,10 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import type { LeaderboardRow } from "@/lib/types";
 
 interface LeaderboardChartProps {
-  rows: any[];
+  rows: LeaderboardRow[];
   sortKey: string;
   sortDir: "asc" | "desc" | null;
   isBatter: boolean;

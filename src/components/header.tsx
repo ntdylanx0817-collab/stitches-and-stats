@@ -2,13 +2,16 @@
 
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon } from "lucide-react";
+import {
+  Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon,
+  type LucideIcon,
+} from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: any }> = [
+const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "live", label: "Live", icon: Activity },
   { key: "derby", label: "Derby", icon: Flame },
   { key: "standings", label: "Standings", icon: Trophy },

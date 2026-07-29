@@ -4,6 +4,14 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { Zap } from "lucide-react";
 
+/** One wedge of the pitch-mix donut. */
+interface DonutArc {
+  key: string;
+  d: string;
+  color: string;
+  index: number;
+}
+
 interface PitchMixData {
   name: string;
   count: number;
@@ -49,7 +57,7 @@ export function PitchArsenal({ data, isPitcher, className }: PitchArsenalProps) 
 
   // Precompute arc data for the donut chart
   const arcs = useMemo(() => {
-    return topPitches.reduce<{ cumulative: number; result: any[] }>(
+    return topPitches.reduce<{ cumulative: number; result: DonutArc[] }>(
       (acc, pitch, i) => {
         const startAngle = acc.cumulative;
         const sweepAngle = (pitch.percentage / 100) * 360;

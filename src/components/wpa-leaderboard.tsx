@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Trophy, Skull, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { EnrichedPitch } from "@/lib/types";
 
 interface WinProbPoint {
   playIndex: number;
@@ -47,7 +48,7 @@ export function WPALeaderboard({ gamePk }: { gamePk: number }) {
     refetchInterval: 15_000,
   });
 
-  const { data: gameData } = useQuery<{ pitches: any[] }>({
+  const { data: gameData } = useQuery<{ pitches: EnrichedPitch[] }>({
     queryKey: ["game-wpa", gamePk],
     queryFn: async () => {
       const res = await fetch(`/api/game/${gamePk}`);
@@ -136,7 +137,7 @@ function WPARow({ entry, isHero, rank }: { entry: WPAEntry; isHero: boolean; ran
   );
 }
 
-function computeWPA(wpData: WinProbData | undefined, pitches: any[]): WPAData {
+function computeWPA(wpData: WinProbData | undefined, pitches: EnrichedPitch[]): WPAData {
   if (!wpData || !wpData.points || wpData.points.length < 2) {
     return { heroes: [], goats: [] };
   }

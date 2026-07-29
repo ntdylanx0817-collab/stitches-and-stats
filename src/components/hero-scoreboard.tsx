@@ -10,6 +10,7 @@ import { OnBaseTrail } from "@/components/on-base-trail";
 import { PlayByPlayModal } from "@/components/play-by-play-modal";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import type { GameStatus, Linescore } from "@/lib/types";
 
 interface HeroScoreboardProps {
   gamePk: number;
@@ -21,8 +22,8 @@ interface HeroScoreboardProps {
   homeName: string;
   awayScore: number;
   homeScore: number;
-  status: any;
-  linescore: any;
+  status: GameStatus | null;
+  linescore: Linescore | null;
   gameDate?: string;
 }
 
@@ -241,7 +242,7 @@ export function HeroScoreboard({
                 <div className="font-scoreboard text-[8px] text-slate-600 h-4 flex items-center">{awayAbbr}</div>
                 <div className="font-scoreboard text-[8px] text-slate-600 h-4 flex items-center">{homeAbbr}</div>
               </div>
-              {linescore.innings.map((inn: any) => (
+              {linescore.innings.map((inn: Linescore["innings"][number]) => (
                 <div key={inn.num} className="flex flex-col items-center gap-px">
                   <div className="font-scoreboard text-[8px] text-slate-600 w-5 text-center">{inn.num}</div>
                   <div className="font-scoreboard text-[10px] text-slate-300 w-5 text-center num">{inn.away?.runs ?? 0}</div>

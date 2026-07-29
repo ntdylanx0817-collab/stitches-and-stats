@@ -5,16 +5,19 @@ import { useMemo, useState } from "react";
 import { Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** A single batted-ball event plotted on the spray chart. */
+export interface SprayPoint {
+  x: number;
+  y: number;
+  launchSpeed: number | null;
+  launchAngle: number | null;
+  distance: number | null;
+  event: string;
+  isBarrel: boolean;
+}
+
 interface SprayChartProps {
-  data: Array<{
-    x: number;
-    y: number;
-    launchSpeed: number | null;
-    launchAngle: number | null;
-    distance: number | null;
-    event: string;
-    isBarrel: boolean;
-  }>;
+  data: SprayPoint[];
   playerHand: "L" | "R" | "S";
   className?: string;
 }

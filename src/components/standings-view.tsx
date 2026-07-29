@@ -78,14 +78,14 @@ export function StandingsView() {
 
       {/* Tab toggle */}
       <div className="mb-4 flex rounded-lg border border-chalk bg-midnight/40 p-0.5 w-fit">
-        {[
+        {([
           { key: "divisions", label: "Divisions" },
           { key: "wildcard", label: "Wild Card" },
           { key: "playoff", label: "Playoff Picture" },
-        ].map((t) => (
+        ] as const).map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key as any)}
+            onClick={() => setTab(t.key)}
             className={cn(
               "font-scoreboard rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
               tab === t.key ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, UserX, Repeat, Zap, Activity, Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/loading-states";
@@ -46,7 +47,7 @@ interface LineupData {
   lastUpdated: number;
 }
 
-const CHANGE_CONFIG: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+const CHANGE_CONFIG: Record<string, { icon: LucideIcon; color: string; bg: string; label: string }> = {
   scratch: { icon: UserX, color: "text-crimson", bg: "bg-crimson/10 border-crimson/30", label: "Scratched" },
   pitching_change: { icon: Repeat, color: "text-mint", bg: "bg-mint/10 border-mint/30", label: "Pitching Change" },
   pinch_hit: { icon: Zap, color: "text-amber", bg: "bg-amber/10 border-amber/30", label: "Pinch Hit" },

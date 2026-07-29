@@ -9,6 +9,102 @@ const SAVANT_API = 'https://baseballsavant.mlb.com'
 const POLL_INTERVAL_MS = 8_000 // poll each active game every 8s
 
 // ===== Types =====
+//
+// This service is its own package and does not share the Next app's module
+// graph, so the upstream payloads are described here rather than imported.
+// They are intentionally permissive: the service relays fields through to the
+// client and only reads a handful of them itself.
+
+/** An arbitrary JSON object from an upstream API. */
+type Json = Record<string, unknown>
+
+/** A pitch/action event inside a play, from the MLB live feed. */
+interface FeedPlayEvent {
+  index?: number
+  playId?: string
+  pitchNumber?: number
+  isPitch?: boolean
+  startTime?: string
+  endTime?: string
+  type?: string
+  details?: {
+    description?: string
+    call?: { code: string; description: string }
+    isStrike?: boolean
+    isBall?: boolean
+    isInPlay?: boolean
+    type?: { code?: string; description?: string }
+  }
+  count?: { balls: number; strikes: number; outs: number }
+  pitchData?: {
+    startSpeed?: number
+    strikeZoneTop?: number
+    strikeZoneBottom?: number
+    coordinates?: { pX?: number; pZ?: number }
+    zone?: number
+    breakX?: number
+    breakZ?: number
+    spinRate?: number
+    extension?: number
+    plateTime?: number
+  }
+}
+
+/** A play from the MLB live feed's `allPlays`. */
+interface FeedPlay {
+  atBatIndex: number
+  about: { inning: number; halfInning: 'top' | 'bottom'; [k: string]: unknown }
+  result?: { event?: string; description?: string; homeScore?: number; awayScore?: number }
+  count?: { balls: number; strikes: number; outs: number }
+  matchup?: {
+    batter?: { id: number; fullName: string }
+    pitcher?: { id: number; fullName: string }
+    batterSide?: { code: string }
+    pitchHand?: { code: string }
+    [k: string]: unknown
+  }
+  playEndTime?: string
+  playEvents?: FeedPlayEvent[]
+}
+
+/** The MLB live feed response, narrowed to what this service reads. */
+interface LiveFeed {
+  gameData?: {
+    status?: { abstractGameState?: string; [k: string]: unknown }
+    teams?: { away?: Json; home?: Json }
+    venue?: Json
+    datetime?: Json
+  }
+  liveData?: {
+    linescore?: Json
+    plays?: { allPlays?: FeedPlay[]; currentPlay?: FeedPlay }
+  }
+}
+
+/** One Statcast pitch record from Baseball Savant's game feed. */
+interface SavantPitch {
+  play_id?: string
+  inning?: number
+  half_inning?: string
+  ab_number?: number
+  pitch_number?: number
+  [metric: string]: unknown
+}
+
+/** Baseball Savant's game feed, narrowed to what this service reads. */
+interface SavantFeed {
+  exit_velocity?: SavantPitch[]
+  home_runs?: unknown[]
+  game_status?: unknown
+}
+
+/** A scheduled game entry, narrowed to what this service reads. */
+interface ScheduleGame {
+  gamePk: number
+  status?: { abstractGameState?: string }
+  teams?: { away?: { team?: { name?: string } }; home?: { team?: { name?: string } } }
+}
+
 interface LiveGameState {
   gamePk: number
   status: string
@@ -20,7 +116,7 @@ interface LiveGameState {
 // ===== State =====
 const activeGameSubs = new Map<number, Set<string>>() // gamePk -> socket ids
 const liveGames = new Map<number, LiveGameState>()
-const gameDataCache = new Map<number, { fetchedAt: number; data: any }>()
+const gameDataCache = new Map<number, { fetchedAt: number; data: unknown }>()
 const GAME_TTL_MS = 30_000
 
 // ===== Helpers =====
@@ -46,7 +142,7 @@ function log(msg: string, fields: Record<string, unknown> = {}, level: 'info' | 
   }
 }
 
-async function fetchJSON(url: string, init?: RequestInit): Promise<any> {
+async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
     signal: AbortSignal.timeout(8_000),
@@ -58,7 +154,7 @@ async function fetchJSON(url: string, init?: RequestInit): Promise<any> {
     },
   })
   if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`)
-  return await res.json()
+  return (await res.json()) as T
 }
 
 function ymd(date: Date): string {
@@ -73,17 +169,17 @@ async function fetchLiveGamePks(): Promise<Array<{ gamePk: number; status: strin
   const date = ymd(new Date())
   const url = `${STATS_API}/v1/schedule?sportId=1&date=${encodeURIComponent(date)}`
   try {
-    const data = await fetchJSON(url)
+    const data = await fetchJSON<{ dates?: Array<{ games?: ScheduleGame[] }> }>(url)
     const games = data?.dates?.[0]?.games ?? []
     return games
-      .filter((g: any) => {
+      .filter((g: ScheduleGame) => {
         const state = g?.status?.abstractGameState
         // Live games OR recently final (within last hour) so users can still see final plays
         return state === 'Live' || state === 'Final' || state === 'Preview'
       })
-      .map((g: any) => ({
+      .map((g: ScheduleGame) => ({
         gamePk: g.gamePk,
-        status: g.status.abstractGameState,
+        status: g.status?.abstractGameState ?? 'Unknown',
         away: g.teams?.away?.team?.name,
         home: g.teams?.home?.team?.name,
       }))
@@ -94,10 +190,10 @@ async function fetchLiveGamePks(): Promise<Array<{ gamePk: number; status: strin
 }
 
 /** Fetch live feed for a game. */
-async function fetchLiveFeed(gamePk: number): Promise<any | null> {
+async function fetchLiveFeed(gamePk: number): Promise<LiveFeed | null> {
   try {
     const url = `${STATS_API}/v1.1/game/${gamePk}/feed/live`
-    return await fetchJSON(url)
+    return await fetchJSON<LiveFeed>(url)
   } catch (err) {
     log(`Error fetching feed ${gamePk}: ${(err as Error).message}`)
     return null
@@ -105,17 +201,17 @@ async function fetchLiveFeed(gamePk: number): Promise<any | null> {
 }
 
 /** Fetch savant statcast data for a game. */
-async function fetchSavantFeed(gamePk: number): Promise<any | null> {
+async function fetchSavantFeed(gamePk: number): Promise<SavantFeed | null> {
   try {
     const url = `${SAVANT_API}/gf?game_pk=${gamePk}`
-    return await fetchJSON(url)
+    return await fetchJSON<SavantFeed>(url)
   } catch (err) {
     return null
   }
 }
 
 /** Strip a feed to its essential real-time updates. */
-function extractFeedSnapshot(feed: any) {
+function extractFeedSnapshot(feed: LiveFeed) {
   const allPlays = feed?.liveData?.plays?.allPlays ?? []
   const currentPlay = feed?.liveData?.plays?.currentPlay ?? null
   return {
@@ -127,7 +223,7 @@ function extractFeedSnapshot(feed: any) {
     },
     venue: feed?.gameData?.venue,
     datetime: feed?.gameData?.datetime,
-    allPlays: allPlays.map((p: any) => ({
+    allPlays: allPlays.map((p: FeedPlay) => ({
       atBatIndex: p.atBatIndex,
       about: p.about,
       result: p.result,
@@ -145,7 +241,7 @@ function extractFeedSnapshot(feed: any) {
       // Include ALL pitch events (not just the last one) so the client can
       // render the full pitch log and strike zone. Each event is trimmed to
       // the fields we actually use to keep payload size manageable.
-      playEvents: (p.playEvents ?? []).map((e: any) => ({
+      playEvents: (p.playEvents ?? []).map((e: FeedPlayEvent) => ({
         index: e.index,
         playId: e.playId,
         pitchNumber: e.pitchNumber,
@@ -157,16 +253,16 @@ function extractFeedSnapshot(feed: any) {
         count: e.count,
         pitchData: e.pitchData,
       })),
-      pitchCount: p.playEvents?.filter((e: any) => e.isPitch).length ?? 0,
+      pitchCount: p.playEvents?.filter((e: FeedPlayEvent) => e.isPitch).length ?? 0,
     })),
     currentPlay,
     playCount: allPlays.length,
   }
 }
 
-function extractSavantSnapshot(savant: any) {
+function extractSavantSnapshot(savant: SavantFeed) {
   return {
-    exit_velocity: (savant?.exit_velocity ?? []).map((p: any) => ({
+    exit_velocity: (savant?.exit_velocity ?? []).map((p: SavantPitch) => ({
       play_id: p.play_id,
       inning: p.inning,
       half_inning: p.half_inning,
@@ -238,8 +334,8 @@ async function pollLoop() {
         // Build the latest pitch event (if any) by combining feed + savant.
         // Use the LAST pitch event from the last play (not just lastEvent which
         // could be a non-pitch action like a pickoff).
-        let latestPitch: any = null
-        const pitchEvents = lastPlay?.playEvents?.filter((e: any) => e.isPitch) ?? []
+        let latestPitch: { pitchNumber: number; [field: string]: unknown } | null = null
+        const pitchEvents = lastPlay?.playEvents?.filter((e: FeedPlayEvent) => e.isPitch) ?? []
         const lastPitchEvent = pitchEvents[pitchEvents.length - 1] ?? null
         if (lastPitchEvent) {
           const inning = lastPlay.about.inning
@@ -249,7 +345,7 @@ async function pollLoop() {
           const abNumber = atBatIndex + 1
           const key = `${inning}-${halfInning}-${abNumber}-${pitchNumber}`
           const sp = savantSnapshot?.exit_velocity?.find(
-            (p: any) => `${p.inning}-${p.half_inning}-${p.ab_number}-${p.pitch_number}` === key
+            (p: SavantPitch) => `${p.inning}-${p.half_inning}-${p.ab_number}-${p.pitch_number}` === key
           )
           latestPitch = {
             key,

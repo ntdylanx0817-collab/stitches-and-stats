@@ -21,6 +21,7 @@ import { useSavantStore } from "@/lib/store";
 import { cn, statcastSeasons } from "@/lib/utils";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { LeaderboardChart } from "@/components/leaderboard-chart";
+import type { LeaderboardRow } from "@/lib/types";
 
 type SortDir = "asc" | "desc" | null;
 interface ColDef {
@@ -29,8 +30,8 @@ interface ColDef {
   short?: string;
   width?: number;
   align?: "left" | "right" | "center";
-  format?: (v: any) => string;
-  tone?: (v: any) => string;
+  format?: (v: number | string | undefined) => string;
+  tone?: (v: number | string | undefined) => string;
   group?: "standard" | "advanced";
 }
 
@@ -157,7 +158,7 @@ export function LeaderboardsView() {
     }
   }
 
-  const { data, isLoading, error, refetch } = useQuery<{ rows: any[]; total: number; year: number; type: string }>({
+  const { data, isLoading, error, refetch } = useQuery<{ rows: LeaderboardRow[]; total: number; year: number; type: string }>({
     queryKey: ["leaderboard", lbType, lbYear, lbMin, lbTeam, lbPosition],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -216,7 +217,7 @@ export function LeaderboardsView() {
     else setSortDir("desc");
   };
 
-  const openPlayer = (row: any) => {
+  const openPlayer = (row: LeaderboardRow) => {
     setSelectedPlayer({
       id: Number(row.player_id),
       name: String(row.player_name ?? ""),
@@ -426,7 +427,7 @@ export function LeaderboardsView() {
                     onClick={() => openPlayer(row)}
                   >
                     {visibleCols.map((col) => {
-                      let val: any;
+                      let val: number | string | undefined;
                       if (col.key === "rank") val = idx + 1;
                       else val = row[col.key];
                       const display = col.format ? col.format(val) : (val ?? "—");

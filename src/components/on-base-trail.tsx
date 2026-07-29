@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import type { GameStatus, Linescore } from "@/lib/types";
 
 interface OnBaseTrailProps {
   gamePk: number;
@@ -13,8 +14,8 @@ interface OnBaseTrailProps {
 
 export function OnBaseTrail({ gamePk, awayTeamColor, homeTeamColor, isTopInning }: OnBaseTrailProps) {
   const { data } = useQuery<{
-    linescore: any;
-    status: any;
+    linescore: Linescore | null;
+    status: GameStatus | null;
   }>({
     queryKey: ["base-runners", gamePk],
     queryFn: async () => {

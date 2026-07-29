@@ -7,6 +7,7 @@ import {
   Activity, Calendar, ChevronRight, Clock, Filter, Loader2, Radio,
   TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight, Search,
   AlertCircle, Trophy,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,10 @@ import { BullpenStatus } from "@/components/bullpen-status";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { EnrichedPitch } from "@/lib/types";
+import type { EnrichedPitch, LivePitchEvent, Linescore, GameStatus, FeedTeam, StatcastPitch } from "@/lib/types";
+
+/** One inning row in the linescore. */
+type InningLine = Linescore["innings"][number];
 import { EmptyState, ErrorState, PitchLogSkeleton, StrikeZoneSkeleton, Skeleton } from "@/components/loading-states";
 
 interface ScheduleGame {
@@ -217,7 +221,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     // Also subscribe to the granular game:pitch event for snappier UI feedback
     // when a new pitch arrives mid-at-bat (the snapshot polls every 8s, but
     // game:pitch fires immediately when a new pitch key is detected).
-    const offPitch = onPitch((pitch: any) => {
+    const offPitch = onPitch((pitch: LivePitchEvent) => {
       if (!pitch || pitch.atBatIndex == null || pitch.pitchNumber == null) return;
       setLivePitches((prev) => {
         const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
@@ -239,23 +243,27 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           pitchHand: pitch.pitchHand,
           description: pitch.description ?? "",
           playResult: pitch.result ?? "",
-          call: pitch.call?.code ?? pitch.call,
+          // `call` arrives as { code, description }; the old form fell back to
+          // the object itself when code was absent.
+          call: pitch.call?.code,
           callDescription: pitch.call?.description,
           pitchType: pitch.pitchType,
           pitchName: pitch.pitchName,
-          startSpeed: pitch.startSpeed,
-          endSpeed: pitch.endSpeed,
-          spinRate: pitch.spinRate,
-          breakX: pitch.breakX,
-          breakZ: pitch.breakZ,
-          inducedBreakZ: pitch.inducedBreakZ,
-          extension: pitch.extension,
-          plateTime: pitch.plateTime,
+          // The wire shape uses null for "no reading"; EnrichedPitch uses
+          // undefined, so these are narrowed rather than passed straight on.
+          startSpeed: pitch.startSpeed ?? undefined,
+          endSpeed: pitch.endSpeed ?? undefined,
+          spinRate: pitch.spinRate ?? undefined,
+          breakX: pitch.breakX ?? undefined,
+          breakZ: pitch.breakZ ?? undefined,
+          inducedBreakZ: pitch.inducedBreakZ ?? undefined,
+          extension: pitch.extension ?? undefined,
+          plateTime: pitch.plateTime ?? undefined,
           pX: pitch.pX ?? pitch.coordinates?.pX,
           pZ: pitch.pZ ?? pitch.coordinates?.pZ,
           zone: pitch.zone,
-          szTop: pitch.szTop,
-          szBot: pitch.szBot,
+          szTop: pitch.szTop ?? undefined,
+          szBot: pitch.szBot ?? undefined,
           isStrike: !!pitch.isStrike,
           isBall: !!pitch.isBall,
           isInPlay: !!pitch.isInPlay,
@@ -290,9 +298,9 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // For Live/Final games, poll every 5s for near-real-time updates.
   const { data: restData, isLoading: restLoading } = useQuery<{
     pitches: EnrichedPitch[];
-    linescore: any;
-    status: any;
-    teams: any;
+    linescore: Linescore | null;
+    status: GameStatus | null;
+    teams: { away?: FeedTeam; home?: FeedTeam };
   }>({
     queryKey: ["game-feed-rest", gamePk],
     queryFn: async () => {
@@ -302,7 +310,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     },
     enabled: !connected || !snapshot,
     // TanStack Query passes the Query object; use query.state.data to avoid TDZ
-    refetchInterval: (query: any) => {
+    refetchInterval: (query) => {
       const data = query.state?.data;
       const state = data?.status?.abstractGameState;
       // Stop polling for Preview games (they haven't started)
@@ -321,7 +329,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       // in each play (not just the last one) so the strike zone and pitch log
       // show every pitch of every at-bat.
       const pitches: EnrichedPitch[] = [];
-      const savantMap = new Map<string, any>();
+      const savantMap = new Map<string, StatcastPitch>();
       for (const sp of snapshot.savant.exit_velocity) {
         const k = `${sp.inning}-${sp.half_inning}-${sp.ab_number}-${sp.pitch_number ?? 0}`;
         savantMap.set(k, sp);
@@ -474,7 +482,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // Highlight metrics for the latest pitch
   const latestMetrics = useMemo(() => {
     if (!latestPitch) return [];
-    const m: Array<{ label: string; value: string; tone?: string; icon?: any }> = [];
+    const m: Array<{ label: string; value: string; tone?: string; icon?: LucideIcon }> = [];
     const num = (v: unknown): number | null => {
       if (v == null) return null;
       const n = typeof v === "number" ? v : Number(v);
@@ -588,7 +596,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             }).map(([code, name]) => {
               const has = pitchTypeStats.some((p) => p.type === code);
               if (!has) return null;
-              const color = (PITCH_COLOR_LEGEND as any)[code] ?? "#94A3B8";
+              const color = PITCH_COLOR_LEGEND[code] ?? "#94A3B8";
               return (
                 <span key={code} className="inline-flex items-center gap-1 rounded-full bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-300">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
@@ -747,7 +755,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           </h3>
           <div className="space-y-2">
             {pitchTypeStats.slice(0, 8).map((p) => {
-              const color = (PITCH_COLOR_LEGEND as any)[p.type] ?? "#94A3B8";
+              const color = PITCH_COLOR_LEGEND[p.type] ?? "#94A3B8";
               const pct = mergedPitches.length > 0 ? (p.count / mergedPitches.length) * 100 : 0;
               return (
                 <div key={p.type}>
@@ -783,7 +791,12 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   );
 }
 
-function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; status: any; teams: any; gamePk: number }) {
+function Scoreboard({ linescore, status, teams, gamePk }: {
+  linescore: Linescore | null;
+  status: GameStatus | null;
+  teams: { away?: FeedTeam; home?: FeedTeam } | null;
+  gamePk: number;
+}) {
   const innings = linescore?.innings ?? [];
   const away = linescore?.teams?.away;
   const home = linescore?.teams?.home;
@@ -829,7 +842,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
             <thead>
               <tr className="text-[10px] uppercase text-slate-500">
                 <th className="text-left py-1 pr-2 sticky left-0 bg-transparent"></th>
-                {innings.map((inn: any) => (
+                {innings.map((inn: InningLine) => (
                   <th key={inn.num} className="px-1.5 py-1 text-center min-w-[20px]">{inn.num}</th>
                 ))}
                 {(away || home) && (
@@ -849,7 +862,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
                     <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
                   </div>
                 </td>
-              {innings.map((inn: any) => (
+              {innings.map((inn: InningLine) => (
                 <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
                   {inn.away.runs ?? 0}
                 </td>
@@ -869,7 +882,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: { linescore: any; stat
                   <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{homeName.split(" ").slice(-1)[0]}</span>
                 </div>
               </td>
-              {innings.map((inn: any) => (
+              {innings.map((inn: InningLine) => (
                 <td key={inn.num} className="px-1.5 py-1.5 text-center text-slate-300">
                   {inn.home.runs ?? 0}
                 </td>

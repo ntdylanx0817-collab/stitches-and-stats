@@ -2,28 +2,15 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
-import type { EnrichedPitch } from "@/lib/types";
+import type { EnrichedPitch, GameSnapshot, LivePitchEvent } from "@/lib/types";
 
-interface GameSnapshot {
-  gamePk: number;
-  status: any;
-  linescore: any;
-  teams: { away: any; home: any };
-  allPlays: any[];
-  currentPlay: any | null;
-  playCount: number;
-  savant: any | null;
-  latestPitch: EnrichedPitch | null;
-  isNewPlay: boolean;
-  timestamp: number;
-}
 
 interface SocketCtx {
   connected: boolean;
   subscribeGame: (gamePk: number) => void;
   unsubscribeGame: (gamePk: number) => void;
   onSnapshot: (cb: (snap: GameSnapshot) => void) => () => void;
-  onPitch: (cb: (pitch: EnrichedPitch) => void) => () => void;
+  onPitch: (cb: (pitch: LivePitchEvent) => void) => () => void;
 }
 
 const Ctx = createContext<SocketCtx | null>(null);
@@ -31,7 +18,7 @@ const Ctx = createContext<SocketCtx | null>(null);
 export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
   const snapshotCbsRef = useRef<Set<(s: GameSnapshot) => void>>(new Set());
-  const pitchCbsRef = useRef<Set<(p: EnrichedPitch) => void>>(new Set());
+  const pitchCbsRef = useRef<Set<(p: LivePitchEvent) => void>>(new Set());
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -53,7 +40,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     sock.on("game:snapshot", (snap: GameSnapshot) => {
       snapshotCbsRef.current.forEach((cb) => cb(snap));
     });
-    sock.on("game:pitch", (pitch: EnrichedPitch) => {
+    sock.on("game:pitch", (pitch: LivePitchEvent) => {
       pitchCbsRef.current.forEach((cb) => cb(pitch));
     });
 
@@ -77,7 +64,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     return () => { snapshotCbsRef.current.delete(cb); };
   }, []);
 
-  const onPitch = useCallback((cb: (p: EnrichedPitch) => void) => {
+  const onPitch = useCallback((cb: (p: LivePitchEvent) => void) => {
     pitchCbsRef.current.add(cb);
     return () => { pitchCbsRef.current.delete(cb); };
   }, []);

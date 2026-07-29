@@ -15,6 +15,32 @@ import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
+/** Batter inputs echoed back by /api/simulate. */
+interface SimBatterStats {
+  kPercent: number;
+  bbPercent: number;
+  battingAvg: number;
+  slg: number;
+  obp: number;
+  woba: number;
+  xwoba: number;
+  barrelPercent: number;
+  hardHitPercent: number;
+  avgExitVelo: number;
+}
+
+/** Pitcher inputs echoed back by /api/simulate. */
+interface SimPitcherStats {
+  kPercent: number;
+  bbPercent: number;
+  era: number;
+  whip: number;
+  avg: number;
+  xwoba: number;
+  barrelPercent: number;
+  hardHitPercent: number;
+  avgExitVelo: number;
+}
 
 interface PlayerOption {
   player_id: number;
@@ -55,8 +81,8 @@ interface SimResult {
     onBase: number; sluggingEvents: number;
     expectedBA: number; expectedOBP: number; expectedSLG: number; expectedOPS: number;
   };
-  batterStats: any;
-  pitcherStats: any;
+  batterStats: SimBatterStats;
+  pitcherStats: SimPitcherStats;
   matchupInsight: string;
 }
 
@@ -127,8 +153,8 @@ export function SimulatorView() {
       if (!res.ok) throw new Error("simulation failed");
       const data: SimResult = await res.json();
       setSimResult(data);
-    } catch (err: any) {
-      setSimError(err.message || "Simulation failed");
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : "Simulation failed");
       setSimResult(null);
     } finally {
       setSimLoading(false);

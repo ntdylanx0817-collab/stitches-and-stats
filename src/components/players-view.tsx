@@ -25,6 +25,10 @@ import { LeagueRanks } from "@/components/league-ranks";
 import { PitchMovement } from "@/components/pitch-movement";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { ExpectedVsActual } from "@/components/expected-vs-actual";
+import type { LeaderboardRow } from "@/lib/types";
+
+/** Accent colours a stat tile can use. */
+type StatTone = "default" | "cobalt" | "crimson" | "amber" | "mint" | "warning-track";
 
 interface FullPlayerData {
   player: {
@@ -45,7 +49,7 @@ interface FullPlayerData {
     draftYear?: number;
     mlbDebutDate?: string;
   };
-  stats: any | null;
+  stats: LeaderboardRow | null;
   percentiles: Array<{
     key: string; label: string; value: number | string;
     percentile: number; display?: string; higherIsBetter: boolean;
@@ -69,7 +73,7 @@ interface FullPlayerData {
   totalPitches: number;
   gameLog: Array<{
     date: string; opponent: string; isHome: boolean;
-    stat: Record<string, any>;
+    stat: Record<string, number | string | undefined>;
   }>;
   leagueRanks: Array<{ label: string; value: string; rank: number; total: number }>;
 }
@@ -303,7 +307,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
                       ["Avg EV", fmtMph(stats.avg_hit_speed), "crimson"],
                       ["Max EV", fmtMph(stats.max_hit_speed), "crimson"],
                     ] as const).map(([label, val, tone], i) => (
-                      <StatCard key={i} label={label} value={val} tone={tone as any} />
+                      <StatCard key={i} label={label} value={val} tone={tone as StatTone} />
                     ))
                   : ([
                       ["ERA", fmtNum(stats.p_era, 2), "default"],
@@ -319,7 +323,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
                       ["HardHit%", fmtPct(stats.hard_hit_percent), "mint"],
                       ["Avg EV", fmtMph(stats.avg_hit_speed), "mint"],
                     ] as const).map(([label, val, tone], i) => (
-                      <StatCard key={i} label={label} value={val} tone={tone as any} />
+                      <StatCard key={i} label={label} value={val} tone={tone as StatTone} />
                     ))
                 }
               </div>
@@ -429,7 +433,7 @@ function PercentileBar({ metric, index }: {
   );
 }
 
-function StatCard({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "cobalt" | "crimson" | "amber" | "mint" | "warning-track" }) {
+function StatCard({ label, value, tone = "default" }: { label: string; value: string; tone?: StatTone }) {
   const toneCls = {
     default: "text-chalk",
     cobalt: "text-cobalt",

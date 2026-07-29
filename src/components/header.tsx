@@ -52,8 +52,11 @@ export function Header() {
             </div>
           </button>
 
-          {/* Nav tabs */}
-          <nav className="flex items-center gap-0.5 rounded-lg border border-chalk bg-midnight/60 p-0.5">
+          {/* Nav tabs. min-w-0 lets this shrink below its content width inside
+              the flex row so it scrolls internally on very narrow viewports
+              (below ~320px) instead of pushing the theme toggle or connection
+              badge off-screen with no way to reach them. */}
+          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-chalk bg-midnight/60 p-0.5 scrollbar-thin">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
@@ -63,7 +66,7 @@ export function Header() {
                   onClick={() => setView(item.key)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    "relative flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
                     active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -96,7 +99,7 @@ export function Header() {
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
+            className="flex shrink-0 items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
             title={theme === "dark" ? "Stadium Day Mode" : "Night Game Mode"}
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -107,7 +110,7 @@ export function Header() {
               (e.g. the pitch feed's Live/Polling badge) cover this on mobile
               and tablet. */}
           <div
-            className="hidden items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5 lg:flex"
+            className="hidden shrink-0 items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5 lg:flex"
             title={connected ? "Connected — receiving live updates" : "Reconnecting to the live update server…"}
           >
             <span className={cn(

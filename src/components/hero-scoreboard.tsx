@@ -124,10 +124,10 @@ export function HeroScoreboard({
             </div>
             <motion.div
               key={awayScore}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="font-scoreboard text-5xl sm:text-6xl font-black num text-chalk leading-none mt-1 sm:mt-0"
+              initial={{ scale: 0.5, opacity: 0, filter: "drop-shadow(0 0 24px rgba(61,219,160,0.9))" }}
+              animate={{ scale: 1, opacity: 1, filter: "drop-shadow(0 0 0px rgba(61,219,160,0))" }}
+              transition={{ scale: { type: "spring", stiffness: 300, damping: 20 }, opacity: { duration: 0.2 }, filter: { duration: 0.9, ease: "easeOut" } }}
+              className="font-scoreboard text-6xl sm:text-7xl font-black num text-chalk leading-none mt-1 sm:mt-0 text-glow-warning"
             >
               <AnimatedScoreDisplay value={awayScore ?? 0} />
             </motion.div>
@@ -135,7 +135,7 @@ export function HeroScoreboard({
 
           {/* Center: VS + base runners */}
           <div className="flex flex-col items-center gap-2">
-            <div className="font-scoreboard text-xs text-slate-600">VS</div>
+            <div className="font-scoreboard label-xs text-slate-600">VS</div>
             {state === "Live" ? (
               <OnBaseTrail
                 gamePk={gamePk}
@@ -145,7 +145,7 @@ export function HeroScoreboard({
               />
             ) : odds ? (
               <div className="flex flex-col items-center gap-1 py-1">
-                <div className="font-scoreboard text-[9px] uppercase text-slate-500">Proj Total</div>
+                <div className="font-scoreboard label-xs text-slate-500">Proj Total</div>
                 <div className="font-scoreboard text-lg font-bold text-warning-track num">{odds.projectedTotal.toFixed(1)}</div>
                 <div className="font-scoreboard text-[8px] text-slate-600">runs</div>
               </div>
@@ -156,10 +156,10 @@ export function HeroScoreboard({
           <div className="flex flex-col items-center sm:flex-row sm:gap-4">
             <motion.div
               key={homeScore}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="font-scoreboard text-5xl sm:text-6xl font-black num text-chalk leading-none mb-1 sm:mb-0"
+              initial={{ scale: 0.5, opacity: 0, filter: "drop-shadow(0 0 24px rgba(61,219,160,0.9))" }}
+              animate={{ scale: 1, opacity: 1, filter: "drop-shadow(0 0 0px rgba(61,219,160,0))" }}
+              transition={{ scale: { type: "spring", stiffness: 300, damping: 20 }, opacity: { duration: 0.2 }, filter: { duration: 0.9, ease: "easeOut" } }}
+              className="font-scoreboard text-6xl sm:text-7xl font-black num text-chalk leading-none mb-1 sm:mb-0 text-glow-warning"
             >
               <AnimatedScoreDisplay value={homeScore ?? 0} />
             </motion.div>
@@ -179,17 +179,17 @@ export function HeroScoreboard({
         {state === "Preview" && odds && (
           <div className="mt-3 grid grid-cols-3 gap-2 border-t border-chalk pt-3">
             <div className="text-center">
-              <div className="font-scoreboard text-[8px] uppercase text-slate-500">{awayAbbr} ML</div>
+              <div className="font-scoreboard label-xs text-slate-500">{awayAbbr} ML</div>
               <div className={cn("font-scoreboard text-sm font-bold num", odds.awayMoneyline < 0 ? "text-crimson" : "text-mint")}>
                 {odds.awayMoneyline > 0 ? "+" : ""}{odds.awayMoneyline}
               </div>
             </div>
             <div className="text-center">
-              <div className="font-scoreboard text-[8px] uppercase text-slate-500">O/U</div>
+              <div className="font-scoreboard label-xs text-slate-500">O/U</div>
               <div className="font-scoreboard text-sm font-bold text-warning-track num">{odds.projectedTotal.toFixed(1)}</div>
             </div>
             <div className="text-center">
-              <div className="font-scoreboard text-[8px] uppercase text-slate-500">{homeAbbr} ML</div>
+              <div className="font-scoreboard label-xs text-slate-500">{homeAbbr} ML</div>
               <div className={cn("font-scoreboard text-sm font-bold num", odds.homeMoneyline < 0 ? "text-crimson" : "text-mint")}>
                 {odds.homeMoneyline > 0 ? "+" : ""}{odds.homeMoneyline}
               </div>

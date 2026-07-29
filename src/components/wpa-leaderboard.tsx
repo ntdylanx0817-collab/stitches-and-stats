@@ -72,7 +72,7 @@ export function WPALeaderboard({ gamePk }: { gamePk: number }) {
   return (
     <div className="glass rounded-2xl p-4">
       <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-        <Trophy className="h-4 w-4 text-warning-track" />
+        <Trophy className="h-4 w-4 text-amber drop-shadow-[0_0_6px_rgba(255,181,71,0.5)]" />
         WPA Leaderboard
       </h3>
       <p className="mb-3 text-[10px] text-slate-500">Win Probability Added — who impacted the game most</p>
@@ -114,7 +114,8 @@ function WPARow({ entry, isHero, rank }: { entry: WPAEntry; isHero: boolean; ran
       transition={{ delay: rank * 0.05 }}
       className={cn(
         "flex items-center gap-2 rounded-lg border p-1.5",
-        isHero ? "border-mint/15 bg-mint/5" : "border-crimson/15 bg-crimson/5"
+        isHero ? "border-mint/15 bg-mint/5" : "border-crimson/15 bg-crimson/5",
+        rank === 1 && (isHero ? "border-l-2 border-l-mint shadow-sm shadow-mint/20" : "border-l-2 border-l-crimson shadow-sm shadow-crimson/20")
       )}
     >
       <span className={cn(

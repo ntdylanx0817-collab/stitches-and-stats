@@ -23,7 +23,7 @@ export function LeagueRanks({ data, className }: LeagueRanksProps) {
     <div className={className}>
       <div className="glass rounded-2xl p-4">
         <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-          <Trophy className="h-4 w-4 text-warning-track" />
+          <Trophy className="h-4 w-4 text-amber drop-shadow-[0_0_6px_rgba(255,181,71,0.5)]" />
           MLB Rankings
         </h3>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-3">

@@ -144,10 +144,10 @@
   .dark body {
     background:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E"),
-      radial-gradient(ellipse 100% 60% at 50% 0%, rgba(230, 126, 34, 0.06), transparent 70%),
+      radial-gradient(ellipse 100% 70% at 50% -10%, rgba(230, 126, 34, 0.09), transparent 70%),
       radial-gradient(ellipse 80% 40% at 50% 100%, rgba(230, 126, 34, 0.03), transparent 60%),
-      radial-gradient(ellipse 50% 80% at 0% 50%, rgba(77, 163, 255, 0.03), transparent 60%),
-      radial-gradient(ellipse 50% 80% at 100% 50%, rgba(61, 219, 160, 0.02), transparent 60%),
+      radial-gradient(ellipse 50% 80% at 0% 50%, rgba(77, 163, 255, 0.035), transparent 60%),
+      radial-gradient(ellipse 50% 80% at 100% 50%, rgba(61, 219, 160, 0.03), transparent 60%),
       #050a14;
   }
   /* Light theme body — warm cream stadium day */
@@ -250,13 +250,21 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(230, 126, 34, 0.3), transparent);
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(230, 126, 34, 0.45), transparent);
     z-index: 1;
   }
   .card-broadcast > * {
     position: relative;
     z-index: 2;
+  }
+  .card-broadcast:hover {
+    border-color: rgba(230, 126, 34, 0.25);
+  }
+
+  /* Left accent border — apply to standalone stat/leader cards, not chrome like header */
+  .card-accent-left {
+    border-left: 3px solid rgba(230, 126, 34, 0.7);
   }
 
   /* Interactive hover lift — for clickable cards */
@@ -363,6 +371,59 @@
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: rgba(230, 126, 34, 0.45);
+  }
+
+  /* Uppercase micro-labels for eyebrows, column headers, and captions */
+  .label-sm {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .label-xs {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Semantic border weights — use instead of ad-hoc opacity picks */
+  .border-accent {
+    border-color: rgba(230, 126, 34, 0.40);
+  }
+  .border-subtle {
+    border-color: rgba(248, 249, 250, 0.15);
+  }
+  .border-faint {
+    border-color: rgba(248, 249, 250, 0.05);
+  }
+
+  /* Layered surface depth — deepest to nearest */
+  .bg-depth-1 {
+    background-color: var(--color-midnight);
+  }
+  .bg-depth-2 {
+    background-color: var(--color-midnight-2);
+  }
+  .bg-depth-3 {
+    background-color: var(--color-midnight-3);
+  }
+
+  .box-glow-mint {
+    box-shadow: 0 0 24px rgba(61, 219, 160, 0.3);
+  }
+
+  /* Premium card — layered shadow + accent border, for hero/leader content */
+  .card-premium {
+    border-left: 3px solid rgba(230, 126, 34, 0.7);
+    box-shadow:
+      0 8px 32px -8px rgba(0, 0, 0, 0.7),
+      0 2px 12px -2px rgba(230, 126, 34, 0.15);
+  }
+
+  ::selection {
+    background-color: rgba(230, 126, 34, 0.30);
+    color: var(--color-chalk);
   }
 }
 

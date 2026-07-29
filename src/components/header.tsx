@@ -43,10 +43,10 @@ export function Header() {
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-midnight" />
             </div>
             <div className="hidden flex-col leading-none sm:flex">
-              <span className="font-scoreboard text-base font-bold tracking-wide text-chalk uppercase">
-                Stitches <span className="text-warning-track">& Stats</span>
+              <span className="font-scoreboard text-lg font-black tracking-wide text-chalk uppercase">
+                Stitches <span className="text-warning-track text-glow-warning">& Stats</span>
               </span>
-              <span className="text-[8px] uppercase tracking-[0.25em] text-slate-500 font-scoreboard">
+              <span className="label-xs text-slate-500 font-scoreboard">
                 Pro Broadcast Analytics
               </span>
             </div>
@@ -56,7 +56,7 @@ export function Header() {
               the flex row so it scrolls internally on very narrow viewports
               (below ~320px) instead of pushing the theme toggle or connection
               badge off-screen with no way to reach them. */}
-          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-chalk bg-midnight/60 p-0.5 scrollbar-thin">
+          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-subtle bg-gradient-to-b from-midnight-2/70 to-midnight/70 p-0.5 scrollbar-thin">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;

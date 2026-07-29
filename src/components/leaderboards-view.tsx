@@ -231,13 +231,14 @@ export function LeaderboardsView() {
       {/* Filters bar */}
       <div className="glass rounded-2xl p-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Filter className="h-4 w-4 text-cobalt" /> Statcast Leaderboards
+          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-white">
+            <Filter className="h-4 w-4 text-cobalt drop-shadow-[0_0_6px_rgba(77,163,255,0.5)]" /> Statcast Leaderboards
           </h2>
           <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
             {data?.total ?? 0} players
           </Badge>
         </div>
+        <div className="mb-3 h-px bg-gradient-to-r from-cobalt/40 via-cobalt/10 to-transparent" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Type toggle */}
           <div>
@@ -444,7 +445,15 @@ export function LeaderboardsView() {
                           )}
                         >
                           {col.key === "rank" && (
-                            <span className="text-slate-500 font-mono">{idx + 1}</span>
+                            <span className={cn(
+                              "font-mono",
+                              idx === 0 ? "text-amber font-bold text-glow-warning"
+                                : idx === 1 ? "text-slate-300 font-bold"
+                                : idx === 2 ? "text-warning-track/80 font-bold"
+                                : "text-slate-500"
+                            )}>
+                              {idx + 1}
+                            </span>
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">

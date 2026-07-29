@@ -250,7 +250,7 @@ function PlayerSearchPanel({
 }
 
 function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player2Id: number }) {
-  const { data: data1, isLoading: loading1 } = useQuery<PlayerData>({
+  const { data: data1, isLoading: loading1, refetch: refetch1 } = useQuery<PlayerData>({
     queryKey: ["player-profile", player1Id, "batter"],
     queryFn: async () => {
       const res = await fetch(`/api/player/${player1Id}?type=batter`);
@@ -260,7 +260,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
     staleTime: 5 * 60_000,
   });
 
-  const { data: data2, isLoading: loading2 } = useQuery<PlayerData>({
+  const { data: data2, isLoading: loading2, refetch: refetch2 } = useQuery<PlayerData>({
     queryKey: ["player-profile", player2Id, "batter"],
     queryFn: async () => {
       const res = await fetch(`/api/player/${player2Id}?type=batter`);
@@ -281,7 +281,10 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
   if (!data1?.player || !data2?.player) {
     return (
       <div className="mt-4">
-        <ErrorState title="Couldn't load comparison data" />
+        <ErrorState
+          title="Couldn't load comparison data"
+          onRetry={() => { refetch1(); refetch2(); }}
+        />
       </div>
     );
   }

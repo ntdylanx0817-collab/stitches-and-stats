@@ -253,6 +253,7 @@ export function SimulatorView() {
             <ErrorState
               title="Simulation failed"
               description="Make sure both players have current-season Statcast data."
+              onRetry={handleSimulate}
             />
           </motion.div>
         )}

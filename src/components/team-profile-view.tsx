@@ -45,7 +45,7 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
   const setView = useSavantStore((s) => s.setView);
   const color = getTeamColor(teamId);
 
-  const { data, isLoading, error } = useQuery<TeamData>({
+  const { data, isLoading, error, refetch } = useQuery<TeamData>({
     queryKey: ["team", teamId],
     queryFn: async () => {
       const res = await fetch(`/api/team/${teamId}`);
@@ -78,7 +78,7 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
   if (error || !data) {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
-        <ErrorState title="Couldn't load team data" />
+        <ErrorState title="Couldn't load team data" onRetry={() => refetch()} />
         <div className="mt-4 text-center">
           <Button variant="outline" size="sm" onClick={onClose}><ArrowLeft className="mr-1 h-4 w-4" /> Back</Button>
         </div>

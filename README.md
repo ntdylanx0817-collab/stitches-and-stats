@@ -235,6 +235,7 @@ This project is for educational/demonstration purposes and is not affiliated wit
 - **Tests**: `npm test` runs the suite via `bun test` (built into Bun — no extra dependency, and it reads TypeScript directly). Covers the cache's TTL/eviction/deduplication behaviour, API error mapping, and the logger
 - **Typecheck**: `npm run typecheck` covers all three TypeScript projects — the app, the tests (which need Bun's globals), and the live-feed service
 - **Structured logging**: `src/lib/logger.ts` emits JSON lines in production and pretty output in development; set `LOG_LEVEL` to `debug`/`info`/`warn`/`error`/`silent`
+- **Rate limiting**: `src/middleware.ts` throttles `/api/*` with a sliding window — 120 req/min generally, 20 req/min for the endpoints that pull large Statcast CSVs. Tune with `RATE_LIMIT_*` (see `.env.example`). **This is a soft cap:** counters live in process memory, so on serverless each instance has its own and the effective limit multiplies by instance count. Use a shared store if you need a real guarantee
 - **Error boundary**: Catches render errors so a single broken component doesn't crash the app
 - **Loading states**: Shimmer skeletons for all async views
 - **Empty/error states**: Graceful handling for API failures, missing data, and preview games

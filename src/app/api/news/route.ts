@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import { getOrSet } from "@/lib/cache";
+import { errorMessage, errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
@@ -222,41 +223,49 @@ export async function GET(req: NextRequest) {
   // Cache all sources for 60 seconds — articles refresh frequently but we don't
   // want to hammer the upstream feeds on every page load.
   const cacheKey = "news:all";
-  const allArticles = await getOrSet(cacheKey, 60_000, async () => {
-    const results = await Promise.allSettled(NEWS_SOURCES.map(fetchFeed));
-    const articles: NewsArticle[] = [];
-    for (let i = 0; i < results.length; i++) {
-      if (results[i].status === "fulfilled") {
-        articles.push(...results[i].value);
+  try {
+    const allArticles = await getOrSet(cacheKey, 60_000, async () => {
+      const results = await Promise.allSettled(NEWS_SOURCES.map(fetchFeed));
+      const articles: NewsArticle[] = [];
+      for (const result of results) {
+        // Bind to a local so TypeScript can narrow the union — indexing back
+        // into `results[i]` after the status check discards the narrowing.
+        if (result.status === "fulfilled") {
+          articles.push(...result.value);
+        } else {
+          console.error("[news] Feed rejected:", errorMessage(result.reason));
+        }
       }
-    }
-    // Deduplicate by title (some stories appear in multiple feeds)
-    const seen = new Set<string>();
-    const deduped = articles.filter((a) => {
-      const key = a.title.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 60);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      // Deduplicate by title (some stories appear in multiple feeds)
+      const seen = new Set<string>();
+      const deduped = articles.filter((a) => {
+        const key = a.title.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 60);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      // Sort newest first
+      deduped.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp);
+      return deduped;
     });
-    // Sort newest first
-    deduped.sort((a, b) => b.publishedTimestamp - a.publishedTimestamp);
-    return deduped;
-  });
 
-  // Filter by source if requested
-  const filtered = sourceFilter !== "all"
-    ? allArticles.filter((a) => a.sourceSlug === sourceFilter)
-    : allArticles;
+    // Filter by source if requested
+    const filtered = sourceFilter !== "all"
+      ? allArticles.filter((a) => a.sourceSlug === sourceFilter)
+      : allArticles;
 
-  return NextResponse.json({
-    total: filtered.length,
-    sources: NEWS_SOURCES.map((s) => ({
-      name: s.name,
-      slug: s.slug,
-      color: s.color,
-      trustLevel: s.trustLevel,
-    })),
-    articles: filtered.slice(0, limit),
-    cachedAt: Date.now(),
-  });
+    return NextResponse.json({
+      total: filtered.length,
+      sources: NEWS_SOURCES.map((s) => ({
+        name: s.name,
+        slug: s.slug,
+        color: s.color,
+        trustLevel: s.trustLevel,
+      })),
+      articles: filtered.slice(0, limit),
+      cachedAt: Date.now(),
+    });
+  } catch (err) {
+    return errorResponse(err);
+  }
 }

@@ -231,7 +231,7 @@ This project is for educational/demonstration purposes and is not affiliated wit
 
 ## Tech Notes
 
-- **No `ignoreBuildErrors`**: TypeScript and ESLint are enforced in CI
+- **No `ignoreBuildErrors`**: `next build` type-checks the app and fails on type errors. Run `npm run lint` for the ESLint pass — there is no CI wiring these up yet, so run them before pushing
 - **Error boundary**: Catches render errors so a single broken component doesn't crash the app
 - **Loading states**: Shimmer skeletons for all async views
 - **Empty/error states**: Graceful handling for API failures, missing data, and preview games

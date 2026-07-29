@@ -24,11 +24,17 @@ const gameDataCache = new Map<number, { fetchedAt: number; data: any }>()
 const GAME_TTL_MS = 30_000
 
 // ===== Helpers =====
+// File logging is opt-in via LOG_FILE. stdout is always written, so a process
+// manager (systemd, Docker, pm2) captures logs without any path configuration.
+const LOG_FILE = process.env.LOG_FILE ?? ''
+
 function log(msg: string) {
   const ts = new Date().toISOString()
   const line = `[${ts}] ${msg}\n`
   process.stdout.write(line)
-  try { appendFileSync('/home/z/my-project/mini-services/live-feed/service.log', line) } catch {}
+  if (LOG_FILE) {
+    try { appendFileSync(LOG_FILE, line) } catch {}
+  }
 }
 
 async function fetchJSON(url: string, init?: RequestInit): Promise<any> {

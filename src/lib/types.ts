@@ -334,6 +334,7 @@ export interface MLBPlayer {
   birthDate?: string;
   currentAge?: number;
   birthCity?: string;
+  birthStateProvince?: string;
   birthCountry?: string;
   height?: string;
   weight?: number;

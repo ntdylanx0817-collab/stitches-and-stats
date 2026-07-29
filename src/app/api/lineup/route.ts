@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse } from "@/lib/api-errors";
 import { fetchLiveFeed } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
 
@@ -212,14 +213,15 @@ function extractLineup(feed: any): LineupData | null {
   };
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ gamePk: string }> }
-) {
-  // Note: this route is at /api/lineup/[gamePk] but we also support /api/lineup?gamePk=X
-  // For the [gamePk] version, params would have gamePk. But we're using query params.
-  const gamePk = Number(_req.nextUrl.searchParams.get("gamePk"));
-  if (!gamePk) return NextResponse.json({ error: "gamePk required" }, { status: 400 });
+// This route is static (/api/lineup) and takes the game from the query
+// string: /api/lineup?gamePk=X. It previously also declared a `params`
+// argument typed for a [gamePk] segment that does not exist here, which
+// Next.js rejects when route types are checked.
+export async function GET(req: NextRequest) {
+  const gamePk = Number(req.nextUrl.searchParams.get("gamePk"));
+  if (!Number.isInteger(gamePk) || gamePk <= 0) {
+    return NextResponse.json({ error: "gamePk required", status: 400 }, { status: 400 });
+  }
 
   try {
     const cacheKey = `lineup:${gamePk}`;
@@ -230,11 +232,11 @@ export async function GET(
     });
 
     if (!data) {
-      return NextResponse.json({ error: "Lineup data not available" }, { status: 404 });
+      return NextResponse.json({ error: "Lineup data not available", status: 404 }, { status: 404 });
     }
 
     return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 502 });
+  } catch (err) {
+    return errorResponse(err);
   }
 }

@@ -3,6 +3,7 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger, serializeError } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -25,8 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log to console — production monitoring could be wired here
-    console.error("[ErrorBoundary]", error, errorInfo);
+    // Runs in the browser, so this goes to the devtools console rather than
+    // the server log. An error-tracking SDK would hook in here.
+    logger.error("render error caught by boundary", {
+      ...serializeError(error),
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   handleReset = () => {

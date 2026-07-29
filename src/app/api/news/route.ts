@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import { getOrSet } from "@/lib/cache";
-import { errorMessage, errorResponse } from "@/lib/api-errors";
+import { errorResponse } from "@/lib/api-errors";
+import { routeLogger, serializeError } from "@/lib/logger";
+
+const log = routeLogger("/api/news");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
@@ -163,7 +166,7 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
       },
     });
     if (!res.ok) {
-      console.error(`[news] ${source.name} returned ${res.status}`);
+      log.warn("feed returned non-OK", { source: source.slug, upstreamStatus: res.status });
       return [];
     }
     const xml = await res.text();
@@ -211,7 +214,7 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
       })
       .filter((a): a is NewsArticle => a !== null);
   } catch (err) {
-    console.error(`[news] Error fetching ${source.name}:`, (err as Error).message);
+    log.warn("feed fetch failed", { source: source.slug, ...serializeError(err) });
     return [];
   }
 }
@@ -233,7 +236,7 @@ export async function GET(req: NextRequest) {
         if (result.status === "fulfilled") {
           articles.push(...result.value);
         } else {
-          console.error("[news] Feed rejected:", errorMessage(result.reason));
+          log.warn("feed rejected", serializeError(result.reason));
         }
       }
       // Deduplicate by title (some stories appear in multiple feeds)

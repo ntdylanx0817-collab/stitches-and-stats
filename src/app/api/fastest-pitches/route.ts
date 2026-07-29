@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
+import { routeLogger } from "@/lib/logger";
+
+const log = routeLogger("/api/fastest-pitches");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 120;
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
       // stores successes), so every later request would re-hit Savant while
       // it is down. The failure is logged so it stays visible despite the 200.
       if (!res.ok) {
-        console.error(`[fastest-pitches] savant responded ${res.status}; serving empty list`);
+        log.warn("savant returned non-OK; serving empty list", { upstreamStatus: res.status });
         void res.body?.cancel().catch(() => {});
         return [] as FastestPitch[];
       }

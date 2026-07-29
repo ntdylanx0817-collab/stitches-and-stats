@@ -27,10 +27,19 @@ const GAME_TTL_MS = 30_000
 // File logging is opt-in via LOG_FILE. stdout is always written, so a process
 // manager (systemd, Docker, pm2) captures logs without any path configuration.
 const LOG_FILE = process.env.LOG_FILE ?? ''
+const PRETTY_LOGS = process.env.NODE_ENV !== 'production'
 
-function log(msg: string) {
+/**
+ * Emits the same JSON-lines shape as the Next app's logger (src/lib/logger.ts)
+ * so both halves of the system aggregate together. Kept as a separate copy
+ * because this service is its own package and does not share the app's
+ * module graph.
+ */
+function log(msg: string, fields: Record<string, unknown> = {}, level: 'info' | 'warn' | 'error' = 'info') {
   const ts = new Date().toISOString()
-  const line = `[${ts}] ${msg}\n`
+  const line = PRETTY_LOGS
+    ? `[${ts}] ${msg}${Object.keys(fields).length ? ' ' + JSON.stringify(fields) : ''}\n`
+    : JSON.stringify({ ts, level, msg, service: 'live-feed', ...fields }) + '\n'
   process.stdout.write(line)
   if (LOG_FILE) {
     try { appendFileSync(LOG_FILE, line) } catch {}

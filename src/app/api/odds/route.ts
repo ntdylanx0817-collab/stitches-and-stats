@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
+import { routeLogger, serializeError } from "@/lib/logger";
+
+const log = routeLogger("/api/odds");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -140,7 +143,7 @@ async function calculateOdds(awayTeamId: number, homeTeamId: number, gamePk: num
       insight,
     };
   } catch (err) {
-    console.error("[odds] Error:", err);
+    log.error("odds computation failed", serializeError(err));
     return null;
   }
 }

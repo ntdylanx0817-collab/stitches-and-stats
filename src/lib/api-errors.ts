@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger, serializeError } from "./logger";
 
 /**
  * Shared helpers for API route error handling.
@@ -75,7 +76,7 @@ function statusForError(err: unknown): number {
  */
 export function errorResponse(err: unknown, status?: number): NextResponse<ApiErrorBody> {
   const resolved = status ?? statusForError(err);
-  console.error(`[api] ${resolved}:`, errorMessage(err));
+  logger.error("request failed", { status: resolved, ...serializeError(err) });
 
   const clientMessage =
     err instanceof UpstreamError || resolved === 504

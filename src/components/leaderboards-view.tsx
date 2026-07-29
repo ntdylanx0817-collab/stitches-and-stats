@@ -18,7 +18,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSavantStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, statcastSeasons } from "@/lib/utils";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { LeaderboardChart } from "@/components/leaderboard-chart";
 
@@ -267,7 +267,7 @@ export function LeaderboardsView() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
+                {statcastSeasons().map((y) => (
                   <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                 ))}
               </SelectContent>

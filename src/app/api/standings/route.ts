@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
-import { errorResponse } from "@/lib/api-errors";
+import { assertOk, errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -31,7 +31,7 @@ interface DivisionStanding {
   teams: TeamStanding[];
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   // Derive the cache key from the season we actually request — a hardcoded key
   // would serve last season's standings indefinitely once the year rolls over.
   const season = new Date().getFullYear();
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const data = await getOrSet(cacheKey, 300_000, async () => {
       const url = `${STATS_API}/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team,league,division`;
       const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-      if (!res.ok) throw new Error(`standings fetch failed: ${res.status}`);
+      await assertOk(res, "standings");
       const sched = await res.json();
 
       const divisions: DivisionStanding[] = [];

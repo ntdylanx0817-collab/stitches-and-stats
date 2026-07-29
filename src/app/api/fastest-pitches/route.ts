@@ -43,7 +43,15 @@ export async function GET(req: NextRequest) {
         },
       });
 
-      if (!res.ok) throw new Error(`fastest-pitches fetch failed: ${res.status}`);
+      // A non-OK response caches as an empty list for the normal TTL rather
+      // than throwing. Throwing would skip the cache write (getOrSet only
+      // stores successes), so every later request would re-hit Savant while
+      // it is down. The failure is logged so it stays visible despite the 200.
+      if (!res.ok) {
+        console.error(`[fastest-pitches] savant responded ${res.status}; serving empty list`);
+        void res.body?.cancel().catch(() => {});
+        return [] as FastestPitch[];
+      }
 
       const csv = await res.text();
       const rows = parseCSV(csv);

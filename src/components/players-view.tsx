@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useSavantStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, statcastSeasons } from "@/lib/utils";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { Skeleton, ErrorState } from "@/components/loading-states";
 import { SprayChart } from "@/components/spray-chart";
@@ -237,7 +237,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => (
+              {statcastSeasons().map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
             </SelectContent>

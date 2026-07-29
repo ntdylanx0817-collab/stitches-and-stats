@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
-import { assertOk, errorResponse } from "@/lib/api-errors";
+import { assertAllOk, assertOk, errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -39,8 +39,9 @@ export async function GET(
 
       // An error page from the upstream is HTML, so `.json()` would throw an
       // opaque parse error — check status first and fail with a useful message.
-      await assertOk(teamRes, "team");
-      await assertOk(rosterRes, "roster");
+      // Asserted together so a failure releases both bodies, and so an unknown
+      // teamId (404 upstream) surfaces as a 404 rather than a 502.
+      await assertAllOk([[teamRes, "team"], [rosterRes, "roster"]]);
 
       const teamData = await teamRes.json();
       const rosterData = await rosterRes.json();

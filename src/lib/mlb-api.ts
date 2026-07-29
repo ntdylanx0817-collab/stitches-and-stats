@@ -8,6 +8,7 @@ import {
   MLBPlayer,
 } from "./types";
 import { getOrSet, getCached, setCached } from "./cache";
+import { assertOk } from "./api-errors";
 
 const STATS_API = "https://statsapi.mlb.com/api";
 const SAVANT_API = "https://baseballsavant.mlb.com";
@@ -39,7 +40,7 @@ export async function fetchSchedule(dateStr?: string): Promise<MLBSchedule> {
       next: { revalidate: 30 },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) throw new Error(`schedule fetch failed: ${res.status}`);
+    await assertOk(res, "schedule");
     return (await res.json()) as MLBSchedule;
   });
 }
@@ -55,7 +56,7 @@ export async function fetchLiveFeed(gamePk: number): Promise<LiveGameFeed> {
     next: { revalidate: 10 },
     signal: AbortSignal.timeout(10_000),
   });
-  if (!res.ok) throw new Error(`live feed fetch failed: ${res.status}`);
+  await assertOk(res, "live feed");
   const data = (await res.json()) as LiveGameFeed;
   const state = data.gameData?.status?.abstractGameState ?? "Final";
   const ttl = state === "Live" ? ONE_MINUTE : ONE_HOUR;
@@ -80,7 +81,7 @@ export async function fetchSavantGameFeed(gamePk: number): Promise<SavantGameFee
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
       },
     });
-    if (!res.ok) throw new Error(`savant fetch failed: ${res.status}`);
+    await assertOk(res, "savant");
     return (await res.json()) as SavantGameFeed;
   });
 }
@@ -297,7 +298,7 @@ export async function fetchLeaderboard(opts: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
       },
     });
-    if (!res.ok) throw new Error(`leaderboard fetch failed: ${res.status}`);
+    await assertOk(res, "leaderboard");
     const csv = await res.text();
     return parseLeaderboardCSV(csv);
   });
@@ -370,7 +371,7 @@ export async function searchPlayers(query: string, limit = 12): Promise<MLBPlaye
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) throw new Error(`players fetch failed: ${res.status}`);
+    await assertOk(res, "players");
     const data = await res.json();
     return data.people as MLBPlayer[];
   });

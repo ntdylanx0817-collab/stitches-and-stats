@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Calendar, Clock, Loader2, Radio,
+  Activity, Clock, Loader2,
   TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
@@ -21,180 +20,28 @@ import { LiveGameThread } from "@/components/live-game-thread";
 import { WPALeaderboard } from "@/components/wpa-leaderboard";
 import { StreakTracker } from "@/components/streak-tracker";
 import { BullpenStatus } from "@/components/bullpen-status";
-import { useSocket, type GameSnapshot } from "@/components/socket-provider";
+import { GameSelectorStrip } from "@/components/game-selector-strip";
+import { useGamePitches, updatedAgoLabel } from "@/hooks/use-game-pitches";
+import { latestAtBatIndex } from "@/lib/at-bat";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { EnrichedPitch, LivePitchEvent, Linescore, GameStatus, FeedTeam, StatcastPitch } from "@/lib/types";
+import type { EnrichedPitch, Linescore, GameStatus, FeedTeam } from "@/lib/types";
+
+/** How many pitch rows the log renders at once. */
+const PITCH_LOG_LIMIT = 80;
 
 /** One inning row in the linescore. */
 type InningLine = Linescore["innings"][number];
-import { EmptyState, ErrorState, Skeleton } from "@/components/loading-states";
 
-interface ScheduleGame {
-  gamePk: number;
-  gameDate: string;
-  gameDay?: string;
-  gameNumber?: number;
-  doubleHeader?: string;
-  status: { abstractGameState: string; detailedState: string; statusCode: string; reason?: string };
-  venue?: { name: string };
-  away: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
-  home: { id: number; name: string; abbreviation?: string; score: number | null; record?: { wins: number; losses: number } };
-}
-
-/** Format an elapsed duration as a short "updated Xs/Xm ago" label. */
-function updatedAgoLabel(lastUpdated: number | null, now: number): string | null {
-  if (!lastUpdated) return null;
-  const secs = Math.max(0, Math.floor((now - lastUpdated) / 1000));
-  if (secs < 3) return "Updated just now";
-  if (secs < 60) return `Updated ${secs}s ago`;
-  const mins = Math.floor(secs / 60);
-  return `Updated ${mins}m ago`;
-}
 
 export function LiveFeedView() {
   const selectedGamePk = useSavantStore((s) => s.selectedGamePk);
-  const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
-
-  const { data: scheduleData, isLoading: scheduleLoading, error: scheduleError, refetch: refetchSchedule } = useQuery<{ games: ScheduleGame[]; date: string }>({
-    queryKey: ["schedule"],
-    queryFn: async () => {
-      const res = await fetch("/api/schedule");
-      if (!res.ok) throw new Error("schedule failed");
-      return res.json();
-    },
-    refetchInterval: 60_000,
-    retry: 2,
-  });
-
-  // Sort games: Live first, then Preview, then Final
-  // This way you see live games immediately without scrolling.
-  // The `?? []` lives inside the memo: as a separate statement it produced a
-  // new array identity on every render, so the memo never actually hit.
-  const games = useMemo(() => {
-    const order = { Live: 0, Preview: 1, Final: 2 };
-    return [...(scheduleData?.games ?? [])].sort((a, b) => {
-      const aOrder = order[a.status.abstractGameState as keyof typeof order] ?? 3;
-      const bOrder = order[b.status.abstractGameState as keyof typeof order] ?? 3;
-      return aOrder - bOrder;
-    });
-  }, [scheduleData?.games]);
-
-  // Auto-pick the first live game if none selected.
-  // Priority: Live > Final (has pitch data) > Preview (today's upcoming)
-  useEffect(() => {
-    if (!selectedGamePk && games.length > 0) {
-      const live = games.find((g) => g.status.abstractGameState === "Live");
-      const final = games.find((g) => g.status.abstractGameState === "Final");
-      const preview = games.find((g) => g.status.abstractGameState === "Preview");
-      setSelectedGame((live ?? final ?? preview ?? games[0]).gamePk);
-    }
-  }, [games, selectedGamePk, setSelectedGame]);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
-      {/* Game selector strip */}
-      <div className="mb-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
-            <Calendar className="h-4 w-4 text-warning-track" />
-            {scheduleData?.date ?? "—"}
-          </h2>
-          <div className="flex items-center gap-2">
-            {games.filter(g => g.status.abstractGameState === "Live").length > 0 && (
-              <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint font-scoreboard">
-                <Radio className="mr-1 h-3 w-3 animate-live-dot" /> {games.filter(g => g.status.abstractGameState === "Live").length} LIVE
-              </Badge>
-            )}
-          </div>
-        </div>
-        {scheduleLoading ? (
-          <div className="flex gap-2 overflow-hidden pb-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="min-w-[200px] shrink-0 rounded-xl border border-chalk bg-midnight/40 p-3">
-                <div className="mb-2 flex justify-between">
-                  <Skeleton className="h-2 w-12" />
-                  <Skeleton className="h-2 w-10" />
-                </div>
-                <div className="mb-1.5 flex justify-between">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-3 w-4" />
-                </div>
-                <div className="flex justify-between">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-3 w-4" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : scheduleError ? (
-          <ErrorState
-            title="Couldn't load today's schedule"
-            description="The MLB Stats API may be temporarily unavailable."
-            onRetry={() => refetchSchedule()}
-          />
-        ) : games.length === 0 ? (
-          <EmptyState
-            icon={Calendar}
-            title="No games today"
-            description="There are no MLB games scheduled for today or yesterday. Check back later."
-          />
-        ) : (
-          <div className="w-full overflow-x-auto scrollbar-thin -webkit-overflow-scrolling-touch">
-            <div className="flex gap-2 pb-2 min-w-min">
-              {games.map((g) => {
-                const isLive = g.status.abstractGameState === "Live";
-                const isFinal = g.status.abstractGameState === "Final";
-                const isSelected = selectedGamePk === g.gamePk;
-                // Format start time for preview games (convert UTC to local time)
-                const gameDate = g.gameDate ? new Date(g.gameDate) : null;
-                const startTime = gameDate
-                  ? gameDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-                  : null;
-                const isDelayed = g.status?.detailedState?.includes("Delayed") || g.status?.detailedState?.includes("Postponed");
-                return (
-                  <button
-                    key={`${g.gamePk}-${g.gameDay}-${g.status.abstractGameState}`}
-                    onClick={() => setSelectedGame(g.gamePk)}
-                    className={cn(
-                      "hover-lift relative flex min-w-[190px] shrink-0 flex-col gap-1 rounded-xl border p-2.5 text-left transition-all",
-                      isSelected
-                        ? "border-warning-track/40 bg-warning-track/8 box-glow-warning"
-                        : isLive
-                        ? "border-mint/25 bg-mint/5 shimmer-sweep"
-                        : isFinal
-                        ? "border-chalk bg-midnight/30 opacity-70"
-                        : "border-chalk bg-midnight/40"
-                    )}
-                  >
-                    <div className="flex items-center justify-between text-[9px] uppercase tracking-wide font-scoreboard">
-                      <span className={cn(
-                        "flex items-center gap-1 font-bold",
-                        isLive ? "text-mint" : isFinal ? "text-slate-600" : isDelayed ? "text-crimson" : "text-warning-track"
-                      )}>
-                        {isLive && <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />}
-                        {isLive ? "LIVE" : isFinal ? "FINAL" : isDelayed ? "DELAYED" : startTime}
-                      </span>
-                      <span className="text-slate-600 text-[8px]">
-                        {g.venue?.name?.split(" ").pop()}
-                        {g.doubleHeader === "Y" && g.gameNumber && g.gameNumber > 1 ? ` · G${g.gameNumber}` : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-scoreboard font-semibold text-slate-200 truncate">{g.away.abbreviation ?? g.away.name}</span>
-                      <span className={cn("font-scoreboard font-bold num", isLive ? "text-chalk" : "text-slate-300")}>{g.away.score ?? 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-scoreboard font-semibold text-slate-200 truncate">{g.home.abbreviation ?? g.home.name}</span>
-                      <span className={cn("font-scoreboard font-bold num", isLive ? "text-chalk" : "text-slate-300")}>{g.home.score ?? 0}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Same picker the Live At-Bat tab uses, so the selected game — and the
+          auto-pick that chooses one on first load — stay in sync across tabs. */}
+      <GameSelectorStrip />
 
       {selectedGamePk ? (
         <GameFeed key={selectedGamePk} gamePk={selectedGamePk} />
@@ -208,13 +55,11 @@ export function LiveFeedView() {
 }
 
 function GameFeed({ gamePk }: { gamePk: number }) {
-  const { subscribeGame, unsubscribeGame, onSnapshot, onPitch, connected } = useSocket();
-  const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
-  const [livePitches, setLivePitches] = useState<EnrichedPitch[]>([]);
+  const setView = useSavantStore((s) => s.setView);
+  const setSelectedAtBatIndex = useSavantStore((s) => s.setSelectedAtBatIndex);
   const [selectedPitch, setSelectedPitch] = useState<EnrichedPitch | null>(null);
   const [viewAtBatIndex, setViewAtBatIndex] = useState<number | null>(null);
   const [highLeverageOnly, setHighLeverageOnly] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   // Re-render once a second so the "updated Xs ago" label stays fresh without
@@ -224,243 +69,34 @@ function GameFeed({ gamePk }: { gamePk: number }) {
     return () => clearInterval(id);
   }, []);
 
-  // Subscribe to game via WS. The parent uses key={gamePk} so state auto-resets on game change.
-  useEffect(() => {
-    subscribeGame(gamePk);
-    const offSnap = onSnapshot((snap) => {
-      if (snap.gamePk !== gamePk) return;
-      setSnapshot(snap);
-      setLastUpdated(Date.now());
-      // NOTE: Do NOT push snap.latestPitch into livePitches here.
-      // The server's latestPitch is a raw object with nested fields (batter, pitcher,
-      // call, count are objects, not flattened strings/numbers). Pushing it raw
-      // causes "Objects are not valid as a React child" crashes in PitchLogEntry.
-      // The allPitches useMemo below already reconstructs every pitch from
-      // snapshot.allPlays + snapshot.savant with proper flattening.
-    });
-    // Also subscribe to the granular game:pitch event for snappier UI feedback
-    // when a new pitch arrives mid-at-bat (the snapshot polls every 8s, but
-    // game:pitch fires immediately when a new pitch key is detected).
-    const offPitch = onPitch((pitch: LivePitchEvent) => {
-      if (!pitch || pitch.atBatIndex == null || pitch.pitchNumber == null) return;
-      setLastUpdated(Date.now());
-      setLivePitches((prev) => {
-        const key = `${pitch.atBatIndex}-${pitch.pitchNumber}`;
-        if (prev.some((p) => `${p.atBatIndex}-${p.pitchNumber}` === key)) return prev;
-        // The game:pitch payload is shaped like EnrichedPitch but may be missing
-        // some fields — coerce to the expected type with sensible defaults.
-        const enriched: EnrichedPitch = {
-          playId: pitch.playId,
-          atBatIndex: pitch.atBatIndex,
-          inning: pitch.inning ?? 0,
-          halfInning: pitch.halfInning ?? "top",
-          pitchNumber: pitch.pitchNumber,
-          isPitch: true,
-          batterId: pitch.batter?.id,
-          batterName: pitch.batter?.fullName ?? "—",
-          batterSide: pitch.batterSide,
-          pitcherId: pitch.pitcher?.id,
-          pitcherName: pitch.pitcher?.fullName ?? "—",
-          pitchHand: pitch.pitchHand,
-          description: pitch.description ?? "",
-          playResult: pitch.result ?? "",
-          // `call` arrives as { code, description }; the old form fell back to
-          // the object itself when code was absent.
-          call: pitch.call?.code,
-          callDescription: pitch.call?.description,
-          pitchType: pitch.pitchType,
-          pitchName: pitch.pitchName,
-          // The wire shape uses null for "no reading"; EnrichedPitch uses
-          // undefined, so these are narrowed rather than passed straight on.
-          startSpeed: pitch.startSpeed ?? undefined,
-          endSpeed: pitch.endSpeed ?? undefined,
-          spinRate: pitch.spinRate ?? undefined,
-          breakX: pitch.breakX ?? undefined,
-          breakZ: pitch.breakZ ?? undefined,
-          inducedBreakZ: pitch.inducedBreakZ ?? undefined,
-          extension: pitch.extension ?? undefined,
-          plateTime: pitch.plateTime ?? undefined,
-          pX: pitch.pX ?? pitch.coordinates?.pX,
-          pZ: pitch.pZ ?? pitch.coordinates?.pZ,
-          zone: pitch.zone,
-          szTop: pitch.szTop ?? undefined,
-          szBot: pitch.szBot ?? undefined,
-          isStrike: !!pitch.isStrike,
-          isBall: !!pitch.isBall,
-          isInPlay: !!pitch.isInPlay,
-          isBarrel: pitch.isBarrel,
-          isSword: pitch.isSword,
-          exitVelocity: pitch.exitVelocity ?? null,
-          launchAngle: pitch.launchAngle ?? null,
-          hitDistance: pitch.hitDistance ?? null,
-          xBA: pitch.xBA ?? null,
-          batSpeed: pitch.batSpeed ?? null,
-          balls: pitch.count?.balls ?? 0,
-          strikes: pitch.count?.strikes ?? 0,
-          outs: pitch.count?.outs ?? 0,
-          homeScore: pitch.homeScore ?? 0,
-          awayScore: pitch.awayScore ?? 0,
-          timestamp: pitch.timestamp,
-          result: pitch.result,
-          resultDescription: pitch.resultDescription,
-        };
-        return [enriched, ...prev].slice(0, 60);
-      });
-    });
-    return () => {
-      offSnap();
-      offPitch();
-      unsubscribeGame(gamePk);
-    };
-  }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot, onPitch]);
-
-  // Fallback: if WS not connected, fetch via REST periodically.
-  // For Preview (not-yet-started) games, only fetch once — no point polling.
-  // For Live/Final games, poll every 5s for near-real-time updates.
-  const { data: restData, isLoading: restLoading, dataUpdatedAt: restUpdatedAt } = useQuery<{
-    pitches: EnrichedPitch[];
-    linescore: Linescore | null;
-    status: GameStatus | null;
-    teams: { away?: FeedTeam; home?: FeedTeam };
-  }>({
-    queryKey: ["game-feed-rest", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
-      if (!res.ok) throw new Error("feed failed");
-      return res.json();
-    },
-    enabled: !connected || !snapshot,
-    // TanStack Query passes the Query object; use query.state.data to avoid TDZ
-    refetchInterval: (query) => {
-      const data = query.state?.data;
-      const state = data?.status?.abstractGameState;
-      // Stop polling for Preview games (they haven't started)
-      if (state === "Preview") return false;
-      // Stop polling once WS is connected and we have a snapshot
-      if (connected && snapshot) return false;
-      return 5_000;
-    },
-    retry: 2,
-  });
-
-  // Freshness reflects whichever source — WS push or REST fallback — last
-  // actually delivered data, computed at render time rather than synced into
-  // state via an effect.
-  const effectiveLastUpdated = Math.max(lastUpdated ?? 0, restUpdatedAt || 0) || null;
-
-  // Use WS data if available, else REST
-  const allPitches = useMemo<EnrichedPitch[]>(() => {
-    if (snapshot?.savant?.exit_velocity?.length) {
-      // Build enriched pitch list from snapshot — iterate ALL pitch events
-      // in each play (not just the last one) so the strike zone and pitch log
-      // show every pitch of every at-bat.
-      const pitches: EnrichedPitch[] = [];
-      const savantMap = new Map<string, StatcastPitch>();
-      for (const sp of snapshot.savant.exit_velocity) {
-        const k = `${sp.inning}-${sp.half_inning}-${sp.ab_number}-${sp.pitch_number ?? 0}`;
-        savantMap.set(k, sp);
-      }
-      for (const play of snapshot.allPlays) {
-        const inning = play.about.inning;
-        const halfInning = play.about.halfInning;
-        const abNumber = play.atBatIndex + 1;
-        const events = play.playEvents ?? [];
-        for (const ev of events) {
-          if (!ev.isPitch) continue;
-          const key = `${inning}-${halfInning}-${abNumber}-${ev.pitchNumber ?? 0}`;
-          const sp = savantMap.get(key);
-          pitches.push({
-            playId: ev.playId,
-            atBatIndex: play.atBatIndex,
-            inning,
-            halfInning,
-            pitchNumber: ev.pitchNumber ?? 0,
-            isPitch: true,
-            batterId: play.matchup?.batter?.id,
-            batterName: play.matchup?.batter?.fullName ?? "—",
-            batterSide: play.matchup?.batterSide?.code,
-            pitcherId: play.matchup?.pitcher?.id,
-            pitcherName: play.matchup?.pitcher?.fullName ?? "—",
-            pitchHand: play.matchup?.pitchHand?.code,
-            description: ev.details?.description ?? "",
-            playResult: play.result?.event ?? "",
-            call: ev.details?.call?.code,
-            callDescription: ev.details?.call?.description,
-            pitchType: sp?.pitch_type ?? ev.details?.type?.code,
-            pitchName: sp?.pitch_name ?? ev.details?.type?.description,
-            startSpeed: sp?.start_speed ?? ev.pitchData?.startSpeed,
-            endSpeed: sp?.end_speed ?? ev.pitchData?.endSpeed,
-            spinRate: sp?.spin_rate ?? ev.pitchData?.spinRate,
-            breakX: sp?.breakX ?? ev.pitchData?.breakX,
-            breakZ: sp?.breakZ ?? ev.pitchData?.breakZ,
-            inducedBreakZ: sp?.inducedBreakZ,
-            extension: sp?.extension ?? ev.pitchData?.extension,
-            plateTime: sp?.plateTime ?? ev.pitchData?.plateTime,
-            pX: sp?.px ?? ev.pitchData?.coordinates?.pX,
-            pZ: sp?.pz ?? ev.pitchData?.coordinates?.pZ,
-            zone: sp?.zone ?? ev.pitchData?.zone,
-            szTop: sp?.sz_top ?? ev.pitchData?.strikeZoneTop,
-            szBot: sp?.sz_bot ?? ev.pitchData?.strikeZoneBottom,
-            isStrike: !!ev.details?.isStrike,
-            isBall: !!ev.details?.isBall,
-            isInPlay: !!ev.details?.isInPlay,
-            isBarrel: sp?.is_barrel === 1,
-            isSword: !!sp?.isSword,
-            exitVelocity: sp?.hit_speed != null ? parseFloat(sp.hit_speed) : null,
-            launchAngle: sp?.hit_angle != null ? parseFloat(sp.hit_angle) : null,
-            hitDistance: sp?.hit_distance != null ? parseFloat(sp.hit_distance) : null,
-            xBA: sp?.xba != null && sp.xba !== "" ? parseFloat(sp.xba) : null,
-            batSpeed: sp?.batSpeed ?? null,
-            balls: ev.count?.balls ?? play.count?.balls ?? 0,
-            strikes: ev.count?.strikes ?? play.count?.strikes ?? 0,
-            outs: ev.count?.outs ?? play.count?.outs ?? 0,
-            homeScore: play.result?.homeScore ?? 0,
-            awayScore: play.result?.awayScore ?? 0,
-            timestamp: ev.endTime ?? play.playEndTime,
-            result: sp?.result,
-            resultDescription: sp?.des,
-          });
-        }
-      }
-      return pitches.reverse(); // newest first
-    }
-    return (restData?.pitches ?? []).slice().reverse();
-  }, [snapshot, restData]);
-
-  const linescore = snapshot?.linescore ?? restData?.linescore ?? null;
-  const status = snapshot?.status ?? restData?.status ?? null;
-  const teams = snapshot?.teams ?? restData?.teams ?? null;
-
-  // "Initial loading" = no snapshot yet AND REST is loading AND not a preview game
-  const isLoadingInitial = !snapshot && restLoading && status?.abstractGameState !== "Preview";
-
-  // The latest "live" pitches from the WS, which take priority over REST
-  const mergedPitches = useMemo(() => {
-    if (livePitches.length === 0) return allPitches;
-    // Merge by pitch key (atBatIndex-pitchNumber), newest first
-    const seen = new Set<string>();
-    const result: EnrichedPitch[] = [];
-    for (const p of livePitches) {
-      const k = `${p.atBatIndex}-${p.pitchNumber}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        result.push(p);
-      }
-    }
-    for (const p of allPitches) {
-      const k = `${p.atBatIndex}-${p.pitchNumber}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        result.push(p);
-      }
-    }
-    return result.slice(0, 80);
-  }, [livePitches, allPitches]);
+  // Every pitch of the game, merged from the WebSocket push and the REST
+  // fallback. Shared with the Live At-Bat tab — see use-game-pitches.ts. The
+  // parent mounts this with key={gamePk}, which the hook requires.
+  const {
+    pitches: mergedPitches,
+    linescore,
+    status,
+    teams,
+    isLoadingInitial,
+    connected,
+    lastUpdated: effectiveLastUpdated,
+  } = useGamePitches(gamePk);
 
   const viewAtBatPitches = useMemo(
     () => (viewAtBatIndex != null ? mergedPitches.filter((p) => p.atBatIndex === viewAtBatIndex) : []),
     [mergedPitches, viewAtBatIndex]
   );
+
+  // Deep-link into the Live At-Bat tab, pinned on whatever at-bat the modal was
+  // showing. Pinning the still-live at-bat would freeze the tab right as it's
+  // most interesting, so that case resolves to "follow live" instead.
+  const openAtBatInTab = () => {
+    if (viewAtBatIndex == null) return;
+    const liveIndex = latestAtBatIndex(mergedPitches);
+    setSelectedAtBatIndex(viewAtBatIndex === liveIndex ? null : viewAtBatIndex);
+    setView("live-at-bat");
+    setViewAtBatIndex(null);
+  };
 
   // High-leverage filter: only show critical game situations
   // - Bases loaded (2+ runners)
@@ -469,20 +105,24 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   // - Scoring plays / RBIs
   // - 2 outs with runners on
   const displayPitches = useMemo(() => {
-    if (!highLeverageOnly) return mergedPitches;
-    return mergedPitches.filter((p) => {
-      // Full count (3-2)
-      if (p.balls >= 3 && p.strikes >= 2) return true;
-      // Late innings (7+)
-      if (p.inning >= 7) return true;
-      // In-play with RBI potential
-      if (p.isInPlay && (p.exitVelocity ?? 0) >= 95) return true;
-      // Barrel (hard-hit ball)
-      if (p.isBarrel) return true;
-      // 2 outs (pressure situation)
-      if (p.outs >= 2 && (p.balls >= 2 || p.strikes >= 1)) return true;
-      return false;
-    });
+    const matching = highLeverageOnly
+      ? mergedPitches.filter((p) => {
+          // Full count (3-2)
+          if (p.balls >= 3 && p.strikes >= 2) return true;
+          // Late innings (7+)
+          if (p.inning >= 7) return true;
+          // In-play with RBI potential
+          if (p.isInPlay && (p.exitVelocity ?? 0) >= 95) return true;
+          // Barrel (hard-hit ball)
+          if (p.isBarrel) return true;
+          // 2 outs (pressure situation)
+          if (p.outs >= 2 && (p.balls >= 2 || p.strikes >= 1)) return true;
+          return false;
+        })
+      : mergedPitches;
+    // The log animates a row per pitch, so it renders a window of the most
+    // recent ones rather than the whole game the hook now hands over.
+    return matching.slice(0, PITCH_LOG_LIMIT);
   }, [mergedPitches, highLeverageOnly]);
 
   const latestPitch = displayPitches[0] ?? mergedPitches[0] ?? null;
@@ -832,6 +472,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           awayTeamId={teams?.away?.id}
           homeTeamId={teams?.home?.id}
           onClose={() => setViewAtBatIndex(null)}
+          onOpenInTab={openAtBatInTab}
         />
       )}
     </AnimatePresence>

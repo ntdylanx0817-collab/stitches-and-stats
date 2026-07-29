@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
-  Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon,
+  Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon, Target,
   type LucideIcon,
 } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "live", label: "Live", icon: Activity },
+  { key: "live-at-bat", label: "At-Bat", icon: Target },
   { key: "derby", label: "Derby", icon: Flame },
   { key: "standings", label: "Standings", icon: Trophy },
   { key: "players", label: "Players", icon: User },

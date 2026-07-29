@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
+export type ViewKey = "live" | "live-at-bat" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
 
 interface SelectedPlayer {
   id: number;
@@ -15,7 +15,18 @@ interface SavantState {
   setView: (v: ViewKey) => void;
 
   selectedGamePk: number | null;
+  /** Also clears the at-bat selection, which only means anything per-game. */
   setSelectedGame: (pk: number | null) => void;
+
+  /**
+   * At-bat pinned in the Live At-Bat tab. `null` means "follow the live
+   * at-bat", which is the default and what makes the tab watchable hands-off.
+   *
+   * Cleared on every game change — an index from one game points at an
+   * unrelated plate appearance in another.
+   */
+  selectedAtBatIndex: number | null;
+  setSelectedAtBatIndex: (idx: number | null) => void;
 
   selectedPlayer: SelectedPlayer | null;
   setSelectedPlayer: (p: SelectedPlayer | null) => void;
@@ -43,7 +54,10 @@ export const useSavantStore = create<SavantState>((set) => ({
   setView: (view) => set({ view }),
 
   selectedGamePk: null,
-  setSelectedGame: (selectedGamePk) => set({ selectedGamePk }),
+  setSelectedGame: (selectedGamePk) => set({ selectedGamePk, selectedAtBatIndex: null }),
+
+  selectedAtBatIndex: null,
+  setSelectedAtBatIndex: (selectedAtBatIndex) => set({ selectedAtBatIndex }),
 
   selectedPlayer: null,
   setSelectedPlayer: (selectedPlayer) => set({ selectedPlayer }),

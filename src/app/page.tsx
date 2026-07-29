@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/header";
 import { LiveFeedView } from "@/components/live-feed-view";
+import { LiveAtBatView } from "@/components/live-at-bat-view";
 import { PlayersView } from "@/components/players-view";
 import { LeaderboardsView } from "@/components/leaderboards-view";
 import { NewsView } from "@/components/news-view";
@@ -36,6 +37,7 @@ export default function Home() {
             style={{ transformOrigin: "top center", perspective: 1000 }}
           >
             {view === "live" && <LiveFeedView />}
+            {view === "live-at-bat" && <LiveAtBatView />}
             {view === "derby" && <DerbyTab />}
             {view === "standings" && <StandingsView />}
             {view === "team" && selectedTeamId && (

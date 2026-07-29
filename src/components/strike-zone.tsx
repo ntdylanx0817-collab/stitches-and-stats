@@ -114,15 +114,24 @@ export function StrikeZone({
 
   const zone = zoneLineToSVG(safeSzTop, safeSzBot);
   const zoneW = zone.rightX - zone.leftX;
-  const zoneH = zone.topY - zone.botY;
+  // SVG y grows downward, so the zone's top edge has the *smaller* y. Taking
+  // topY - botY here made every height negative, which silently dropped the
+  // zone rectangle and the batter silhouette (a negative height is invalid)
+  // and threw the horizontal grid lines above the zone instead of inside it.
+  const zoneH = zone.botY - zone.topY;
 
   // Group pitches into the 9 standard sub-zones for cell coloring
 
   return (
-    <div className={cn("relative flex flex-col items-center", className)}>
+    // The width cap lives here rather than on the <svg> for two reasons: the
+    // hover tooltip below is positioned in percentages of this box, so it only
+    // lines up with the dots when the box is exactly as wide as the plot; and
+    // `cn` merges Tailwind classes, letting a caller widen the plot by passing
+    // its own max-w (the Live At-Bat tab does).
+    <div className={cn("relative mx-auto flex w-full max-w-[340px] flex-col items-center", className)}>
       <svg
         viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
-        className="w-full max-w-[340px] h-auto"
+        className="h-auto w-full"
         role="img"
         aria-label="Strike zone pitch plot"
       >
@@ -164,20 +173,20 @@ export function StrikeZone({
         {/* Batter silhouette — left/right based on batter side */}
         {batterSide === "L" && (
           <g opacity="0.25" fill="rgba(248, 249, 250, 0.4)">
-            <rect x={zone.leftX - 28} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
-            <circle cx={zone.leftX - 23} cy={zone.botY - 8} r="5" />
+            <rect x={zone.leftX - 28} y={zone.topY - 4} width="10" height={zoneH + 12} rx="3" />
+            <circle cx={zone.leftX - 23} cy={zone.topY - 11} r="5" />
           </g>
         )}
         {batterSide === "R" && (
           <g opacity="0.25" fill="rgba(248, 249, 250, 0.4)">
-            <rect x={zone.rightX + 18} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
-            <circle cx={zone.rightX + 23} cy={zone.botY - 8} r="5" />
+            <rect x={zone.rightX + 18} y={zone.topY - 4} width="10" height={zoneH + 12} rx="3" />
+            <circle cx={zone.rightX + 23} cy={zone.topY - 11} r="5" />
           </g>
         )}
         {!batterSide && (
           <g opacity="0.15" fill="rgba(248, 249, 250, 0.4)">
-            <rect x={zone.rightX + 18} y={zone.botY - 4} width="10" height={zoneH + 12} rx="3" />
-            <circle cx={zone.rightX + 23} cy={zone.botY - 8} r="5" />
+            <rect x={zone.rightX + 18} y={zone.topY - 4} width="10" height={zoneH + 12} rx="3" />
+            <circle cx={zone.rightX + 23} cy={zone.topY - 11} r="5" />
           </g>
         )}
 

@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p mini-services/live-feed/tsconfig.json",
+    "test": "LOG_LEVEL=silent bun test",
+    "test:watch": "LOG_LEVEL=silent bun test --watch",
     "db:push": "prisma db push",
     "db:generate": "prisma generate"
   },

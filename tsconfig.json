@@ -38,6 +38,7 @@
   "exclude": [
     "node_modules",
     "examples",
-    "mini-services"
+    "mini-services",
+    "src/**/__tests__/**"
   ]
 }

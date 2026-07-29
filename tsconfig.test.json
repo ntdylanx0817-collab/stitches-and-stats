@@ -1,0 +1,12 @@
+{
+  // Tests run under `bun test`, so they need Bun's globals and the `bun:test`
+  // module. Those are kept out of the app's tsconfig because the app itself
+  // runs on Node under Next.js and must not depend on Bun-only APIs.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun-types"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "examples", "mini-services"]
+}

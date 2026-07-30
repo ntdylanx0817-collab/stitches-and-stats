@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Activity, Target, TrendingUp, Radio,
-  Loader2, Flame,
+  Flame,
   type LucideIcon,
 } from "lucide-react";
 import { BaseballMark } from "@/components/ui/baseball-mark";
+import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, GameFeedResponse } from "@/lib/types";
 
@@ -64,8 +65,17 @@ export function LiveGameThread({ gamePk }: { gamePk: number }) {
           <Radio className="h-4 w-4 text-mint" />
           Live Game Thread
         </h3>
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-warning-track" />
+        {/* Commentary rows: an icon bubble and two lines of text each. */}
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-start gap-2">
+              <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-2.5" style={{ width: `${78 - i * 9}%` }} />
+                <Skeleton className="h-2" style={{ width: `${58 - i * 7}%` }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

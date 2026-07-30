@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Loader2, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 
 interface BullpenEntry {
@@ -36,8 +37,15 @@ export function BullpenStatus({ teamId, teamName, className }: BullpenStatusProp
       <div className={className}>
         <div className="glass rounded-2xl p-4">
           <h3 className="font-scoreboard mb-2 text-sm font-bold text-chalk uppercase tracking-wide">Bullpen</h3>
-          <div className="flex h-20 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-warning-track" />
+          {/* Pitcher rows: headshot, name, availability pill. */}
+          <div className="space-y-1.5">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                <Skeleton className="h-3 flex-1" style={{ maxWidth: `${70 - i * 8}%` }} />
+                <Skeleton className="h-4 w-12 shrink-0 rounded-full" />
+              </div>
+            ))}
           </div>
         </div>
       </div>

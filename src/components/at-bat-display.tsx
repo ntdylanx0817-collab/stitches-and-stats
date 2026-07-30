@@ -67,10 +67,7 @@ export function AtBatDisplay({
     <div className={cn("flex flex-col", className)}>
       {/* Batted-ball stats bar */}
       {hasBattedBallStats && (
-        <div className={cn(
-          "grid shrink-0 grid-cols-3 gap-2 border-b border-chalk bg-warning-track/5 px-4",
-          isPage ? "py-4" : "py-3"
-        )}>
+        <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-chalk bg-warning-track/5 px-4 py-3">
           <StatBlock label="Exit Velo" value={exitVelo} unit="mph" large={isPage} />
           <StatBlock label="Distance" value={hitDistance} unit="ft" large={isPage} />
           <StatBlock label="Launch Angle" value={launchAngle} unit="deg" large={isPage} />
@@ -78,7 +75,7 @@ export function AtBatDisplay({
       )}
 
       {/* Matchup + count */}
-      <div className="flex shrink-0 flex-col items-center gap-4 border-b border-chalk px-4 py-4 sm:flex-row sm:justify-between sm:gap-3">
+      <div className="flex shrink-0 flex-col items-center gap-3 border-b border-chalk px-4 py-3 sm:flex-row sm:justify-between sm:gap-3">
         <PlayerCard
           playerId={firstPitch.pitcherId}
           name={firstPitch.pitcherName}

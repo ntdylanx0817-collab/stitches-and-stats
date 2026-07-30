@@ -366,10 +366,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         </div>
       </div>
 
-      {/* Right column: WPA + Latest pitch metrics + pitch mix + Game Thread */}
+      {/* Right column: Game Thread first — it's the play-by-play readers open
+          this column for, so it shouldn't sit below the WPA chart's height. */}
       <div className="lg:col-span-4 space-y-4">
-        <WPALeaderboard gamePk={gamePk} />
         <LiveGameThread gamePk={gamePk} />
+        <WPALeaderboard gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-white">

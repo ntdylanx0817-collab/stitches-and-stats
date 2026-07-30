@@ -142,8 +142,8 @@ function AtBatWatcher({ gamePk }: { gamePk: number }) {
   const freshness = updatedAgoLabel(lastUpdated, now);
 
   return (
-    <div className="space-y-3">
-      <div className="glass flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2">
+    <div className="space-y-2">
+      <div className="glass flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="font-scoreboard shrink-0 text-sm font-bold uppercase tracking-wide text-chalk">
             {halfInningLabel(atBat.halfInning, atBat.inning)}

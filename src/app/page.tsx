@@ -22,10 +22,15 @@ export default function Home() {
   const selectedTeamId = useSavantStore((s) => s.selectedTeamId);
   const setView = useSavantStore((s) => s.setView);
 
+  // The live-tracking tabs are watched hands-off for real-time updates, so the
+  // trivia banner's ~90px is pure cost there — it pushes the pitch/at-bat
+  // content users opened the tab for below the fold on a typical viewport.
+  const showFunFact = view !== "live" && view !== "live-at-bat";
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <FunFactBanner />
+      {showFunFact && <FunFactBanner />}
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div

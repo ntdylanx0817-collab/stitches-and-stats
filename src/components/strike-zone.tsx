@@ -280,12 +280,16 @@ export function StrikeZone({
             const isSelected = selectedPitchId === `${p.atBatIndex}-${p.pitchNumber}`;
             const isLatest = idx === recentPitches.length - 1;
             const size = isLatest ? 9 : 7;
+            // Pointing at one pitch pushes the rest back, so a dense cluster
+            // resolves into the single dot the tooltip is describing.
+            const isHovered = hoveredIdx === idx;
+            const isDimmed = hoveredIdx != null && !isHovered;
 
             return (
               <motion.g
                 key={`${p.atBatIndex}-${p.pitchNumber}-${idx}`}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: isDimmed ? 0.3 : 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ type: "spring", stiffness: 360, damping: 22, delay: isLatest ? 0 : Math.min(idx * 0.01, 0.3) }}
                 onClick={() => onSelectPitch?.(p)}
@@ -306,6 +310,11 @@ export function StrikeZone({
                     animate={{ opacity: 0, scale: 1.6 }}
                     transition={{ duration: 1.4, repeat: Infinity, ease: "easeOut" }}
                   />
+                )}
+                {/* Hover halo — a soft bloom in the pitch's own colour, drawn
+                    behind the dot so it reads as light rather than an outline. */}
+                {isHovered && (
+                  <circle cx={pos.x} cy={pos.y} r={size + 6} fill={color} opacity={0.25} />
                 )}
                 {/* Selection ring */}
                 {isSelected && (

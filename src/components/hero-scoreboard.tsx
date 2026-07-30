@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAnimatedValue } from "@/components/animated-counter";
+import { useScored } from "@/hooks/use-scored";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { OnBaseTrail } from "@/components/on-base-trail";
 import { PlayByPlayModal } from "@/components/play-by-play-modal";
@@ -67,6 +68,11 @@ export function HeroScoreboard({
   // than merely tint a background — team labels and the run-scored flash.
   const awayInk = getDisplayTeamColor(awayTeamId);
   const homeInk = getDisplayTeamColor(homeTeamId);
+  // Whole-card wash when either side scores, so a run registers peripherally
+  // even if you weren't looking straight at the number.
+  const awayScored = useScored(awayScore ?? 0);
+  const homeScored = useScored(homeScore ?? 0);
+  const scoringInk = awayScored ? awayInk : homeScored ? homeInk : null;
 
   const startTime = gameDate
     ? new Date(gameDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
@@ -83,8 +89,36 @@ export function HeroScoreboard({
         background: `linear-gradient(135deg, ${awayColor.primary}15, ${homeColor.primary}15)`,
       }}
     >
+      {/* Run-scored wash, in the scoring team's colour. Sits above the card
+          background but below the content, and never takes pointer events so
+          it can't swallow the click that opens play-by-play. */}
+      <AnimatePresence>
+        {scoringInk && (
+          <motion.div
+            key={`${awayScore}-${homeScore}`}
+            initial={{ opacity: 0.42 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="pointer-events-none"
+            // Positioning is inline on purpose. `.card-broadcast > *` sets
+            // `position: relative` on every direct child to lift content above
+            // the card's grain and top-line pseudo-elements, and it ties on
+            // specificity with Tailwind's `absolute` — so a utility class here
+            // loses the coin flip and the wash lands in flow, pushing the
+            // scoreboard down instead of covering it. Inline wins outright.
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 1,
+              background: `radial-gradient(ellipse 90% 70% at 50% 40%, ${scoringInk}, transparent 70%)`,
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Team color accent strips */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 flex">
+      <div className="absolute top-0 left-0 right-0 h-0.5 flex z-[2]">
         <div className="flex-1" style={{ background: awayInk, boxShadow: `0 0 10px ${awayInk}` }} />
         <div className="flex-1" style={{ background: homeInk, boxShadow: `0 0 10px ${homeInk}` }} />
       </div>

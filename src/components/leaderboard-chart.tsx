@@ -2,17 +2,19 @@
 
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import { getDisplayTeamColor, resolveTeamId } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { LeaderboardRow } from "@/lib/types";
 
 /**
- * Bars are coloured by rank, matching the medals on the table below.
+ * Bars are coloured by team when the feed supplies one, and by rank otherwise.
  *
- * They used to be coloured by team — except the lookup was handed
- * `player_id` against a map keyed by team id, so it missed on every row and
- * every bar came out the same fallback blue. The Savant leaderboard doesn't
- * request a team column at all, so there was never anything to look up.
- * Encoding rank is honest about what this component actually knows.
+ * The team column is requested from Savant but its exact name is discovered at
+ * runtime, so a row may legitimately arrive without one. Rank is the fallback
+ * because it is always known and matches the medals on the table below — and
+ * it beats the previous behaviour, where a team lookup was handed `player_id`
+ * against a map keyed by team id, missed on every row, and painted every bar
+ * the same fallback blue.
  */
 const PODIUM_COLORS = ["#FFB547", "#cbd5e1", "#cd7f32"] as const;
 const FIELD_COLOR = "#e67e22";
@@ -56,7 +58,10 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
           {top10.map((row, i) => {
             const value = Number(row[sortKey]);
             const pct = (Math.abs(value) / maxValue) * 100;
-            const barColor: string = PODIUM_COLORS[i] ?? FIELD_COLOR;
+            const teamId = resolveTeamId(row.team);
+            const barColor: string = teamId != null
+              ? getDisplayTeamColor(teamId)
+              : PODIUM_COLORS[i] ?? FIELD_COLOR;
 
             // Format value
             let displayValue = "";

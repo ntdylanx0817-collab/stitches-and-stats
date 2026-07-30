@@ -388,6 +388,13 @@ export interface LeaderboardRow {
   player_id: number;
   player_name: string;
   year: number;
+  /**
+   * Whichever team column Savant returned, normalised by
+   * parseLeaderboardCSV. Absent when the feed carried none — the exact
+   * column name is discovered at runtime, so this may be an id, an
+   * abbreviation or a name. Pass it through resolveTeamId.
+   */
+  team?: string | number;
   ab?: number;
   pa?: number;
   hit?: number;

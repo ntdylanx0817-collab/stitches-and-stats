@@ -8,6 +8,7 @@ import {
 } from "./types";
 import { getOrSet, getCached, setCached } from "./cache";
 import { assertOk } from "./api-errors";
+import { logger, serializeError } from "./logger";
 
 const STATS_API = "https://statsapi.mlb.com/api";
 const SAVANT_API = "https://baseballsavant.mlb.com";
@@ -247,6 +248,16 @@ export async function fetchEnrichedPitches(gamePk: number): Promise<{
  * Fetch the season leaderboards (batters or pitchers) from Baseball Savant's
  * CSV leaderboard endpoint. Cached for 5 minutes.
  */
+/**
+ * Column names Savant may use for a player's team on the custom leaderboard.
+ *
+ * All of them are requested and whichever comes back populated wins, because
+ * the exact name could not be confirmed against the live endpoint — see
+ * fetchLeaderboard for how a rejection is handled. Extra names cost nothing if
+ * Savant ignores unknown selections, and are dropped wholesale if it doesn't.
+ */
+const TEAM_COLUMN_CANDIDATES = ["team_name_alt", "team_name", "team_id", "team"] as const;
+
 const LEADERBOARD_SELECTIONS_BATTER = [
   "player_name", "player_id", "year", "ab", "pa", "hit", "single", "double", "triple",
   "home_run", "k_percent", "bb_percent", "batting_avg", "slg_percent", "on_base_percent",
@@ -287,19 +298,35 @@ export async function fetchLeaderboard(opts: {
 
   const cacheKey = `leaderboard:${type}:${year}:${min}:${position}:${team}:${gameType}`;
   return getOrSet(cacheKey, FIVE_MINUTES, async () => {
-    const selections = type === "batter" ? LEADERBOARD_SELECTIONS_BATTER : LEADERBOARD_SELECTIONS_PITCHER;
-    const url = `${SAVANT_API}/leaderboard/custom?year=${year}&type=${type}&filter=${encodeURIComponent(position)}&min=${min}&selections=${encodeURIComponent(selections)}&team=${encodeURIComponent(team)}&gameType=${encodeURIComponent(gameType)}&html=true&csv=true`;
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(15_000),
-      headers: {
-        "Accept": "text/csv, */*",
-        "Referer": "https://baseballsavant.mlb.com/leaderboard/custom",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-      },
-    });
-    await assertOk(res, "leaderboard");
-    const csv = await res.text();
-    return parseLeaderboardCSV(csv);
+    const base = type === "batter" ? LEADERBOARD_SELECTIONS_BATTER : LEADERBOARD_SELECTIONS_PITCHER;
+
+    const request = async (selections: string) => {
+      const url = `${SAVANT_API}/leaderboard/custom?year=${year}&type=${type}&filter=${encodeURIComponent(position)}&min=${min}&selections=${encodeURIComponent(selections)}&team=${encodeURIComponent(team)}&gameType=${encodeURIComponent(gameType)}&html=true&csv=true`;
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(15_000),
+        headers: {
+          "Accept": "text/csv, */*",
+          "Referer": "https://baseballsavant.mlb.com/leaderboard/custom",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        },
+      });
+      await assertOk(res, "leaderboard");
+      return parseLeaderboardCSV(await res.text());
+    };
+
+    // Ask for the team columns, but never let them be the reason the
+    // leaderboard fails. Whether Savant ignores an unrecognised selection or
+    // rejects the request outright is unconfirmed, so both are handled: on any
+    // failure, retry with exactly the selection list that was working before.
+    try {
+      return await request([...TEAM_COLUMN_CANDIDATES, base].join(","));
+    } catch (err) {
+      logger.warn("leaderboard team columns rejected; retrying without them", {
+        type,
+        ...serializeError(err),
+      });
+      return request(base);
+    }
   });
 }
 
@@ -325,6 +352,16 @@ export function parseLeaderboardCSV(csv: string): LeaderboardRow[] {
     // Normalize: ensure player_id is a number
     if (row.player_id != null) {
       row.player_id = Number(row.player_id);
+      // Collapse whichever team column Savant actually returned onto one key,
+      // so consumers don't each have to know the candidate list. Absent when
+      // none came back, which callers treat as "team unknown".
+      for (const candidate of TEAM_COLUMN_CANDIDATES) {
+        const value = row[candidate];
+        if (value !== undefined && value !== "") {
+          row.team = value;
+          break;
+        }
+      }
       rows.push(row as LeaderboardRow);
     }
   }

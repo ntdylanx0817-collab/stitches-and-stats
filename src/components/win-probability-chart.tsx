@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, Loader2 } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 
 interface WinProbPoint {
@@ -57,9 +58,8 @@ export function WinProbabilityChart({ gamePk }: { gamePk: number }) {
           <TrendingUp className="h-4 w-4 text-warning-track" />
           Win Probability
         </h3>
-        <div className="flex h-[200px] items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-warning-track" />
-        </div>
+        {/* Holds the plot box so the panel keeps its height. */}
+        <Skeleton className="h-[200px] w-full rounded-lg" />
       </div>
     );
   }

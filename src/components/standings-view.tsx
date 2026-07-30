@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Trophy, Loader2, Flame, Snowflake } from "lucide-react";
+import { Trophy, Flame, Snowflake } from "lucide-react";
+
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { ErrorState } from "@/components/loading-states";
+import { CardSkeleton, ErrorState } from "@/components/loading-states";
 
 interface TeamStanding {
   id: number;
@@ -57,8 +58,11 @@ export function StandingsView() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-warning-track" />
+        {/* Three division cards, which is what the loaded view is. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <CardSkeleton key={i} lines={5} />
+          ))}
         </div>
       </div>
     );

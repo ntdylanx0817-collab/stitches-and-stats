@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Flame, Snowflake, Loader2 } from "lucide-react";
+import { Flame, Snowflake } from "lucide-react";
+import { ListSkeleton } from "@/components/loading-states";
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -43,8 +44,9 @@ export function StreakTracker({ className }: { className?: string }) {
       <div className={className}>
         <div className="glass rounded-2xl p-4">
           <h3 className="font-scoreboard mb-3 text-sm font-bold text-chalk uppercase tracking-wide">Streak Tracker</h3>
-          <div className="flex h-24 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-warning-track" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <ListSkeleton rows={3} />
+            <ListSkeleton rows={3} />
           </div>
         </div>
       </div>

@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Loader2, X, Activity } from "lucide-react";
+import { X, Activity } from "lucide-react";
+import { ListSkeleton } from "@/components/loading-states";
 import { BaseballMark } from "@/components/ui/baseball-mark";
 import { Portal } from "@/components/ui/portal";
 import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
@@ -192,9 +193,7 @@ export function PlayByPlayModal({
         {/* Play-by-play feed */}
         <div className="flex-1 overflow-y-auto scrollbar-thin p-3">
           {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-warning-track" />
-            </div>
+            <ListSkeleton rows={6} marker="none" />
           ) : plays.length === 0 ? (
             <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-slate-500">
               <BaseballMark size={36} className="text-slate-600" />

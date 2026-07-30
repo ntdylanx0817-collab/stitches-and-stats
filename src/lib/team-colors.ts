@@ -133,3 +133,39 @@ export const TEAM_IDS: Array<{ id: number; abbr: string; name: string }> = [
   { id: 121, abbr: "NYM", name: "Mets" },
   { id: 158, abbr: "MIL", name: "Brewers" },
 ];
+
+/**
+ * Resolve a team id from whatever a feed hands over — a numeric id, an
+ * abbreviation ("NYY"), or a name ("Yankees", "New York Yankees").
+ *
+ * Savant's leaderboard CSV is the reason this is loose: the column it returns
+ * for team has to be discovered at runtime (see TEAM_COLUMN_CANDIDATES in
+ * mlb-api.ts), so its contents could be any of those forms.
+ *
+ * Returns null when nothing matches, which callers should treat as "no team
+ * known" rather than substituting a default — a wrong team colour is worse
+ * than none.
+ */
+export function resolveTeamId(value: string | number | null | undefined): number | null {
+  if (value == null || value === "") return null;
+
+  if (typeof value === "number" || /^\d+$/.test(String(value).trim())) {
+    const id = Number(value);
+    return TEAM_COLORS[id] ? id : null;
+  }
+
+  const needle = String(value).trim().toLowerCase();
+  if (!needle) return null;
+
+  const byAbbr = TEAM_IDS.find((t) => t.abbr.toLowerCase() === needle);
+  if (byAbbr) return byAbbr.id;
+
+  // Names arrive both bare ("Yankees") and full ("New York Yankees"), so match
+  // an exact name first and only then fall back to a suffix match — otherwise
+  // a short nickname could match the wrong club.
+  const byName = TEAM_IDS.find((t) => t.name.toLowerCase() === needle);
+  if (byName) return byName.id;
+
+  const bySuffix = TEAM_IDS.find((t) => needle.endsWith(t.name.toLowerCase()));
+  return bySuffix ? bySuffix.id : null;
+}

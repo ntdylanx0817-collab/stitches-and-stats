@@ -477,6 +477,14 @@
     color: var(--color-mint);
     filter: drop-shadow(0 0 8px rgba(61, 219, 160, 0.5));
   }
+  /* Lights an icon in whatever colour it already inherits. For the places that
+     encode meaning through the parent — streak rows colour a Flame mint when
+     the team is winning and a Snowflake crimson when it's losing — a fixed
+     colour would invert that. This adds the lit quality and leaves the
+     semantics to the caller. */
+  .icon-glow {
+    filter: drop-shadow(0 0 6px currentColor);
+  }
 
   /* ---------- Podium badges ----------
      Sized to sit inline with a rank number without shifting the row. */

@@ -67,7 +67,7 @@ export function HomeRunDerby() {
       <div className="card-broadcast rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-scoreboard flex items-center gap-2 text-lg font-bold text-chalk uppercase tracking-wide">
-            <Flame className="h-5 w-5 text-crimson" />
+            <Flame className="icon-flame h-5 w-5" />
             Home Run Derby
           </h2>
           <Badge>{entries.length} hard-hit balls</Badge>

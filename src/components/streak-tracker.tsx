@@ -68,7 +68,7 @@ export function StreakTracker({ className }: { className?: string }) {
           {/* Win streaks */}
           <div>
             <div className="mb-1.5 font-scoreboard text-[9px] uppercase tracking-wide text-mint flex items-center gap-1">
-              <Flame className="h-3 w-3" /> Hot Streaks
+              <Flame className="icon-glow h-3 w-3" /> Hot Streaks
             </div>
             <div className="space-y-1">
               {winStreaks.map((s, i) => (
@@ -81,7 +81,7 @@ export function StreakTracker({ className }: { className?: string }) {
           {/* Loss streaks */}
           <div>
             <div className="mb-1.5 font-scoreboard text-[9px] uppercase tracking-wide text-crimson flex items-center gap-1">
-              <Snowflake className="h-3 w-3" /> Cold Streaks
+              <Snowflake className="icon-glow h-3 w-3" /> Cold Streaks
             </div>
             <div className="space-y-1">
               {lossStreaks.map((s, i) => (
@@ -119,7 +119,7 @@ function StreakRow({ entry, onClick }: { entry: StreakEntry; onClick: () => void
         "font-scoreboard flex items-center gap-0.5 text-sm font-black num shrink-0",
         isWin ? "text-mint" : "text-crimson"
       )}>
-        {isWin ? <Flame className="h-3 w-3" /> : <Snowflake className="h-3 w-3" />}
+        {isWin ? <Flame className="icon-glow h-3 w-3" /> : <Snowflake className="icon-glow h-3 w-3" />}
         {entry.streak}
       </span>
     </motion.button>

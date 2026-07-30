@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Trophy, Loader2, Flame, Snowflake } from "lucide-react";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ErrorState } from "@/components/loading-states";
@@ -81,7 +81,7 @@ export function StandingsView() {
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-scoreboard flex items-center gap-2 text-lg font-bold text-chalk uppercase tracking-wide">
-          <Trophy className="h-5 w-5 text-amber drop-shadow-[0_0_6px_rgba(255,181,71,0.5)]" />
+          <Trophy className="icon-trophy h-5 w-5" />
           Standings
         </h2>
         <span className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{data.season} Season</span>
@@ -221,7 +221,7 @@ function TeamRow({
 }) {
   const setSelectedTeamId = useSavantStore((s) => s.setSelectedTeamId);
   const setView = useSavantStore((s) => s.setView);
-  const color = getTeamColor(team.id);
+  const teamInk = getDisplayTeamColor(team.id);
   const isStreakWin = team.streak?.startsWith("W");
   const isStreakLoss = team.streak?.startsWith("L");
   const gb = wildCardGB ?? team.gamesBack;
@@ -236,21 +236,33 @@ function TeamRow({
         isInWildCard && "bg-cobalt/5"
       )}
     >
-      {/* Rank */}
-      <span className={cn(
-        "font-scoreboard w-4 shrink-0 text-center text-[10px] font-bold num",
-        isDivisionLeader ? "text-mint" : isInWildCard ? "text-cobalt" : "text-slate-600"
-      )}>
-        {rank}
-      </span>
+      {/* Rank — the division podium gets a medal, everyone else a number.
+          Bare glyph rather than the .badge-medal chrome: that utility is 28px
+          and would push the top three rows out of line with the rest of a
+          table whose rank column is 16px. */}
+      {rank <= 3 ? (
+        <span
+          className="animate-slide-in-medal w-4 shrink-0 text-center text-[11px] leading-none"
+          aria-label={`Rank ${rank}`}
+        >
+          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
+        </span>
+      ) : (
+        <span className={cn(
+          "font-scoreboard w-4 shrink-0 text-center text-[10px] font-bold num",
+          isDivisionLeader ? "text-mint" : isInWildCard ? "text-cobalt" : "text-slate-600"
+        )}>
+          {rank}
+        </span>
+      )}
 
       {/* Team color dot */}
-      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color.primary }} />
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: teamInk }} />
 
       {/* Team abbreviation */}
       <span
         className="font-scoreboard w-8 shrink-0 text-xs font-bold uppercase"
-        style={{ color: color.primary === "#000000" || color.primary === "#27251F" ? "#f8f9fa" : color.primary }}
+        style={{ color: teamInk }}
       >
         {team.abbr}
       </span>
@@ -272,8 +284,8 @@ function TeamRow({
           "flex items-center gap-0.5 font-scoreboard text-[9px] font-bold shrink-0",
           isStreakWin ? "text-mint" : isStreakLoss ? "text-crimson" : "text-slate-500"
         )}>
-          {isStreakWin && <Flame className="h-2.5 w-2.5" />}
-          {isStreakLoss && <Snowflake className="h-2.5 w-2.5" />}
+          {isStreakWin && <Flame className="icon-glow h-2.5 w-2.5" />}
+          {isStreakLoss && <Snowflake className="icon-glow h-2.5 w-2.5" />}
           {team.streak}
         </span>
       )}

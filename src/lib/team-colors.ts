@@ -37,6 +37,69 @@ export function getTeamColor(teamId: number): { primary: string; secondary: stri
   return TEAM_COLORS[teamId] ?? { primary: "#4DA3FF", secondary: "#e67e22" };
 }
 
+/** WCAG relative luminance of a #rrggbb colour, 0 (black) to 1 (white). */
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return [0, 0, l];
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h =
+    max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h / 6, s, l];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const f = (n: number) => {
+    const k = (n + h * 12) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/**
+ * A team's primary colour, lifted until it actually reads against the midnight
+ * background.
+ *
+ * Roughly a third of the league is branded in near-black navy — Yankees
+ * #003087, Rays #0C2340, Astros #12284B — which disappears on #050a14. Call
+ * sites had been guarding with `primary === "#000000"`, which only catches the
+ * two literal blacks and misses every dark navy, so those teams silently
+ * rendered invisible accents.
+ *
+ * Raises lightness in HSL and leaves saturation alone. Mixing toward white
+ * instead would wash the colour out — Yankees navy lands on a grey-blue and
+ * Rays navy on outright grey — and saturation is what makes an accent read as
+ * that team's, so it is the one channel worth protecting.
+ */
+export function getDisplayTeamColor(teamId: number): string {
+  const color = getTeamColor(teamId).primary;
+  const [h, s, l] = hexToHsl(color);
+  let out = color;
+  // Step lightness up until the colour clears the background. The cap keeps a
+  // pathological input from looping; by then lightness is essentially 1.
+  for (let i = 1; i <= 12 && luminance(out) < 0.18; i++) {
+    out = hslToHex(h, s, Math.min(l + i * 0.06, 1));
+  }
+  return out;
+}
+
 // All 30 team IDs and abbreviations for the odds API
 export const TEAM_IDS: Array<{ id: number; abbr: string; name: string }> = [
   { id: 133, abbr: "ATH", name: "Athletics" },

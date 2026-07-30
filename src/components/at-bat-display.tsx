@@ -7,7 +7,7 @@ import { PlayerCard } from "@/components/player-card";
 import { CountDisplay } from "@/components/count-display";
 import { PitchSequenceList } from "@/components/pitch-sequence-list";
 import { safeToFixed } from "@/components/pitch-log-entry";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch } from "@/lib/types";
 
@@ -50,8 +50,10 @@ export function AtBatDisplay({
   const isTopInning = firstPitch.halfInning === "top";
   const battingTeamId = isTopInning ? awayTeamId : homeTeamId;
   const pitchingTeamId = isTopInning ? homeTeamId : awayTeamId;
-  const battingColor = battingTeamId != null ? getTeamColor(battingTeamId).primary : undefined;
-  const pitchingColor = pitchingTeamId != null ? getTeamColor(pitchingTeamId).primary : undefined;
+  // Display variants: these tint a ring and glow around the headshot, so a
+  // near-black brand colour would render no visible ring at all.
+  const battingColor = battingTeamId != null ? getDisplayTeamColor(battingTeamId) : undefined;
+  const pitchingColor = pitchingTeamId != null ? getDisplayTeamColor(pitchingTeamId) : undefined;
 
   const inPlayResult = lastPitch.isInPlay ? lastPitch : null;
   const exitVelo = safeToFixed(inPlayResult?.exitVelocity, 1);

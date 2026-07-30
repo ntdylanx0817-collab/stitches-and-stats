@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, ChevronRight } from "lucide-react";
 import { useSavantStore } from "@/lib/store";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 
 interface TickerGame {
@@ -86,12 +86,12 @@ function TeamScoreCell({
   isWinner?: boolean;
   homeAway: "away" | "home";
 }) {
-  const colors = getTeamColor(team.id);
+  const teamInk = getDisplayTeamColor(team.id);
   return (
     <div className="flex items-center gap-1.5">
       <span
         className="inline-block h-3 w-1 rounded-full"
-        style={{ background: colors.primary }}
+        style={{ background: teamInk }}
         aria-hidden
       />
       <span

@@ -177,8 +177,8 @@ export function HeroScoreboard({
             {state === "Live" ? (
               <OnBaseTrail
                 gamePk={gamePk}
-                awayTeamColor={awayColor.primary === "#000000" || awayColor.primary === "#27251F" ? "#4DA3FF" : awayColor.primary}
-                homeTeamColor={homeColor.primary === "#000000" || homeColor.primary === "#27251F" ? "#3DDBA0" : homeColor.primary}
+                awayTeamColor={awayInk}
+                homeTeamColor={homeInk}
                 isTopInning={true}
               />
             ) : odds ? (

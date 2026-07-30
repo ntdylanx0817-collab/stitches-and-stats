@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Flame, Snowflake, Loader2 } from "lucide-react";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -97,9 +97,8 @@ export function StreakTracker({ className }: { className?: string }) {
 }
 
 function StreakRow({ entry, onClick }: { entry: StreakEntry; onClick: () => void }) {
-  const color = getTeamColor(entry.id);
   const isWin = entry.type === "team_win";
-  const teamColor = color.primary === "#000000" || color.primary === "#27251F" ? "#4DA3FF" : color.primary;
+  const teamColor = getDisplayTeamColor(entry.id);
 
   return (
     <motion.button

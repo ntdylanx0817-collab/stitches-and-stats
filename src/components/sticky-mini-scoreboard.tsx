@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { PlayByPlayModal } from "@/components/play-by-play-modal";
 import type { GameStatus } from "@/lib/types";
 
@@ -85,7 +85,7 @@ export function StickyMiniScoreboard({
                   <div className="flex items-center gap-2">
                     <span
                       className="font-scoreboard text-sm font-bold uppercase"
-                      style={{ color: awayColor.primary === "#000000" || awayColor.primary === "#27251F" ? "#f8f9fa" : awayColor.primary }}
+                      style={{ color: getDisplayTeamColor(awayTeamId) }}
                     >
                       {awayAbbr}
                     </span>
@@ -125,7 +125,7 @@ export function StickyMiniScoreboard({
                     <span className="font-scoreboard text-xl font-black text-chalk num">{homeScore}</span>
                     <span
                       className="font-scoreboard text-sm font-bold uppercase"
-                      style={{ color: homeColor.primary === "#000000" || homeColor.primary === "#27251F" ? "#f8f9fa" : homeColor.primary }}
+                      style={{ color: getDisplayTeamColor(homeTeamId) }}
                     >
                       {homeAbbr}
                     </span>

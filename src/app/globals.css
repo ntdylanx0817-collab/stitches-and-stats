@@ -282,7 +282,10 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(230, 126, 34, 0.45), transparent);
+    background: linear-gradient(90deg, transparent, rgba(230, 126, 34, 0.75), transparent);
+    /* Bleeds light down into the card so the edge reads as a lit strip rather
+       than a drawn line. */
+    box-shadow: 0 0 12px rgba(230, 126, 34, 0.55);
     z-index: 1;
   }
   .card-broadcast > * {

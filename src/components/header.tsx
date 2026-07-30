@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
@@ -10,6 +11,9 @@ import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
 import { cn } from "@/lib/utils";
+
+/** Never fires; `mounted` only needs to differ between server and client. */
+const noopSubscribe = () => () => {};
 
 const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "live", label: "Live", icon: Activity },
@@ -28,6 +32,23 @@ export function Header() {
   const setView = useSavantStore((s) => s.setView);
   const { connected } = useSocket();
   const { theme, setTheme } = useTheme();
+
+  // next-themes can only learn the theme from localStorage after mount, so
+  // `theme` is undefined on the server and on the first client render. Reading
+  // it directly made the toggle render Moon server-side and Sun once hydrated,
+  // and React threw out the whole tree over the mismatch.
+  //
+  // Holding the rendered state at the provider's defaultTheme until mounted
+  // makes both of those first passes agree. Anyone who has actually chosen
+  // light gets a one-frame icon swap after mount, which is a repaint rather
+  // than a hydration error.
+  //
+  // useSyncExternalStore rather than setState-in-an-effect: React is told
+  // outright that the server snapshot is false and the client snapshot true,
+  // so it renders the pre-hydration pass correctly instead of being corrected
+  // by an effect afterwards.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const isDark = mounted ? theme === "dark" : true;
 
   return (
     <header className="sticky top-0 z-40 w-full">
@@ -107,11 +128,12 @@ export function Header() {
 
           {/* Theme toggle */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(isDark ? "light" : "dark")}
             className="flex shrink-0 items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
-            title={theme === "dark" ? "Stadium Day Mode" : "Night Game Mode"}
+            title={isDark ? "Stadium Day Mode" : "Night Game Mode"}
+            aria-label={isDark ? "Switch to Stadium Day Mode" : "Switch to Night Game Mode"}
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
           {/* Live status indicator — hidden below lg, where the header's nav

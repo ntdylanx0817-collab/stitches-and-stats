@@ -2,9 +2,20 @@
 
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { LeaderboardRow } from "@/lib/types";
+
+/**
+ * Bars are coloured by rank, matching the medals on the table below.
+ *
+ * They used to be coloured by team — except the lookup was handed
+ * `player_id` against a map keyed by team id, so it missed on every row and
+ * every bar came out the same fallback blue. The Savant leaderboard doesn't
+ * request a team column at all, so there was never anything to look up.
+ * Encoding rank is honest about what this component actually knows.
+ */
+const PODIUM_COLORS = ["#FFB547", "#cbd5e1", "#cd7f32"] as const;
+const FIELD_COLOR = "#e67e22";
 
 interface LeaderboardChartProps {
   rows: LeaderboardRow[];
@@ -45,8 +56,7 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
           {top10.map((row, i) => {
             const value = Number(row[sortKey]);
             const pct = (Math.abs(value) / maxValue) * 100;
-            const color = getTeamColor(row.player_id || 0);
-            const teamColor = color.primary === "#000000" || color.primary === "#27251F" ? "#4DA3FF" : color.primary;
+            const barColor: string = PODIUM_COLORS[i] ?? FIELD_COLOR;
 
             // Format value
             let displayValue = "";
@@ -71,10 +81,16 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
                 className="flex items-center gap-2"
               >
                 {/* Rank */}
-                <span className={cn(
-                  "font-scoreboard w-5 shrink-0 text-center text-[10px] font-bold num",
-                  i === 0 ? "text-crimson" : i === 1 ? "text-amber" : i === 2 ? "text-warning-track" : "text-slate-600"
-                )}>
+                {/* Podium order matches the medals on the table and the bar
+                    colours beside it; this used to lead with crimson, which
+                    reads as "bad" everywhere else in the app. */}
+                <span
+                  className={cn(
+                    "font-scoreboard w-5 shrink-0 text-center text-[10px] font-bold num",
+                    i > 2 && "text-slate-600"
+                  )}
+                  style={i <= 2 ? { color: PODIUM_COLORS[i] } : undefined}
+                >
                   {i + 1}
                 </span>
 
@@ -89,8 +105,8 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
                     transition={{ delay: Math.min(i * 0.04, 0.4) + 0.1, duration: 0.5, ease: "easeOut" }}
                     className="h-full rounded-md flex items-center justify-end pr-1.5"
                     style={{
-                      background: `linear-gradient(90deg, ${teamColor}30, ${teamColor}80)`,
-                      boxShadow: `0 0 6px ${teamColor}30`,
+                      background: `linear-gradient(90deg, ${barColor}30, ${barColor}80)`,
+                      boxShadow: `0 0 6px ${barColor}30`,
                     }}
                   >
                     <span className="font-scoreboard text-[10px] font-bold text-chalk num">{displayValue}</span>

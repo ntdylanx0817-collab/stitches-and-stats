@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Radio, ChevronRight } from "lucide-react";
+import { useScored } from "@/hooks/use-scored";
 import { useSavantStore } from "@/lib/store";
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,10 @@ function TeamScoreCell({
   homeAway: "away" | "home";
 }) {
   const teamInk = getDisplayTeamColor(team.id);
+  // The ticker is the one always-visible surface, so it should register a run
+  // even while you're on another tab. Same hook the hero card uses: silent on
+  // mount, silent on downward corrections, fires only when the score rises.
+  const justScored = useScored(team.score ?? 0);
   return (
     <div className="flex items-center gap-1.5">
       <span
@@ -100,16 +105,28 @@ function TeamScoreCell({
       >
         {team.abbr}
       </span>
-      <span
+      <motion.span
+        // The flex parent already blockifies this, so the scale applies; the
+        // explicit inline-block just keeps that true if it ever moves out of a
+        // flex row, since transforms are ignored on inline boxes.
         className={cn(
-          "font-scoreboard text-[13px] font-bold tabular-nums",
+          "font-scoreboard inline-block text-[13px] font-bold tabular-nums",
           isWinner || (isLive && team.score !== null && team.score > 0)
             ? "text-chalk"
             : "text-slate-400"
         )}
+        animate={
+          justScored
+            ? {
+                scale: [1, 1.3, 1],
+                textShadow: [`0 0 0 ${teamInk}00`, `0 0 12px ${teamInk}`, `0 0 0 ${teamInk}00`],
+              }
+            : { scale: 1 }
+        }
+        transition={{ duration: 0.7, ease: "easeOut" }}
       >
         {team.score ?? (isLive ? "0" : "")}
-      </span>
+      </motion.span>
       {/* Hidden on mobile to save space */}
       {team.record && (
         <span className="hidden xl:inline text-[9px] text-slate-500 tabular-nums">

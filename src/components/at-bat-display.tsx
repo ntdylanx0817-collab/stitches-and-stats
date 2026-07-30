@@ -67,18 +67,17 @@ export function AtBatDisplay({
     <div className={cn("flex flex-col", className)}>
       {/* Batted-ball stats bar */}
       {hasBattedBallStats && (
-        <div className={cn(
-          "grid shrink-0 grid-cols-3 gap-2 border-b border-chalk bg-warning-track/5 px-4",
-          isPage ? "py-4" : "py-3"
-        )}>
+        <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-chalk bg-warning-track/5 px-4 py-3">
           <StatBlock label="Exit Velo" value={exitVelo} unit="mph" large={isPage} />
           <StatBlock label="Distance" value={hitDistance} unit="ft" large={isPage} />
           <StatBlock label="Launch Angle" value={launchAngle} unit="deg" large={isPage} />
         </div>
       )}
 
-      {/* Matchup + count */}
-      <div className="flex shrink-0 flex-col items-center gap-4 border-b border-chalk px-4 py-4 sm:flex-row sm:justify-between sm:gap-3">
+      {/* Matchup + count — always a row, even on phones. Stacking these three
+          blocks vertically on narrow viewports was the single biggest thing
+          pushing the strike zone below the fold on mobile (~200px). */}
+      <div className="flex shrink-0 flex-row items-center justify-between gap-1.5 border-b border-chalk px-3 py-3 sm:gap-3 sm:px-4">
         <PlayerCard
           playerId={firstPitch.pitcherId}
           name={firstPitch.pitcherName}

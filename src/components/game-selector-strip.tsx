@@ -68,8 +68,8 @@ export function GameSelectorStrip({ className }: { className?: string }) {
   const liveCount = games.filter((g) => g.status.abstractGameState === "Live").length;
 
   return (
-    <div className={cn("mb-4", className)}>
-      <div className="mb-2 flex items-center justify-between">
+    <div className={cn("mb-3", className)}>
+      <div className="mb-1.5 flex items-center justify-between">
         <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
           <Calendar className="h-4 w-4 text-warning-track" />
           {data?.date ?? "—"}
@@ -114,7 +114,7 @@ export function GameSelectorStrip({ className }: { className?: string }) {
         />
       ) : (
         <div className="-webkit-overflow-scrolling-touch w-full overflow-x-auto scrollbar-thin">
-          <div className="flex min-w-min gap-2 pb-2">
+          <div className="flex min-w-min gap-2 pb-1.5">
             {games.map((g) => {
               const isLive = g.status.abstractGameState === "Live";
               const isFinal = g.status.abstractGameState === "Final";
@@ -131,7 +131,7 @@ export function GameSelectorStrip({ className }: { className?: string }) {
                   onClick={() => setSelectedGame(g.gamePk)}
                   aria-pressed={isSelected}
                   className={cn(
-                    "hover-lift relative flex min-w-[190px] shrink-0 flex-col gap-1 rounded-xl border p-2.5 text-left transition-all",
+                    "hover-lift relative flex min-w-[190px] shrink-0 flex-col gap-1 rounded-xl border p-2 text-left transition-all",
                     isSelected
                       ? "border-warning-track/40 bg-warning-track/8 box-glow-warning"
                       : isLive

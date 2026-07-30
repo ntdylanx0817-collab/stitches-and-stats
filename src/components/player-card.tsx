@@ -22,15 +22,15 @@ export function PlayerCard({ playerId, name, role, handedness, accentColor, clas
     : null;
 
   return (
-    <div className={cn("flex flex-col items-center gap-2 text-center", className)}>
+    <div className={cn("flex flex-col items-center gap-1.5 text-center", className)}>
       <div
         className="rounded-full p-0.5"
         style={accentColor ? { boxShadow: `0 0 0 2px ${accentColor}60, 0 0 16px ${accentColor}30` } : undefined}
       >
-        <PlayerAvatar playerId={playerId ?? 0} fallbackText={name} size={72} className="rounded-full" />
+        <PlayerAvatar playerId={playerId ?? 0} fallbackText={name} size={60} className="rounded-full" />
       </div>
       <div>
-        <div className="text-sm font-bold text-chalk truncate max-w-[120px]">{name}</div>
+        <div className="text-xs font-bold text-chalk truncate max-w-[90px] sm:text-sm sm:max-w-[120px]">{name}</div>
         <div className="label-xs text-slate-500">
           {handLabel ?? (role === "pitcher" ? "Pitcher" : "Batter")}
         </div>

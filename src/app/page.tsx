@@ -22,10 +22,15 @@ export default function Home() {
   const selectedTeamId = useSavantStore((s) => s.selectedTeamId);
   const setView = useSavantStore((s) => s.setView);
 
+  // The live-tracking tabs are watched hands-off for real-time updates, so the
+  // trivia banner's ~90px is pure cost there — it pushes the pitch/at-bat
+  // content users opened the tab for below the fold on a typical viewport.
+  const showFunFact = view !== "live" && view !== "live-at-bat";
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <FunFactBanner />
+      {showFunFact && <FunFactBanner />}
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -34,7 +39,13 @@ export default function Home() {
             animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
             exit={{ opacity: 0, y: -20, scale: 0.98, rotateX: -2 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            style={{ transformOrigin: "top center", perspective: 1000 }}
+            // No `perspective` here: as a CSS property it only applies to a
+            // child's own 3D transform, so it never affected this element's
+            // own rotateX — but it *did* make this div the containing block
+            // for every `position: fixed` descendant, which put the modals
+            // and the sticky mini-scoreboard at page coordinates instead of
+            // viewport ones (off-screen entirely on a tall mobile page).
+            style={{ transformOrigin: "top center" }}
           >
             {view === "live" && <LiveFeedView />}
             {view === "live-at-bat" && <LiveAtBatView />}

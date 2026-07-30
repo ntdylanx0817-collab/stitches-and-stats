@@ -7,6 +7,7 @@ import {
   Loader2, Flame,
   type LucideIcon,
 } from "lucide-react";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, GameFeedResponse } from "@/lib/types";
 
@@ -77,7 +78,10 @@ export function LiveGameThread({ gamePk }: { gamePk: number }) {
           <Radio className="h-4 w-4 text-mint" />
           Live Game Thread
         </h3>
-        <p className="text-xs text-slate-500 text-center py-6">Waiting for game action…</p>
+        <div className="flex flex-col items-center gap-2 py-6">
+          <BaseballMark size={32} className="text-slate-700" />
+          <p className="text-xs text-slate-500">Waiting for game action…</p>
+        </div>
       </div>
     );
   }

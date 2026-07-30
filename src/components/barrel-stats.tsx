@@ -34,7 +34,7 @@ export function BarrelStats({ data, className }: BarrelStatsProps) {
     <div className={className}>
       <div className="glass rounded-2xl p-4">
         <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-          <Zap className="h-4 w-4 text-warning-track" />
+          <Zap className="icon-zap h-4 w-4" />
           Batted Ball Metrics
         </h3>
         <p className="mb-3 text-[11px] text-slate-500">

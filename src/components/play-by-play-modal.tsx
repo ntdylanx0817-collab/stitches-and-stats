@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Loader2, X, Activity } from "lucide-react";
 import { Portal } from "@/components/ui/portal";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, GameFeedResponse, GameStatus, Linescore } from "@/lib/types";
 
@@ -130,7 +130,7 @@ export function PlayByPlayModal({
           <div className="text-center">
             <div
               className="font-scoreboard text-sm font-bold uppercase"
-              style={{ color: awayColor.primary === "#000000" || awayColor.primary === "#27251F" ? "#f8f9fa" : awayColor.primary }}
+              style={{ color: getDisplayTeamColor(awayTeamId) }}
               title={awayName}
             >
               {awayAbbr}
@@ -145,7 +145,7 @@ export function PlayByPlayModal({
           <div className="text-center">
             <div
               className="font-scoreboard text-sm font-bold uppercase"
-              style={{ color: homeColor.primary === "#000000" || homeColor.primary === "#27251F" ? "#f8f9fa" : homeColor.primary }}
+              style={{ color: getDisplayTeamColor(homeTeamId) }}
               title={homeName}
             >
               {homeAbbr}
@@ -231,12 +231,8 @@ export function PlayByPlayModal({
                         backgroundColor: play.halfInning === "top" ? `${awayColor.primary}20` : `${homeColor.primary}20`,
                         color:
                           play.halfInning === "top"
-                            ? awayColor.primary === "#000000" || awayColor.primary === "#27251F"
-                              ? "#f8f9fa"
-                              : awayColor.primary
-                            : homeColor.primary === "#000000" || homeColor.primary === "#27251F"
-                              ? "#f8f9fa"
-                              : homeColor.primary,
+                            ? getDisplayTeamColor(awayTeamId)
+                            : getDisplayTeamColor(homeTeamId),
                       }}
                     >
                       {play.halfInning === "top" ? "▲" : "▼"} {play.inning}

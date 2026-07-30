@@ -72,7 +72,7 @@ export function WPALeaderboard({ gamePk }: { gamePk: number }) {
   return (
     <div className="glass rounded-2xl p-4">
       <h3 className="font-scoreboard mb-3 flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-        <Trophy className="h-4 w-4 text-amber drop-shadow-[0_0_6px_rgba(255,181,71,0.5)]" />
+        <Trophy className="icon-trophy h-4 w-4" />
         WPA Leaderboard
       </h3>
       <p className="mb-3 text-[10px] text-slate-500">Win Probability Added — who impacted the game most</p>
@@ -81,7 +81,7 @@ export function WPALeaderboard({ gamePk }: { gamePk: number }) {
         {/* Heroes */}
         <div>
           <div className="mb-1.5 font-scoreboard text-[9px] uppercase tracking-wide text-mint flex items-center gap-1">
-            <Trophy className="h-3 w-3" /> Heroes
+            <Trophy className="icon-glow h-3 w-3" /> Heroes
           </div>
           <div className="space-y-1">
             {wpaData.heroes.map((entry, i) => (
@@ -93,7 +93,7 @@ export function WPALeaderboard({ gamePk }: { gamePk: number }) {
         {/* Goats */}
         <div>
           <div className="mb-1.5 font-scoreboard text-[9px] uppercase tracking-wide text-crimson flex items-center gap-1">
-            <Skull className="h-3 w-3" /> Goats
+            <Skull className="icon-glow h-3 w-3" /> Goats
           </div>
           <div className="space-y-1">
             {wpaData.goats.map((entry, i) => (
@@ -115,7 +115,11 @@ function WPARow({ entry, isHero, rank }: { entry: WPAEntry; isHero: boolean; ran
       className={cn(
         "flex items-center gap-2 rounded-lg border p-1.5",
         isHero ? "border-mint/15 bg-mint/5" : "border-crimson/15 bg-crimson/5",
-        rank === 1 && (isHero ? "border-l-2 border-l-mint shadow-sm shadow-mint/20" : "border-l-2 border-l-crimson shadow-sm shadow-crimson/20")
+        // Top hero and top goat are the two rows worth finding at a glance,
+        // so they get a lit edge rather than a slightly darker one.
+        rank === 1 && (isHero
+          ? "border-l-2 border-l-mint shadow-[0_0_14px_-3px_rgba(61,219,160,0.55)]"
+          : "border-l-2 border-l-crimson shadow-[0_0_14px_-3px_rgba(255,59,92,0.55)]")
       )}
     >
       <span className={cn(

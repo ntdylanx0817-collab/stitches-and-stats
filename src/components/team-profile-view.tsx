@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlayerAvatar } from "@/components/player-avatar";
-import { getTeamColor } from "@/lib/team-colors";
+import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Skeleton, ErrorState } from "@/components/loading-states";
@@ -100,7 +100,7 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
           <div className="flex items-center gap-4">
             <div
               className="font-scoreboard flex h-16 w-16 shrink-0 items-center justify-center rounded-xl text-2xl font-black uppercase"
-              style={{ background: `linear-gradient(135deg, ${color.primary}40, ${color.secondary}20)`, color: color.primary === "#000000" || color.primary === "#27251F" ? "#f8f9fa" : color.primary }}
+              style={{ background: `linear-gradient(135deg, ${color.primary}40, ${color.secondary}20)`, color: getDisplayTeamColor(teamId) }}
             >
               {t.abbreviation}
             </div>

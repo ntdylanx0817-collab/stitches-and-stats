@@ -78,12 +78,20 @@ export function Header() {
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
-                  <Icon className="relative h-3.5 w-3.5" />
+                  <Icon
+                    className={cn(
+                      "relative h-3.5 w-3.5 transition-[filter] duration-200",
+                      // Warm halo rather than .icon-glow: the active label is
+                      // chalk, so currentColor would give a white glow that
+                      // vanishes against the pill. Orange reads as lit.
+                      active && "drop-shadow-[0_0_7px_rgba(230,126,34,0.85)]"
+                    )}
+                  />
                   <span className="relative hidden xl:inline">{item.label}</span>
                   {active && (
                     <motion.span
                       layoutId="nav-underline"
-                      className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track"
+                      className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track shadow-[0_0_8px_rgba(230,126,34,0.9)]"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}

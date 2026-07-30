@@ -445,15 +445,25 @@ export function LeaderboardsView() {
                           )}
                         >
                           {col.key === "rank" && (
-                            <span className={cn(
-                              "font-mono",
-                              idx === 0 ? "text-amber font-bold text-glow-warning"
-                                : idx === 1 ? "text-slate-300 font-bold"
-                                : idx === 2 ? "text-warning-track/80 font-bold"
-                                : "text-slate-500"
-                            )}>
-                              {idx + 1}
-                            </span>
+                            idx < 3 ? (
+                              // The podium gets the full badge — this column is
+                              // 40px, so the 28px chrome fits without shifting
+                              // the row (unlike the denser standings table).
+                              // Re-sorting changes the row key, so the medal
+                              // re-lands when a player moves onto the podium.
+                              <span
+                                className={cn(
+                                  "badge-medal animate-slide-in-medal",
+                                  idx === 0 ? "rank-badge-gold" : idx === 1 ? "rank-badge-silver" : "rank-badge-bronze"
+                                )}
+                                style={{ animationDelay: `${idx * 90}ms` }}
+                                aria-label={`Rank ${idx + 1}`}
+                              >
+                                {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-slate-500">{idx + 1}</span>
+                            )
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">

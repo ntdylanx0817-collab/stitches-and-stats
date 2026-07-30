@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Clock, Loader2,
+  Activity, Clock,
   TrendingUp, Zap, Target, Gauge, CircleDot, ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +22,7 @@ import { StreakTracker } from "@/components/streak-tracker";
 import { BullpenStatus } from "@/components/bullpen-status";
 import { GameSelectorStrip } from "@/components/game-selector-strip";
 import { BaseballMark } from "@/components/ui/baseball-mark";
+import { PitchLogSkeleton } from "@/components/loading-states";
 import { useGamePitches, updatedAgoLabel } from "@/hooks/use-game-pitches";
 import { latestAtBatIndex } from "@/lib/at-bat";
 import { useSavantStore } from "@/lib/store";
@@ -349,26 +350,24 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] pr-2">
             <div className="space-y-1.5">
               <AnimatePresence initial={false}>
-                {displayPitches.length === 0 ? (
+                {displayPitches.length === 0 && status?.abstractGameState === "Preview" ? (
+                  // Checked before the loading case: if the game hasn't started
+                  // there is nothing coming, and a skeleton would promise rows
+                  // that won't arrive for hours.
                   <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
-                    {status?.abstractGameState === "Preview" ? (
-                      <>
-                        <Clock className="h-6 w-6 text-warning-track" />
-                        <div className="font-scoreboard text-sm font-medium text-slate-300 uppercase tracking-wide">Game hasn't started</div>
-                        <div className="text-xs text-slate-500">Pitch-by-pitch data will appear here once the game begins.</div>
-                      </>
-                    ) : isLoadingInitial ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin text-cobalt" />
-                        <div className="text-sm">Loading pitches…</div>
-                      </>
-                    ) : (
-                      <>
-                        <BaseballMark size={40} className="text-slate-600" />
-                        <div className="text-sm">No pitches available</div>
-                        <div className="text-xs text-slate-500">Statcast data may not be available for this game.</div>
-                      </>
-                    )}
+                    <Clock className="h-6 w-6 text-warning-track" />
+                    <div className="font-scoreboard text-sm font-medium text-slate-300 uppercase tracking-wide">Game hasn&apos;t started</div>
+                    <div className="text-xs text-slate-500">Pitch-by-pitch data will appear here once the game begins.</div>
+                  </div>
+                ) : displayPitches.length === 0 && isLoadingInitial ? (
+                  // Rows really are on the way, so hold their shape instead of
+                  // collapsing the feed to a spinner and reflowing on arrival.
+                  <PitchLogSkeleton count={7} />
+                ) : displayPitches.length === 0 ? (
+                  <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-400">
+                    <BaseballMark size={40} className="text-slate-600" />
+                    <div className="text-sm">No pitches available</div>
+                    <div className="text-xs text-slate-500">Statcast data may not be available for this game.</div>
                   </div>
                 ) : (
                   displayPitches.map((p, idx) => (

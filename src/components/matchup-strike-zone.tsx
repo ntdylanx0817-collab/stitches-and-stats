@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Loader2, Target } from "lucide-react";
+import { Target } from "lucide-react";
+import { StrikeZoneSkeleton } from "@/components/loading-states";
 
 interface ZoneData {
   zone: number;
@@ -139,9 +140,14 @@ export function MatchupStrikeZone({
         </p>
 
         {isLoading ? (
-          <div className="flex h-64 items-center justify-center">
+          <div className="flex h-64 flex-col items-center justify-center gap-3">
+            {/* Skeleton over a spinner: this fetch is slow enough to be worth
+                holding the zone's shape while it runs. Width-capped so the
+                square plus its caption fits the 16rem row. */}
+            <div className="w-36">
+              <StrikeZoneSkeleton />
+            </div>
             <div className="text-center">
-              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-warning-track" />
               <p className="text-xs text-slate-500">Loading {batterLoading ? "batter" : "pitcher"} zone data…</p>
               <p className="text-[10px] text-slate-600 mt-1">Fetching 25,000+ pitches from Statcast</p>
             </div>

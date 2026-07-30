@@ -53,6 +53,37 @@ export function PitchLogSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
+/**
+ * Rows of "marker, label, value" — the shape most of the side panels load
+ * into (streak rows, derby leaders, bullpen arms, velocity leaders).
+ *
+ * Label widths taper down the list so it reads as varied content rather than
+ * a stack of identical bars.
+ */
+export function ListSkeleton({
+  rows = 4,
+  marker = "dot",
+  className = "",
+}: {
+  rows?: number;
+  /** Leading element: a team colour dot, a round headshot, or nothing. */
+  marker?: "dot" | "avatar" | "none";
+  className?: string;
+}) {
+  return (
+    <div className={`space-y-1.5 ${className}`}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          {marker === "avatar" && <Skeleton className="h-7 w-7 shrink-0 rounded-full" />}
+          {marker === "dot" && <Skeleton className="h-2.5 w-2.5 shrink-0 rounded-full" />}
+          <Skeleton className="h-3 flex-1" style={{ maxWidth: `${76 - i * 9}%` }} />
+          <Skeleton className="h-3.5 w-10 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Strike zone skeleton */
 export function StrikeZoneSkeleton() {
   return (

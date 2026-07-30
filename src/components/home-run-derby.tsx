@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, Loader2 } from "lucide-react";
+import { Flame, Zap } from "lucide-react";
+import { ListSkeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 
 interface HomeRunEntry {
@@ -41,9 +42,9 @@ export function HomeRunDerby() {
 
   if (isLoading) {
     return (
-      <div className="glass rounded-2xl p-6 text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-warning-track" />
-        <p className="mt-2 text-xs text-slate-500">Loading today's hardest-hit balls…</p>
+      <div className="glass rounded-2xl p-4">
+        <p className="mb-3 text-xs text-slate-500">Loading today&apos;s hardest-hit balls…</p>
+        <ListSkeleton rows={5} marker="none" />
       </div>
     );
   }

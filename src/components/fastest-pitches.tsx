@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gauge, Loader2 } from "lucide-react";
+import { Gauge } from "lucide-react";
+import { ListSkeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
 import { HomeRunDerby } from "@/components/home-run-derby";
 
@@ -51,9 +52,9 @@ function FastestPitches() {
 
   if (isLoading) {
     return (
-      <div className="glass rounded-2xl p-6 text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-warning-track" />
-        <p className="mt-2 text-xs text-slate-500">Loading fastest pitches…</p>
+      <div className="glass rounded-2xl p-4">
+        <p className="mb-3 text-xs text-slate-500">Loading fastest pitches…</p>
+        <ListSkeleton rows={5} marker="none" />
       </div>
     );
   }

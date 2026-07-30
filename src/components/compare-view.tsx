@@ -4,11 +4,11 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  GitCompare, Search, Loader2, X,
+  GitCompare, Search, X,
   Target, Award,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Skeleton, EmptyState, ErrorState } from "@/components/loading-states";
+import { Skeleton, ListSkeleton, EmptyState, ErrorState } from "@/components/loading-states";
 import { SprayChart, type SprayPoint } from "@/components/spray-chart";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
@@ -273,7 +273,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
   if (loading1 || loading2) {
     return (
       <div className="mt-4 glass rounded-xl p-6">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-warning-track" />
+        <ListSkeleton rows={6} marker="none" />
       </div>
     );
   }
@@ -543,7 +543,7 @@ function SprayChartComparison({ player1Id, player2Id, name1, name2 }: {
   if (loading1 || loading2) {
     return (
       <div className="border-t border-chalk p-4">
-        <Loader2 className="mx-auto h-5 w-5 animate-spin text-warning-track" />
+        <ListSkeleton rows={4} marker="none" />
       </div>
     );
   }

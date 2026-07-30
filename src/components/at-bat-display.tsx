@@ -74,8 +74,10 @@ export function AtBatDisplay({
         </div>
       )}
 
-      {/* Matchup + count */}
-      <div className="flex shrink-0 flex-col items-center gap-3 border-b border-chalk px-4 py-3 sm:flex-row sm:justify-between sm:gap-3">
+      {/* Matchup + count — always a row, even on phones. Stacking these three
+          blocks vertically on narrow viewports was the single biggest thing
+          pushing the strike zone below the fold on mobile (~200px). */}
+      <div className="flex shrink-0 flex-row items-center justify-between gap-1.5 border-b border-chalk px-3 py-3 sm:gap-3 sm:px-4">
         <PlayerCard
           playerId={firstPitch.pitcherId}
           name={firstPitch.pitcherName}

@@ -234,6 +234,14 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         ) : (
           <Scoreboard linescore={linescore} status={status} teams={teams} gamePk={gamePk} />
         )}
+        {/* On mobile the 3-column grid stacks into 1, so Live Game Thread
+            (normally first in the 3rd column) would otherwise sit below all
+            of this column and the pitch log — thousands of pixels down.
+            Shown here instead, right under the score, on narrow screens only;
+            hidden lg:block below keeps the desktop column layout unchanged. */}
+        <div className="lg:hidden">
+          <LiveGameThread gamePk={gamePk} />
+        </div>
         <WinProbabilityChart gamePk={gamePk} />
         <LineupChanges gamePk={gamePk} />
         <StreakTracker />
@@ -367,9 +375,12 @@ function GameFeed({ gamePk }: { gamePk: number }) {
       </div>
 
       {/* Right column: Game Thread first — it's the play-by-play readers open
-          this column for, so it shouldn't sit below the WPA chart's height. */}
+          this column for, so it shouldn't sit below the WPA chart's height.
+          Hidden below lg since the mobile copy above already covers it. */}
       <div className="lg:col-span-4 space-y-4">
-        <LiveGameThread gamePk={gamePk} />
+        <div className="hidden lg:block">
+          <LiveGameThread gamePk={gamePk} />
+        </div>
         <WPALeaderboard gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">

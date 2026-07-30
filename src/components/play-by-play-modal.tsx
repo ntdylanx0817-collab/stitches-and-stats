@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Loader2, X, Activity } from "lucide-react";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 import { Portal } from "@/components/ui/portal";
 import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
@@ -196,7 +197,7 @@ export function PlayByPlayModal({
             </div>
           ) : plays.length === 0 ? (
             <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-slate-500">
-              <Activity className="h-6 w-6 text-slate-600" />
+              <BaseballMark size={36} className="text-slate-600" />
               <span>{state === "Preview" ? "Game hasn't started yet" : "No play data available yet"}</span>
               {state === "Live" && (
                 <span className="text-[10px] font-scoreboard uppercase tracking-wide text-warning-track">

@@ -21,6 +21,7 @@ import { WPALeaderboard } from "@/components/wpa-leaderboard";
 import { StreakTracker } from "@/components/streak-tracker";
 import { BullpenStatus } from "@/components/bullpen-status";
 import { GameSelectorStrip } from "@/components/game-selector-strip";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 import { useGamePitches, updatedAgoLabel } from "@/hooks/use-game-pitches";
 import { latestAtBatIndex } from "@/lib/at-bat";
 import { useSavantStore } from "@/lib/store";
@@ -46,8 +47,22 @@ export function LiveFeedView() {
       {selectedGamePk ? (
         <GameFeed key={selectedGamePk} gamePk={selectedGamePk} />
       ) : (
-        <div className="glass flex h-96 items-center justify-center rounded-2xl text-slate-400">
-          Select a game above to view live pitch-by-pitch data
+        <div className="glass relative flex h-96 flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl px-6 text-center">
+          {/* Inline placement — see BaseballMark: `.glass > *` beats `absolute`. */}
+          <BaseballMark
+            size={340}
+            className="pointer-events-none text-warning-track/[0.06]"
+            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
+          />
+          <BaseballMark size={56} className="relative text-warning-track/60" />
+          <div className="relative">
+            <h3 className="font-scoreboard text-lg font-bold uppercase tracking-wide text-chalk">
+              No game selected
+            </h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Pick a game above to follow it pitch by pitch.
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -349,7 +364,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                       </>
                     ) : (
                       <>
-                        <Activity className="h-6 w-6 text-slate-500" />
+                        <BaseballMark size={40} className="text-slate-600" />
                         <div className="text-sm">No pitches available</div>
                         <div className="text-xs text-slate-500">Statcast data may not be available for this game.</div>
                       </>

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 /** Shimmer skeleton block for loading states */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
@@ -97,12 +98,24 @@ export function EmptyState({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-10 text-center"
+      className="glass relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl p-10 text-center"
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-warning-track/20 bg-warning-track/5">
+      {/* Oversized ball behind the copy. Faint enough to read as texture, and
+          it fills what is otherwise a large empty panel with something that
+          belongs to the sport. */}
+      {/* Positioned inline, not with `absolute`: `.glass > *` sets
+          `position: relative` on every direct child and ties with the utility
+          on specificity, which would drop this into flow above the copy
+          instead of behind it. */}
+      <BaseballMark
+        size={190}
+        className="pointer-events-none text-warning-track/[0.07]"
+        style={{ position: "absolute", top: -32, right: -32 }}
+      />
+      <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-warning-track/20 bg-warning-track/5">
         <Icon className="h-6 w-6 text-warning-track/70" />
       </div>
-      <div>
+      <div className="relative">
         <h3 className="mb-1 text-base font-semibold text-white">{title}</h3>
         {description && (
           <p className="mx-auto max-w-md text-sm text-slate-400">{description}</p>

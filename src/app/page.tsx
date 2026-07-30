@@ -39,7 +39,13 @@ export default function Home() {
             animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
             exit={{ opacity: 0, y: -20, scale: 0.98, rotateX: -2 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            style={{ transformOrigin: "top center", perspective: 1000 }}
+            // No `perspective` here: as a CSS property it only applies to a
+            // child's own 3D transform, so it never affected this element's
+            // own rotateX — but it *did* make this div the containing block
+            // for every `position: fixed` descendant, which put the modals
+            // and the sticky mini-scoreboard at page coordinates instead of
+            // viewport ones (off-screen entirely on a tall mobile page).
+            style={{ transformOrigin: "top center" }}
           >
             {view === "live" && <LiveFeedView />}
             {view === "live-at-bat" && <LiveAtBatView />}

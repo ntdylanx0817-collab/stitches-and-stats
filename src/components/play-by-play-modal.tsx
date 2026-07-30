@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Loader2, X, Activity } from "lucide-react";
+import { Portal } from "@/components/ui/portal";
 import { getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch, GameFeedResponse, GameStatus, Linescore } from "@/lib/types";
@@ -83,6 +84,7 @@ export function PlayByPlayModal({
   // For Preview games, show a friendly "hasn't started" message
   // but still render the modal so the user sees the structure.
   return (
+    <Portal>
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -273,6 +275,7 @@ export function PlayByPlayModal({
         </div>
       </motion.div>
     </motion.div>
+    </Portal>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Maximize2, X } from "lucide-react";
+import { Portal } from "@/components/ui/portal";
 import { AtBatDisplay } from "@/components/at-bat-display";
 import type { EnrichedPitch } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, on
   if (pitches.length === 0) return null;
 
   return (
+    <Portal>
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -84,5 +86,6 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, on
         />
       </motion.div>
     </motion.div>
+    </Portal>
   );
 }

@@ -120,3 +120,62 @@ describe("fetchLeaderboard team-column fallback", () => {
     await expect(run(boom, { year: 2003, min: 3 })).rejects.toThrow();
   });
 });
+
+describe("team-column diagnostics", () => {
+  const originalFetch = globalThis.fetch;
+
+  /** Capture what the logger writes while a fetch runs. */
+  async function capture(csv: string, opts: object, failFirst = false) {
+    const { fetchLeaderboard } = await import("@/lib/mlb-api");
+    const lines: string[] = [];
+    const saved = {
+      log: console.log, warn: console.warn, error: console.error,
+      level: process.env.LOG_LEVEL,
+    };
+    // The suite runs with LOG_LEVEL=silent; the threshold is re-read on every
+    // write, so lifting it here is enough. warn has its own console sink.
+    process.env.LOG_LEVEL = "debug";
+    const sink = (...a: unknown[]) => { lines.push(a.map(String).join(" ")); };
+    console.log = sink; console.warn = sink; console.error = sink;
+
+    let attempt = 0;
+    globalThis.fetch = (async () => {
+      attempt++;
+      if (failFirst && attempt === 1) return new Response("nope", { status: 400 });
+      return new Response(csv, { status: 200 });
+    }) as typeof fetch;
+
+    try {
+      await fetchLeaderboard(opts);
+    } finally {
+      globalThis.fetch = originalFetch;
+      console.log = saved.log; console.warn = saved.warn; console.error = saved.error;
+      if (saved.level === undefined) delete process.env.LOG_LEVEL;
+      else process.env.LOG_LEVEL = saved.level;
+    }
+    return lines.join("\n");
+  }
+
+  const WITH_TEAM = 'player_id,team_name_alt,woba\n592450,NYY,0.42\n';
+  const WITHOUT_TEAM = 'player_id,woba\n592450,0.42\n';
+
+  test("names the column that resolved", async () => {
+    const out = await capture(WITH_TEAM, { year: 2011, min: 11 });
+    expect(out).toContain("team column resolved");
+    expect(out).toContain("team_name_alt");
+  });
+
+  test("says so when the response carried no team column", async () => {
+    // Savant accepted the request but has no such column.
+    const out = await capture(WITHOUT_TEAM, { year: 2012, min: 12 });
+    expect(out).toContain("no team column");
+  });
+
+  test("the rejection path is distinguishable from the missing-column path", async () => {
+    const out = await capture(WITHOUT_TEAM, { year: 2013, min: 13 }, true);
+    expect(out).toContain("rejected");
+    // The retry drops the columns, so the no-column line must not also fire —
+    // otherwise the two failure modes would look identical in the logs.
+    expect(out).not.toContain("no team column");
+  });
+});

@@ -319,15 +319,41 @@ export async function fetchLeaderboard(opts: {
     // rejects the request outright is unconfirmed, so both are handled: on any
     // failure, retry with exactly the selection list that was working before.
     try {
-      return await request([...TEAM_COLUMN_CANDIDATES, base].join(","));
+      const rows = await request([...TEAM_COLUMN_CANDIDATES, base].join(","));
+      reportTeamColumn(rows, type);
+      return rows;
     } catch (err) {
       logger.warn("leaderboard team columns rejected; retrying without them", {
         type,
         ...serializeError(err),
+        outcome: "savant rejects unknown selections — TEAM_COLUMN_CANDIDATES must name a real column",
       });
       return request(base);
     }
   });
+}
+
+/**
+ * Say which team column came back, once per uncached fetch.
+ *
+ * The candidate names in TEAM_COLUMN_CANDIDATES are unverified — the endpoint
+ * is unreachable from CI — so this turns "why are the bars not team-coloured?"
+ * into one log line instead of a guess. Together with the rejection warning it
+ * distinguishes the two failure modes: a warning there means Savant refused
+ * the request, this line means it accepted and simply returned no such column.
+ */
+function reportTeamColumn(rows: LeaderboardRow[], type: string): void {
+  const sample = rows[0];
+  if (!sample) return;
+  const found = TEAM_COLUMN_CANDIDATES.find((c) => sample[c] !== undefined && sample[c] !== "");
+  if (found) {
+    logger.info("leaderboard team column resolved", { type, column: found });
+  } else {
+    logger.warn("leaderboard returned no team column; bars fall back to rank colour", {
+      type,
+      tried: [...TEAM_COLUMN_CANDIDATES],
+    });
+  }
 }
 
 /** Parse the savant leaderboard CSV into rows of typed records. */

@@ -37,7 +37,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       # Each step runs even if an earlier one failed, so a single push reports
-      # every problem at once instead of one per round trip.
+      # every problem at once instead of one per round trip. A consequence
+      # worth knowing when reading a failed run: later steps still execute, so
+      # the end of the log can look healthy while the job is red. Check the
+      # job's conclusion, not the tail of its output.
+      #
+      # `bun run verify` runs these same four locally. Keep the two in step —
+      # a local check narrower than this one is how a red build gets merged.
       - name: Typecheck
         if: '!cancelled()'
         run: bun run typecheck

@@ -159,17 +159,21 @@ export function StrikeZone({
   const safeSzBot = typeof szBot === "number" && !isNaN(szBot) ? szBot : 1.5;
   const recentPitches = useMemo(() => pitches.slice(-maxPitches), [pitches, maxPitches]);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  // A pitch type isolated from the legend. Colour alone cannot separate
+  // thirteen types under dichromatic vision, so this gives an exact answer:
+  // pick a type and only its pitches stay lit.
+  const [pinnedType, setPinnedType] = useState<string | null>(null);
 
   // Only the types actually plotted, in descending frequency, so the legend
   // stays short and describes this at-bat rather than the whole rulebook.
   const legend = useMemo(() => {
-    const seen = new Map<string, { label: string; color: string; count: number }>();
+    const seen = new Map<string, { code: string; label: string; color: string; count: number }>();
     for (const p of recentPitches) {
       const code = p.pitchType?.toUpperCase();
       if (!code) continue;
       const entry = seen.get(code);
       if (entry) entry.count++;
-      else seen.set(code, { label: p.pitchName ?? code, color: getPitchColor(code), count: 1 });
+      else seen.set(code, { code, label: p.pitchName ?? code, color: getPitchColor(code), count: 1 });
     }
     return [...seen.values()].sort((a, b) => b.count - a.count);
   }, [recentPitches]);
@@ -345,7 +349,8 @@ export function StrikeZone({
             // Pointing at one pitch pushes the rest back, so a dense cluster
             // resolves into the single dot the tooltip is describing.
             const isHovered = hoveredIdx === idx;
-            const isDimmed = hoveredIdx != null && !isHovered;
+            const offPinnedType = pinnedType != null && p.pitchType?.toUpperCase() !== pinnedType;
+            const isDimmed = (hoveredIdx != null && !isHovered) || offPinnedType;
 
             return (
               <motion.g
@@ -461,18 +466,33 @@ export function StrikeZone({
           of living only in a hover tooltip — which also saves everyone from
           pointing at each dot to learn what was thrown. */}
       {showLabels && legend.length > 0 && (
-        <ul className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px]">
-          {legend.map((item) => (
-            <li key={item.label} className="flex items-center gap-1 text-slate-400">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: item.color }}
-                aria-hidden
-              />
-              <span>{item.label}</span>
-              <span className="num text-slate-600">{item.count}</span>
-            </li>
-          ))}
+        <ul className="mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px]">
+          {legend.map((item) => {
+            const active = pinnedType === item.code;
+            return (
+              <li key={item.code}>
+                <button
+                  type="button"
+                  onClick={() => setPinnedType(active ? null : item.code)}
+                  aria-pressed={active}
+                  aria-label={`Show only ${item.label} (${item.count} thrown)`}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-1.5 py-0.5 transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warning-track",
+                    active ? "bg-white/10 text-chalk" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  )}
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden
+                  />
+                  <span>{item.label}</span>
+                  <span className="num text-slate-600">{item.count}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 

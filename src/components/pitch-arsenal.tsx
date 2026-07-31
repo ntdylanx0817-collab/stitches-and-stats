@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { Zap } from "lucide-react";
+import { getPitchColor } from "@/components/strike-zone";
 
 /** One wedge of the pitch-mix donut. */
 interface DonutArc {
@@ -26,27 +27,8 @@ interface PitchArsenalProps {
   className?: string;
 }
 
-const PITCH_COLORS: Record<string, string> = {
-  "4-Seam Fastball": "#FF6B6B",
-  "Sinker": "#FF8E72",
-  "Cutter": "#FFB547",
-  "Slider": "#4DA3FF",
-  "Sweeper": "#5DADEC",
-  "Curveball": "#3DDBA0",
-  "Knuckle Curve": "#7BE3B4",
-  "Slow Curve": "#A78BFA",
-  "Changeup": "#FFB547",
-  "Split-Finger": "#C68BFF",
-  "Splitter": "#C68BFF",
-  "Slurve": "#5DADEC",
-  "Forkball": "#94A3B8",
-  "Knuckleball": "#94A3B8",
-  "Two-Seam Fastball": "#FF8E72",
-};
 
-function getPitchColor(name: string): string {
-  return PITCH_COLORS[name] || "#94A3B8";
-}
+
 
 export function PitchArsenal({ data, isPitcher, className }: PitchArsenalProps) {
   const topPitches = useMemo(() => {

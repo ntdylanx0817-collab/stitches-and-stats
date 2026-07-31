@@ -53,9 +53,42 @@ const PITCH_COLORS: Record<string, string> = {
   FO: "#94A3B8", // pitch out
 };
 
-function getPitchColor(pitchType?: string): string {
-  if (!pitchType) return "#94A3B8";
-  return PITCH_COLORS[pitchType.toUpperCase()] ?? "#94A3B8";
+/**
+ * Savant sends the type as a code on pitch data and as a full name elsewhere,
+ * so both resolve here. Names map to codes rather than to colours directly —
+ * that way PITCH_COLORS stays the only place a pitch colour is decided, and
+ * the arsenal, movement plot and zone cannot drift apart again. They had:
+ * three copies of this palette existed, so a 4-seam was one colour on the plot
+ * and another in the arsenal.
+ */
+const PITCH_NAME_TO_CODE: Record<string, string> = {
+  "4-seam fastball": "FF",
+  "two-seam fastball": "FT",
+  "sinker": "SI",
+  "cutter": "FC",
+  "slider": "SL",
+  "sweeper": "ST",
+  "slurve": "ST",
+  "curveball": "CU",
+  "knuckle curve": "KC",
+  "slow curve": "CS",
+  "screwball": "SC",
+  "changeup": "CH",
+  "split-finger": "FS",
+  "splitter": "FS",
+  "forkball": "FO",
+  "knuckleball": "KN",
+};
+
+const PITCH_FALLBACK = "#94A3B8";
+
+function getPitchColor(pitchTypeOrName?: string): string {
+  if (!pitchTypeOrName) return PITCH_FALLBACK;
+  const key = pitchTypeOrName.trim();
+  const byCode = PITCH_COLORS[key.toUpperCase()];
+  if (byCode) return byCode;
+  const code = PITCH_NAME_TO_CODE[key.toLowerCase()];
+  return code ? PITCH_COLORS[code] ?? PITCH_FALLBACK : PITCH_FALLBACK;
 }
 
 /** Short result label for the hover tooltip. Kept local (not imported from

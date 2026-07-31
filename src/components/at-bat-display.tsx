@@ -6,7 +6,7 @@ import { StrikeZone } from "@/components/strike-zone";
 import { PlayerCard } from "@/components/player-card";
 import { CountDisplay } from "@/components/count-display";
 import { PitchSequenceList } from "@/components/pitch-sequence-list";
-import { safeToFixed } from "@/components/pitch-log-entry";
+import { AnimatedCounter } from "@/components/animated-counter";
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { EnrichedPitch } from "@/lib/types";
@@ -56,9 +56,11 @@ export function AtBatDisplay({
   const pitchingColor = pitchingTeamId != null ? getDisplayTeamColor(pitchingTeamId) : undefined;
 
   const inPlayResult = lastPitch.isInPlay ? lastPitch : null;
-  const exitVelo = safeToFixed(inPlayResult?.exitVelocity, 1);
-  const launchAngle = safeToFixed(inPlayResult?.launchAngle, 0);
-  const hitDistance = safeToFixed(inPlayResult?.hitDistance, 0);
+  // Raw numbers rather than formatted strings: StatBlock animates the
+  // count-up and does its own rounding.
+  const exitVelo = toNumber(inPlayResult?.exitVelocity);
+  const launchAngle = toNumber(inPlayResult?.launchAngle);
+  const hitDistance = toNumber(inPlayResult?.hitDistance);
   const hasBattedBallStats = exitVelo != null || launchAngle != null || hitDistance != null;
 
   const selectedPitchId = selectedPitch
@@ -70,7 +72,7 @@ export function AtBatDisplay({
       {/* Batted-ball stats bar */}
       {hasBattedBallStats && (
         <div className="grid shrink-0 grid-cols-3 gap-2 border-b border-chalk bg-warning-track/5 px-4 py-3">
-          <StatBlock label="Exit Velo" value={exitVelo} unit="mph" large={isPage} />
+          <StatBlock label="Exit Velo" value={exitVelo} decimals={1} unit="mph" large={isPage} />
           <StatBlock label="Distance" value={hitDistance} unit="ft" large={isPage} />
           <StatBlock label="Launch Angle" value={launchAngle} unit="deg" large={isPage} />
         </div>
@@ -136,9 +138,19 @@ export function AtBatDisplay({
   );
 }
 
-function StatBlock({ label, value, unit, large }: {
+/** Coerce a feed value to a finite number, or null. Mirrors safeToFixed's
+  * guards but keeps the number so it can be animated. */
+function toNumber(val: unknown): number | null {
+  if (val == null) return null;
+  const n = typeof val === "number" ? val : Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
+function StatBlock({ label, value, decimals = 0, unit, large }: {
   label: string;
-  value: string | null;
+  /** Raw number so the readout can count up; null renders an empty cell. */
+  value: number | null;
+  decimals?: number;
   unit: string;
   large?: boolean;
 }) {
@@ -149,7 +161,12 @@ function StatBlock({ label, value, unit, large }: {
         "font-scoreboard font-black text-warning-track num",
         large ? "text-xl sm:text-3xl" : "text-lg sm:text-xl"
       )}>
-        {value} <span className="text-xs font-medium text-slate-400">{unit}</span>
+        {/* Counts up on mount, the way a broadcast reveals a batted ball.
+            These only render once a ball is actually in play, so the reveal
+            marks a real moment rather than firing on every render. */}
+        <AnimatedCounter value={value} decimals={decimals} />
+        {" "}
+        <span className="text-xs font-medium text-slate-400">{unit}</span>
       </div>
       <div className="label-xs text-slate-500">{label}</div>
     </div>

@@ -128,6 +128,8 @@ describe("team-column diagnostics", () => {
   async function capture(csv: string, opts: object, failFirst = false) {
     const { fetchLeaderboard } = await import("@/lib/mlb-api");
     const lines: string[] = [];
+    /* eslint-disable no-console -- the point of this helper is to intercept
+       the logger's console sinks; the originals are restored in `finally`. */
     const saved = {
       log: console.log, warn: console.warn, error: console.error,
       level: process.env.LOG_LEVEL,
@@ -153,6 +155,7 @@ describe("team-column diagnostics", () => {
       if (saved.level === undefined) delete process.env.LOG_LEVEL;
       else process.env.LOG_LEVEL = saved.level;
     }
+    /* eslint-enable no-console */
     return lines.join("\n");
   }
 

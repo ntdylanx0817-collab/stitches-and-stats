@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { Maximize2, X } from "lucide-react";
 import { Portal } from "@/components/ui/portal";
 import { AtBatDisplay } from "@/components/at-bat-display";
@@ -22,13 +22,8 @@ interface AtBatDetailsModalProps {
  * {@link AtBatDisplay}. The Live At-Bat tab renders the same body full-width.
  */
 export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, onOpenInTab }: AtBatDetailsModalProps) {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // Escape, the focus trap and focus restoration all live in the hook.
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   if (pitches.length === 0) return null;
 
@@ -46,7 +41,9 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, on
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-strong flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="glass-strong flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { X, Activity } from "lucide-react";
 import { ListSkeleton } from "@/components/loading-states";
 import { BaseballMark } from "@/components/ui/baseball-mark";
@@ -76,6 +77,8 @@ export function PlayByPlayModal({
     staleTime: 5_000,
   });
 
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+
   const awayColor = getTeamColor(awayTeamId);
   const homeColor = getTeamColor(homeTeamId);
   const state = status?.abstractGameState ?? data?.status?.abstractGameState ?? "Preview";
@@ -99,7 +102,12 @@ export function PlayByPlayModal({
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, y: 20, opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="glass-strong rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="play-by-play-title"
+        className="glass-strong rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
         style={{ background: `linear-gradient(180deg, ${awayColor.primary}10, ${homeColor.primary}10, #050a14)` }}
       >
@@ -107,7 +115,7 @@ export function PlayByPlayModal({
         <div className="flex items-center justify-between p-4 border-b border-chalk shrink-0">
           <div className="flex items-center gap-3">
             <Activity className="h-5 w-5 text-warning-track" />
-            <h2 className="font-scoreboard text-lg font-bold text-chalk uppercase tracking-wide">Play-by-Play</h2>
+            <h2 id="play-by-play-title" className="font-scoreboard text-lg font-bold text-chalk uppercase tracking-wide">Play-by-Play</h2>
             {state === "Live" && (
               <span className="flex items-center gap-1 rounded-md bg-mint/15 px-2 py-0.5">
                 <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />

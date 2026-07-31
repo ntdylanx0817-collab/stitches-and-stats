@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 
 interface AnimatedCounterProps {
   value: number;
@@ -24,6 +24,12 @@ export function AnimatedCounter({
   suffix = "",
   className,
 }: AnimatedCounterProps) {
+  // MotionConfig's reducedMotion only governs transform and layout on motion
+  // components. This animates *text content*, which Framer cannot recognise as
+  // motion, so the preference has to be read directly. A number ticking upward
+  // is decoration; the number itself is the information, so reduced motion
+  // gets the value straight away.
+  const reduceMotion = useReducedMotion();
   const motionValue = useMotionValue(0);
   const spring = useSpring(motionValue, { duration: duration * 1000, bounce: 0.3 });
   const display = useTransform(spring, (latest) => {
@@ -42,6 +48,10 @@ export function AnimatedCounter({
     return () => unsubscribe();
   }, [display]);
 
+  if (reduceMotion) {
+    return <span className={className}>{`${prefix}${value.toFixed(decimals)}${suffix}`}</span>;
+  }
+
   return (
     <motion.span
       className={className}
@@ -58,10 +68,18 @@ export function AnimatedCounter({
  * Hook version for inline use — returns the animated string.
  */
 export function useAnimatedValue(value: number, decimals: number = 0, duration: number = 0.8): string {
+  const reduceMotion = useReducedMotion();
   const [display, setDisplay] = useState("0");
   const ref = useRef({ current: 0, target: value, startTime: 0, raf: 0 });
 
   useEffect(() => {
+    // Nothing to animate; the formatted value is returned directly below, so
+    // no state write is needed (and writing one here trips
+    // react-hooks/set-state-in-effect).
+    if (reduceMotion) {
+      ref.current.current = value;
+      return;
+    }
     const start = performance.now();
     const startVal = ref.current.current;
     const endVal = value;
@@ -87,7 +105,7 @@ export function useAnimatedValue(value: number, decimals: number = 0, duration: 
     // runs, which is not necessarily the frame this effect scheduled.
     const state = ref.current;
     return () => cancelAnimationFrame(state.raf);
-  }, [value, decimals, duration]);
+  }, [value, decimals, duration, reduceMotion]);
 
-  return display;
+  return reduceMotion ? value.toFixed(decimals) : display;
 }

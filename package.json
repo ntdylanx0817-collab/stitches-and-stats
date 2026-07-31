@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p mini-services/live-feed/tsconfig.json",
     "test": "LOG_LEVEL=silent bun test",
-    "test:watch": "LOG_LEVEL=silent bun test --watch"
+    "test:watch": "LOG_LEVEL=silent bun test --watch",
+    "verify": "bun run typecheck && bun run test && bun run lint && bun run build"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",

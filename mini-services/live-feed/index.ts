@@ -133,6 +133,65 @@ function log(msg: string, fields: Record<string, unknown> = {}, level: 'info' | 
   }
 }
 
+/**
+ * Origins allowed to open a WebSocket connection to this service.
+ *
+ * The frontend normally reaches this service through the Caddy gateway on
+ * the same origin (see socket-provider.tsx's `XTransformPort` comment), so a
+ * same-origin browser client never needs CORS clearance at all — this list
+ * only matters for direct cross-origin connections. It used to be `origin:
+ * '*'`, which let any website's script connect and ride along on this
+ * deployment's outbound polling of the MLB/Savant APIs.
+ *
+ * Comma-separated via ALLOWED_ORIGINS. Unset means "same-origin only" in
+ * production; local dev gets localhost so `bun dev` works without any setup.
+ */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
+
+if (ALLOWED_ORIGINS.length === 0 && process.env.NODE_ENV === 'production') {
+  log(
+    'ALLOWED_ORIGINS is unset in production — cross-origin WebSocket connections will be rejected. Set it to a comma-separated list of trusted origins if the frontend is served from a different origin than this service.',
+    {},
+    'warn'
+  )
+}
+
+const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true
+  const allowed = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEV_ORIGINS
+  return allowed.includes(origin)
+}
+
+/**
+ * Sets Access-Control-Allow-Origin on the polling transport's HTTP
+ * responses. This alone does NOT block anything — the `cors` package only
+ * shapes response headers, and a browser does not enforce CORS on the raw
+ * WebSocket transport the way it does on XHR/fetch. `allowRequest` below is
+ * what actually rejects a connection.
+ */
+function corsOriginCheck(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  callback(null, isOriginAllowed(origin))
+}
+
+/**
+ * Engine.IO invokes this for every incoming request — polling *and* the
+ * WebSocket upgrade alike — before a transport is established, and can
+ * refuse the connection outright. This is the actual enforcement point.
+ *
+ * `cors.origin` alone left every transport open regardless of its verdict:
+ * a `transports: ['websocket']` client with an untrusted Origin header
+ * connected successfully in testing even after `cors.origin` was wired up,
+ * because Socket.IO's `cors` config never gates the upgrade path.
+ */
+function allowRequest(req: IncomingMessage, callback: (err: string | null | undefined, success: boolean) => void) {
+  callback(null, isOriginAllowed(req.headers.origin))
+}
+
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -408,7 +467,8 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
 
 const io = new Server(httpServer, {
   path: '/',
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { origin: corsOriginCheck, methods: ['GET', 'POST'] },
+  allowRequest,
   pingTimeout: 60000,
   pingInterval: 25000,
 })

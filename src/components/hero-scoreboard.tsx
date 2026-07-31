@@ -74,12 +74,31 @@ export function HeroScoreboard({
   const homeScored = useScored(homeScore ?? 0);
   const scoringInk = awayScored ? awayInk : homeScored ? homeInk : null;
 
+  // What a screen reader is told about this game. The app's whole purpose is
+  // live updates and none of them were announced — a run scoring changed the
+  // page silently. Rebuilt from score and half-inning only, so the region's
+  // text changes exactly when something worth hearing happens; a pitch-level
+  // feed here would talk over the user every twenty seconds.
+  const liveSummary = (() => {
+    const away = `${awayName || awayAbbr} ${awayScore ?? 0}`;
+    const home = `${homeName || homeAbbr} ${homeScore ?? 0}`;
+    if (state !== "Live") return `${state}. ${away}, ${home}.`;
+    const half = [status?.inningState, status?.inning].filter(Boolean).join(" ");
+    return `${half ? half + ". " : ""}${away}, ${home}.`;
+  })();
+
   const startTime = gameDate
     ? new Date(gameDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
     : null;
 
   return (
     <>
+    {/* Outside the button on purpose. Inside, its text joined the button's
+        accessible name, so the control announced the score twice — once as
+        its own label and again as the status. */}
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {liveSummary}
+    </p>
     <motion.button
       onClick={() => setExpanded(true)}
       whileHover={{ scale: 1.005 }}

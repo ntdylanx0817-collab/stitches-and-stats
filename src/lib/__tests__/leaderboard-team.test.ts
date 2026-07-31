@@ -52,7 +52,9 @@ describe("parseLeaderboardCSV team normalisation", () => {
     // The whole point of the fallback: losing team data must not lose the rest.
     const r = row("player_id,player_name,woba", '592450,"Judge, Aaron",0.42');
     expect(r.player_id).toBe(592450);
-    expect(r.woba).toBe(0.42);
+    // Number(): the row type declares woba as a string, but the parser
+    // coerces numeric cells, so the runtime value here is 0.42 the number.
+    expect(Number(r.woba)).toBe(0.42);
     expect(r.team).toBeUndefined();
   });
 
@@ -79,7 +81,7 @@ describe("fetchLeaderboard team-column fallback", () => {
       const url = String(input);
       urls.push(url);
       return handler(url, urls.length);
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     try {
       const rows = await fetchLeaderboard(opts);
       return { rows, urls };
@@ -145,7 +147,7 @@ describe("team-column diagnostics", () => {
       attempt++;
       if (failFirst && attempt === 1) return new Response("nope", { status: 400 });
       return new Response(csv, { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       await fetchLeaderboard(opts);

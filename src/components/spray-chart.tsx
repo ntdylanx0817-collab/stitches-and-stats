@@ -42,18 +42,22 @@ function savantToSVG(x: number, y: number) {
 
 function getEventColor(event: string): string {
   switch (event) {
-    case "home_run": return "#FF3B5C";
-    case "triple": return "#A78BFA";
-    case "double": return "#4DA3FF";
-    case "single": return "#3DDBA0";
+    // Okabe-Ito, picked so the six outcomes stay separable for dichromatic
+    // vision: the previous set collapsed 2B into 1B and 1B into OUT under
+    // red-green deficiency, which are the two distinctions that matter most
+    // on a spray chart.
+    case "home_run": return "#D55E00";
+    case "triple": return "#CC79A7";
+    case "double": return "#0072B2";
+    case "single": return "#56B4E9";
     case "field_out":
     case "grounded_into_double_play":
     case "force_out":
     case "fielders_choice":
     case "fielders_choice_out":
-      return "#64748B";
+      return "#7A8699";
     case "sac_fly":
-      return "#FFB547";
+      return "#F0E442";
     case "field_error":
       return "#FF8E72";
     default:
@@ -278,12 +282,12 @@ export function SprayChart({ data, playerHand, className }: SprayChartProps) {
         {/* Legend */}
         <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px]">
           {[
-            { label: "HR", color: "#FF3B5C" },
-            { label: "3B", color: "#A78BFA" },
-            { label: "2B", color: "#4DA3FF" },
-            { label: "1B", color: "#3DDBA0" },
-            { label: "OUT", color: "#64748B" },
-            { label: "SF", color: "#FFB547" },
+            { label: "HR", color: "#D55E00" },
+            { label: "3B", color: "#CC79A7" },
+            { label: "2B", color: "#0072B2" },
+            { label: "1B", color: "#56B4E9" },
+            { label: "OUT", color: "#7A8699" },
+            { label: "SF", color: "#F0E442" },
           ].map((item) => (
             <span key={item.label} className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />

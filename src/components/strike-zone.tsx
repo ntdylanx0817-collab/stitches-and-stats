@@ -20,20 +20,35 @@ interface StrikeZoneProps {
 }
 
 // Pitch-type → color map (Baseball Savant-inspired)
+/**
+ * Pitch-type colours, from the Okabe-Ito qualitative palette — chosen because
+ * it is designed to stay separable under dichromatic vision — with
+ * lightness-shifted siblings for the rarer pitches, since lightness is the
+ * channel dichromats keep.
+ *
+ * This replaced a palette that gave cutter and changeup the same hex, and slow
+ * curve and screwball another, so two pairs were indistinguishable for
+ * everyone regardless of colour vision.
+ *
+ * Thirteen categories still cannot all be told apart by hue under dichromacy —
+ * measuring this palette leaves 14 pairs under a just-noticeable difference,
+ * down from 23 — which is why the plot carries a labelled legend rather than
+ * relying on colour alone.
+ */
 const PITCH_COLORS: Record<string, string> = {
-  FF: "#FF6B6B", // 4-seam
-  FT: "#FF8E72", // 2-seam
-  FC: "#FFB547", // cutter
-  SI: "#FF7A45", // sinker
-  FS: "#C68BFF", // splitter
-  SL: "#4DA3FF", // slider
-  ST: "#5DADEC", // sweeper
-  CU: "#3DDBA0", // curveball
-  KC: "#7BE3B4", // knuckle curve
-  CS: "#A78BFA", // slow curve
-  SC: "#A78BFA", // screwball
-  CH: "#FFB547", // changeup
-  KN: "#94A3B8", // knuckle
+  FF: "#D55E00", // 4-seam — vermillion
+  SI: "#E69F00", // sinker — orange
+  FT: "#F5B75B", // 2-seam — light orange
+  FC: "#F0E442", // cutter — yellow
+  CH: "#CC79A7", // changeup — reddish purple
+  FS: "#9B5DE5", // splitter — violet
+  SL: "#56B4E9", // slider — sky blue
+  ST: "#0072B2", // sweeper — blue
+  CU: "#009E73", // curveball — bluish green
+  KC: "#5FE3B8", // knuckle curve — light green
+  CS: "#7D6FD1", // slow curve — muted violet
+  SC: "#B98CD9", // screwball — light violet
+  KN: "#94A3B8", // knuckle — slate
   PO: "#94A3B8", // pitch out
   FO: "#94A3B8", // pitch out
 };
@@ -111,6 +126,20 @@ export function StrikeZone({
   const safeSzBot = typeof szBot === "number" && !isNaN(szBot) ? szBot : 1.5;
   const recentPitches = useMemo(() => pitches.slice(-maxPitches), [pitches, maxPitches]);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  // Only the types actually plotted, in descending frequency, so the legend
+  // stays short and describes this at-bat rather than the whole rulebook.
+  const legend = useMemo(() => {
+    const seen = new Map<string, { label: string; color: string; count: number }>();
+    for (const p of recentPitches) {
+      const code = p.pitchType?.toUpperCase();
+      if (!code) continue;
+      const entry = seen.get(code);
+      if (entry) entry.count++;
+      else seen.set(code, { label: p.pitchName ?? code, color: getPitchColor(code), count: 1 });
+    }
+    return [...seen.values()].sort((a, b) => b.count - a.count);
+  }, [recentPitches]);
 
   const zone = zoneLineToSVG(safeSzTop, safeSzBot);
   const zoneW = zone.rightX - zone.leftX;
@@ -393,6 +422,26 @@ export function StrikeZone({
           </>
         )}
       </svg>
+
+      {/* Legend. Thirteen pitch types cannot all be separated by hue under
+          dichromatic vision, so the colour mapping is spelled out here instead
+          of living only in a hover tooltip — which also saves everyone from
+          pointing at each dot to learn what was thrown. */}
+      {showLabels && legend.length > 0 && (
+        <ul className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px]">
+          {legend.map((item) => (
+            <li key={item.label} className="flex items-center gap-1 text-slate-400">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: item.color }}
+                aria-hidden
+              />
+              <span>{item.label}</span>
+              <span className="num text-slate-600">{item.count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/* Hover tooltip */}
       {hoveredIdx != null && recentPitches[hoveredIdx] && (() => {

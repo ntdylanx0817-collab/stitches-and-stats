@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { StrikeZone } from "@/components/strike-zone";
+import { StrikeZone, getPitchColor } from "@/components/strike-zone";
 import { PitchLogEntry } from "@/components/pitch-log-entry";
 import { AtBatDetailsModal } from "@/components/at-bat-details-modal";
 import { LineupChanges } from "@/components/lineup-changes";
@@ -281,25 +281,6 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             selectedPitchId={selectedPitch ? `${selectedPitch.atBatIndex}-${selectedPitch.pitchNumber}` : null}
             onSelectPitch={setSelectedPitch}
           />
-          {/* Legend */}
-          <div className="mt-3 flex flex-wrap gap-1.5 min-h-[20px]">
-            {pitchTypeStats.length === 0 && (
-              <span className="text-[10px] text-slate-600">No pitch types to display</span>
-            )}
-            {Object.entries({
-              FF: "4-Seam", FT: "Sinker", SL: "Slider", CH: "Changeup", CU: "Curveball", FC: "Cutter", ST: "Sweeper", SI: "Sinker",
-            }).map(([code, name]) => {
-              const has = pitchTypeStats.some((p) => p.type === code);
-              if (!has) return null;
-              const color = PITCH_COLOR_LEGEND[code] ?? "#94A3B8";
-              return (
-                <span key={code} className="inline-flex items-center gap-1 rounded-full bg-white/[0.03] px-2 py-0.5 text-[10px] text-slate-300">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-                  {name}
-                </span>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -459,7 +440,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           </h3>
           <div className="space-y-2">
             {pitchTypeStats.slice(0, 8).map((p) => {
-              const color = PITCH_COLOR_LEGEND[p.type] ?? "#94A3B8";
+              const color = getPitchColor(p.type);
               const pct = mergedPitches.length > 0 ? (p.count / mergedPitches.length) * 100 : 0;
               return (
                 <div key={p.type}>
@@ -626,20 +607,3 @@ function getOrdinal(n: number): string {
   return "th";
 }
 
-const PITCH_COLOR_LEGEND: Record<string, string> = {
-  FF: "#FF6B6B",
-  FT: "#FF8E72",
-  FC: "#FFB547",
-  SI: "#FF7A45",
-  FS: "#C68BFF",
-  SL: "#4DA3FF",
-  ST: "#5DADEC",
-  CU: "#3DDBA0",
-  KC: "#7BE3B4",
-  CS: "#A78BFA",
-  SC: "#A78BFA",
-  CH: "#FFB547",
-  KN: "#94A3B8",
-  PO: "#94A3B8",
-  FO: "#94A3B8",
-};

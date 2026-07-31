@@ -403,7 +403,8 @@ function PercentileBar({ metric, index }: {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.5), type: "spring", stiffness: 220, damping: 26 }}
-      className="rounded-xl border border-chalk bg-midnight/40 p-3 transition-all hover:border-chalk-strong"
+      whileHover={{ y: -2, scale: 1.01, boxShadow: `0 12px 32px -12px ${toneColor}80` }}
+      className="rounded-xl border border-chalk bg-midnight/40 p-3 transition-colors hover:border-chalk-strong"
     >
       <div className="flex items-start justify-between mb-2">
         <div>

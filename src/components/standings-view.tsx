@@ -232,10 +232,16 @@ function TeamRow({
   const isGBZero = gb === "0.0" || gb === "-";
 
   return (
-    <button
+    <motion.button
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: Math.min(rank * 0.03, 0.3), type: "spring", stiffness: 320, damping: 28 }}
+      whileHover={{ x: 3 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => { setSelectedTeamId(team.id); setView("team"); }}
+      style={{ "--row-accent": `${teamInk}cc` } as React.CSSProperties}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-warning-track/10 text-left cursor-pointer",
+        "interactive-row group flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-3 hover:bg-warning-track/10 text-left cursor-pointer",
         isDivisionLeader && "bg-mint/5",
         isInWildCard && "bg-cobalt/5"
       )}
@@ -288,8 +294,8 @@ function TeamRow({
           "flex items-center gap-0.5 font-scoreboard text-[9px] font-bold shrink-0",
           isStreakWin ? "text-mint" : isStreakLoss ? "text-crimson" : "text-slate-500"
         )}>
-          {isStreakWin && <Flame className="icon-glow h-2.5 w-2.5" />}
-          {isStreakLoss && <Snowflake className="icon-glow h-2.5 w-2.5" />}
+          {isStreakWin && <Flame className="icon-glow h-2.5 w-2.5 transition-transform duration-200 group-hover:scale-125" />}
+          {isStreakLoss && <Snowflake className="icon-glow h-2.5 w-2.5 transition-transform duration-200 group-hover:scale-125" />}
           {team.streak}
         </span>
       )}
@@ -301,6 +307,6 @@ function TeamRow({
       )}>
         {team.runDifferential > 0 ? "+" : ""}{team.runDifferential}
       </span>
-    </button>
+    </motion.button>
   );
 }

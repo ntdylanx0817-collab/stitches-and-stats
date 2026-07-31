@@ -437,10 +437,10 @@ export function LeaderboardsView() {
                 {rows.slice(0, visibleCount).map((row, idx) => (
                   <motion.tr
                     key={`${row.player_id}-${idx}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(idx * 0.005, 0.3) }}
-                    className="row-mowed-grass border-b border-chalk cursor-pointer transition-colors group"
+                    className="row-mowed-grass row-glow-hover border-b border-chalk cursor-pointer transition-colors group"
                     onClick={() => openPlayer(row)}
                   >
                     {visibleCols.map((col) => {
@@ -478,15 +478,15 @@ export function LeaderboardsView() {
                                 {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
                               </span>
                             ) : (
-                              <span className="font-mono text-slate-500">{idx + 1}</span>
+                              <span className="font-mono text-slate-500 inline-block transition-transform duration-200 group-hover:scale-110 group-hover:text-warning-track">{idx + 1}</span>
                             )
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">
-                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-[10px] font-bold text-white">
+                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-[10px] font-bold text-white transition-transform duration-200 group-hover:scale-110 group-hover:shadow-[0_0_10px_rgba(230,126,34,0.5)]">
                                 {String(row.player_name ?? "?").split(",").map((s: string) => s.trim()[0] ?? "").join("").slice(0, 2)}
                               </div>
-                              <span className="truncate">{row.player_name ?? "—"}</span>
+                              <span className="truncate transition-colors group-hover:text-warning-track">{row.player_name ?? "—"}</span>
                             </div>
                           )}
                           {col.key !== "rank" && col.key !== "player_name" && display}

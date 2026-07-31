@@ -121,15 +121,25 @@ export function GlobalPlayerSearch() {
           >
             <div className="max-h-[360px] overflow-y-auto scrollbar-thin">
               {players.map((p, i) => (
-                <button
+                <motion.button
                   key={p.id}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: Math.min(i * 0.03, 0.24) }}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => selectPlayer(p)}
                   onMouseEnter={() => setActiveIdx(i)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors group ${
                     i === activeIdx ? "bg-cobalt/15 text-white" : "hover:bg-white/5"
                   }`}
                 >
-                  <PlayerAvatar playerId={p.id} size={36} fallbackText={p.fullName} className="rounded-full" />
+                  <PlayerAvatar
+                    playerId={p.id}
+                    size={36}
+                    fallbackText={p.fullName}
+                    className="rounded-full transition-transform duration-200 group-hover:scale-110"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-white">
                       {p.fullName}
@@ -147,7 +157,7 @@ export function GlobalPlayerSearch() {
                   {p.primaryPosition === "P" && (
                     <Badge variant="outline" className="border-mint/30 bg-mint/10 text-mint">PIT</Badge>
                   )}
-                </button>
+                </motion.button>
               ))}
             </div>
             <div className="mt-1 flex items-center justify-between px-3 py-1.5 text-[10px] text-slate-500">

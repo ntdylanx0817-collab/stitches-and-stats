@@ -404,13 +404,20 @@ export interface LeaderboardRow {
   home_run?: number;
   k_percent?: number;
   bb_percent?: number;
-  batting_avg?: string;
-  slg_percent?: string;
-  on_base_percent?: string;
-  woba?: string;
-  xwoba?: string;
-  xba?: string;
-  xslg?: string;
+  /**
+   * Rate stats. parseLeaderboardCSV coerces any purely numeric cell, so these
+   * arrive as numbers in practice and only stay strings when the feed sends
+   * something non-numeric or blank. They were declared `string`, which is why
+   * formatters reached for String() and printed .64 for a .640 slugging and
+   * the full float for a .402 xwOBA.
+   */
+  batting_avg?: number | string;
+  slg_percent?: number | string;
+  on_base_percent?: number | string;
+  woba?: number | string;
+  xwoba?: number | string;
+  xba?: number | string;
+  xslg?: number | string;
   hard_hit_percent?: number;
   barrel_brea?: number; // barrel %
   sweet_spot_percent?: number;

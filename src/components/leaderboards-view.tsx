@@ -35,6 +35,22 @@ interface ColDef {
   group?: "standard" | "advanced";
 }
 
+/**
+ * Rate stats read as .322 — three decimals, leading zero dropped.
+ *
+ * The columns used to do `String(v).replace(/^0/, "")`, which loses a trailing
+ * zero (.640 printed as .64) and exposes float noise (.402 printed as
+ * .40199999999999997), because the parser hands over numbers rather than the
+ * strings the row type claimed. The truthy guard also swallowed a real .000,
+ * showing it as no-data.
+ */
+function formatRate(v: number | string | undefined): string {
+  if (v == null || v === "") return "—";
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(3).replace(/^(-?)0\./, "$1.");
+}
+
 const BATTER_COLS: ColDef[] = [
   { key: "rank", label: "#", width: 40, align: "center", group: "standard" },
   { key: "player_name", label: "Player", short: "Player", align: "left", width: 180, group: "standard" },
@@ -42,16 +58,16 @@ const BATTER_COLS: ColDef[] = [
   { key: "ab", label: "AB", width: 50, group: "standard" },
   { key: "hit", label: "H", width: 50, group: "standard" },
   { key: "home_run", label: "HR", width: 50, group: "standard" },
-  { key: "batting_avg", label: "AVG", short: "AVG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.250, 0.300) },
-  { key: "on_base_percent", label: "OBP", short: "OBP", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.340, 0.380) },
-  { key: "slg_percent", label: "SLG", short: "SLG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.420, 0.500) },
-  { key: "woba", label: "wOBA", short: "wOBA", width: 65, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.320, 0.370) },
+  { key: "batting_avg", label: "AVG", short: "AVG", width: 60, group: "standard", format: formatRate, tone: (v) => toneAvg(Number(v), 0.250, 0.300) },
+  { key: "on_base_percent", label: "OBP", short: "OBP", width: 60, group: "standard", format: formatRate, tone: (v) => toneAvg(Number(v), 0.340, 0.380) },
+  { key: "slg_percent", label: "SLG", short: "SLG", width: 60, group: "standard", format: formatRate, tone: (v) => toneAvg(Number(v), 0.420, 0.500) },
+  { key: "woba", label: "wOBA", short: "wOBA", width: 65, group: "standard", format: formatRate, tone: (v) => toneAvg(Number(v), 0.320, 0.370) },
   { key: "k_percent", label: "K%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 25, 18) },
   { key: "bb_percent", label: "BB%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 8, 12) },
   // Advanced / Statcast
-  { key: "xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.320, 0.370) },
-  { key: "xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.250, 0.300) },
-  { key: "xslg", label: "xSLG", short: "xSLG", width: 65, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneAvg(Number(v), 0.420, 0.500) },
+  { key: "xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: formatRate, tone: (v) => toneAvg(Number(v), 0.320, 0.370) },
+  { key: "xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: formatRate, tone: (v) => toneAvg(Number(v), 0.250, 0.300) },
+  { key: "xslg", label: "xSLG", short: "xSLG", width: 65, group: "advanced", format: formatRate, tone: (v) => toneAvg(Number(v), 0.420, 0.500) },
   { key: "barrel_brea", label: "Barrel%", short: "Barrel%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 7, 12) },
   { key: "hard_hit_percent", label: "HardHit%", short: "HardHit%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 38, 45) },
   { key: "sweet_spot_percent", label: "SweetSpot%", short: "SweetSpot%", width: 90, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 32, 38) },
@@ -69,10 +85,10 @@ const PITCHER_COLS: ColDef[] = [
   { key: "p_whip", label: "WHIP", width: 60, group: "standard", format: (v) => v ? Number(v).toFixed(2) : "—", tone: (v) => toneReverse(Number(v), 1.35, 1.15) },
   { key: "k_percent", label: "K%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneAvg(Number(v), 23, 28) },
   { key: "bb_percent", label: "BB%", width: 60, group: "standard", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 6) },
-  { key: "avg", label: "AVG", width: 60, group: "standard", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
+  { key: "avg", label: "AVG", width: 60, group: "standard", format: formatRate, tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
   // Advanced / Statcast
-  { key: "xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.330, 0.290) },
-  { key: "xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: (v) => v ? String(v).replace(/^0/, "") : "—", tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
+  { key: "xwoba", label: "xwOBA", short: "xwOBA", width: 70, group: "advanced", format: formatRate, tone: (v) => toneReverse(Number(v), 0.330, 0.290) },
+  { key: "xba", label: "xBA", short: "xBA", width: 65, group: "advanced", format: formatRate, tone: (v) => toneReverse(Number(v), 0.250, 0.220) },
   { key: "hard_hit_percent", label: "HardHit%", short: "HardHit%", width: 80, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 40, 35) },
   { key: "barrel_brea", label: "Barrel%", short: "Barrel%", width: 70, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}%` : "—", tone: (v) => toneReverse(Number(v), 8, 5) },
   { key: "avg_hit_speed", label: "Avg EV", short: "Avg EV", width: 75, group: "advanced", format: (v) => v ? `${Number(v).toFixed(1)}` : "—", tone: (v) => toneReverse(Number(v), 89, 87) },

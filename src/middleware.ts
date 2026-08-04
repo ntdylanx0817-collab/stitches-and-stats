@@ -45,6 +45,9 @@ const EXPENSIVE_ROUTES = [
   "/api/home-run-derby",
   "/api/leaderboard",
   "/api/player-zones",
+  // Fans out to five upstream calls (schedule, hitting, pitching,
+  // transactions, standings) on a cache miss.
+  "/api/recap",
   "/api/simulate",
 ];
 

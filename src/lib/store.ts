@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type ViewKey = "live" | "live-at-bat" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
+export type ViewKey = "live" | "live-at-bat" | "recap" | "standings" | "players" | "leaderboard" | "news" | "simulator" | "compare" | "derby" | "team";
 
 interface SelectedPlayer {
   id: number;

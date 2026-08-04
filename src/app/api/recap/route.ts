@@ -34,6 +34,21 @@ const log = logger.child({ component: "recap" });
 const TOP_HITTERS = 8;
 const TOP_PITCHERS = 6;
 
+/**
+ * Ceiling on how many player splits `/v1/stats?stats=byDateRange` returns per
+ * side. This has to comfortably clear the number of distinct players who can
+ * appear in a day's box scores, not just how many the recap displays — the
+ * endpoint's own default ordering is not "best performance first", so a limit
+ * that truncated the pool would risk silently dropping the actual best line
+ * before this module ever gets a chance to rank it.
+ *
+ * ~15 games at up to ~17 hitters and ~10 pitchers apiece (bench + a bullpen
+ * game) covers a normal full slate several times over; doubled for the rare
+ * day stacked with doubleheader makeups.
+ */
+const HITTING_SPLITS_LIMIT = 600;
+const PITCHING_SPLITS_LIMIT = 400;
+
 export interface RecapPayload {
   date: string;
   season: number;
@@ -192,8 +207,8 @@ export async function GET(req: NextRequest) {
     const [scheduleRes, hittingRes, pitchingRes, transactionsRes, standingsRes] =
       await Promise.allSettled([
         getJson<MLBSchedule>(scheduleUrl, "recap schedule"),
-        getJson<StatsResponse<HittingSplitStat>>(statsUrl("hitting", date, 400), "recap hitting"),
-        getJson<StatsResponse<PitchingSplitStat>>(statsUrl("pitching", date, 300), "recap pitching"),
+        getJson<StatsResponse<HittingSplitStat>>(statsUrl("hitting", date, HITTING_SPLITS_LIMIT), "recap hitting"),
+        getJson<StatsResponse<PitchingSplitStat>>(statsUrl("pitching", date, PITCHING_SPLITS_LIMIT), "recap pitching"),
         getJson<{ transactions?: RawTransaction[] }>(
           `${STATS_API}/v1/transactions?startDate=${date}&endDate=${date}`,
           "recap transactions"
@@ -226,7 +241,11 @@ export async function GET(req: NextRequest) {
     const payload: RecapPayload = {
       date,
       season,
-      isComplete: slate.games > 0 && slate.final === slate.games,
+      // An off day (zero games — a rare all-star break or scheduling gap) has
+      // nothing to wait for, so it counts as complete too. Without this, a
+      // zero-game slate can never satisfy `final === games` and the client
+      // polls it every 2 minutes forever.
+      isComplete: slate.final === slate.games,
       totals: {
         ...slate,
         // Taken from the stat splits rather than the linescores: a linescore

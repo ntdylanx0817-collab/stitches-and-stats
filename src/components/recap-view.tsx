@@ -157,8 +157,6 @@ export function RecapView() {
             </div>
           )}
 
-          <SlateStrip totals={data.totals} isComplete={data.isComplete} />
-
           {data.games.length === 0 ? (
             <EmptyState
               icon={CalendarDays}
@@ -166,13 +164,16 @@ export function RecapView() {
               description="Nothing was played — try stepping back a day."
             />
           ) : (
-            <Section title="Scoreboard" icon={Activity} accent="text-warning-track">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {data.games.map((game, i) => (
-                  <GameCard key={game.gamePk} game={game} index={i} />
-                ))}
-              </div>
-            </Section>
+            <>
+              <SlateStrip totals={data.totals} isComplete={data.isComplete} />
+              <Section title="Scoreboard" icon={Activity} accent="text-warning-track">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {data.games.map((game, i) => (
+                    <GameCard key={game.gamePk} game={game} index={i} />
+                  ))}
+                </div>
+              </Section>
+            </>
           )}
 
           {(data.hitters.length > 0 || data.pitchers.length > 0) && (
@@ -302,11 +303,18 @@ function GameCard({ game, index }: { game: RecapGame; index: number }) {
   const setSelectedGame = useSavantStore((s) => s.setSelectedGame);
   const setView = useSavantStore((s) => s.setView);
 
+  // A postponed game sits in the "Preview" abstract state same as an
+  // upcoming one — without this check it would render a start time as if it
+  // were still about to be played, which reads as wrong the day after.
+  const isPostponed = /postponed|suspended|cancelled/i.test(game.detailedState);
+
   const statusLabel = game.state === "Final"
     ? game.isExtras ? `F/${game.innings}` : "Final"
     : game.state === "Live"
       ? game.detailedState || "Live"
-      : new Date(game.gameDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      : isPostponed
+        ? game.detailedState
+        : new Date(game.gameDate).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   return (
     <motion.button
@@ -322,7 +330,7 @@ function GameCard({ game, index }: { game: RecapGame; index: number }) {
         <span
           className={cn(
             "font-scoreboard text-[9px] font-bold uppercase tracking-wide",
-            game.state === "Live" ? "text-mint animate-live-dot" : "text-slate-500"
+            game.state === "Live" ? "text-mint animate-live-dot" : isPostponed ? "text-crimson" : "text-slate-500"
           )}
         >
           {statusLabel}

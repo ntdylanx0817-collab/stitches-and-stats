@@ -479,7 +479,7 @@ export function StrikeZone({
                   className={cn(
                     "flex items-center gap-1 rounded-full px-1.5 py-0.5 transition-colors",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warning-track",
-                    active ? "bg-white/10 text-chalk" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                    active ? "bg-chalk/10 text-chalk" : "text-slate-400 hover:bg-chalk/5 hover:text-slate-200"
                   )}
                 >
                   <span
@@ -504,7 +504,7 @@ export function StrikeZone({
         const speed = typeof p.startSpeed === "number" ? p.startSpeed.toFixed(1) : null;
         return (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-white/10 bg-midnight-2/95 px-2.5 py-1.5 text-[11px] shadow-lg"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-chalk/10 bg-midnight-2/95 px-2.5 py-1.5 text-[11px] shadow-lg"
             style={{ left: `${(pos.x / SVG_SIZE) * 100}%`, top: `${(pos.y / SVG_SIZE) * 100}%`, marginTop: -10 }}
           >
             <div className="font-semibold text-chalk">

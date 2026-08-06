@@ -107,7 +107,7 @@ export function NewsView() {
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-chalk">
             <Newspaper className="h-5 w-5 text-cobalt" />
             Baseball News
           </h2>
@@ -120,7 +120,7 @@ export function NewsView() {
           size="sm"
           onClick={() => refetch()}
           disabled={isFetching}
-          className="border-white/10 bg-white/[0.02] hover:bg-white/5"
+          className="border-chalk/10 bg-chalk/[0.02] hover:bg-chalk/5"
         >
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isFetching && "animate-spin")} />
           Refresh
@@ -138,7 +138,7 @@ export function NewsView() {
             "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             sourceFilter === "all"
               ? "border-cobalt/40 bg-cobalt/15 text-cobalt"
-              : "border-white/10 bg-white/[0.02] text-slate-400 hover:text-white hover:bg-white/5"
+              : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:text-chalk hover:bg-chalk/5"
           )}
         >
           All Sources
@@ -156,8 +156,8 @@ export function NewsView() {
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 active
-                  ? "border-white/30 bg-white/10 text-white"
-                  : "border-white/10 bg-white/[0.02] text-slate-400 hover:text-white hover:bg-white/5"
+                  ? "border-chalk/30 bg-chalk/10 text-chalk"
+                  : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:text-chalk hover:bg-chalk/5"
               )}
             >
               <span
@@ -178,7 +178,7 @@ export function NewsView() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search articles by keyword…"
-          className="h-9 rounded-lg border-white/5 bg-white/[0.02] pl-9"
+          className="h-9 rounded-lg border-chalk/5 bg-chalk/[0.02] pl-9"
         />
       </div>
 
@@ -230,7 +230,7 @@ export function NewsView() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ delay: Math.min(idx * 0.02, 0.3) }}
-                    className="glass-hover group flex flex-col rounded-xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/15"
+                    className="glass-hover group flex flex-col rounded-xl border border-chalk/5 bg-chalk/[0.02] p-4 transition-all hover:border-chalk/15"
                   >
                     {/* Source + trust badge */}
                     <div className="mb-2 flex items-center justify-between gap-2">
@@ -256,7 +256,7 @@ export function NewsView() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white transition-colors group-hover:text-cobalt">
+                    <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-chalk transition-colors group-hover:text-cobalt">
                       {article.title}
                     </h3>
 

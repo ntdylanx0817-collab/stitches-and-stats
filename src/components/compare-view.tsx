@@ -231,7 +231,7 @@ function PlayerSearchPanel({
                   <button
                     key={p.player_id}
                     onClick={() => { onSelect(p.player_id); setDropdownOpen(false); setSearch(""); }}
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                    className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left hover:bg-chalk/5 transition-colors"
                   >
                     <span className="truncate text-sm font-medium text-chalk">{p.player_name}</span>
                     <span className="flex shrink-0 gap-2 text-[10px] text-slate-500 font-scoreboard">

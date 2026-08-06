@@ -265,11 +265,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         {teams?.home?.id && <BullpenStatus teamId={teams.home.id} teamName={teams.home.abbreviation ?? teams.home.name} />}
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">
               <Target className="h-4 w-4 text-cobalt" />
               Strike Zone
             </h3>
-            <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
+            <Badge variant="outline" className="border-chalk/10 text-[10px] text-slate-400">
               {recentZonePitches.length} pitches
             </Badge>
           </div>
@@ -379,7 +379,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         <WPALeaderboard gamePk={gamePk} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">
               <Zap className="h-4 w-4 text-crimson" />
               Latest Pitch Metrics
             </h3>
@@ -391,11 +391,11 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           </div>
           {latestPitch ? (
             <div>
-              <div className="mb-3 rounded-xl bg-white/[0.03] p-3 border border-white/5">
+              <div className="mb-3 rounded-xl bg-chalk/[0.03] p-3 border border-chalk/5">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">
                   {latestPitch.inning > 0 ? `${latestPitch.halfInning === "top" ? "Top" : "Bottom"} ${latestPitch.inning}` : "Pre-game"}
                 </div>
-                <div className="text-sm font-semibold text-white">{latestPitch.batterName}</div>
+                <div className="text-sm font-semibold text-chalk">{latestPitch.batterName}</div>
                 <div className="text-xs text-slate-400">vs {latestPitch.pitcherName}</div>
                 <div className="mt-1 text-xs text-slate-300">{latestPitch.description}</div>
               </div>
@@ -406,14 +406,14 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                     m.tone === "crimson" ? "text-crimson" :
                     m.tone === "cobalt" ? "text-cobalt" :
                     m.tone === "amber" ? "text-amber" :
-                    m.tone === "mint" ? "text-mint" : "text-white";
+                    m.tone === "mint" ? "text-mint" : "text-chalk";
                   return (
                     <motion.div
                       key={`${m.label}-${i}`}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5"
+                      className="rounded-xl border border-chalk/5 bg-chalk/[0.02] p-2.5"
                     >
                       <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-slate-500">
                         {Icon && <Icon className="h-3 w-3" />}
@@ -434,7 +434,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
         {/* Pitch mix */}
         <div className="glass rounded-2xl p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-chalk">
             <Gauge className="h-4 w-4 text-cobalt" />
             Pitch Mix
           </h3>
@@ -453,7 +453,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                       {p.count} · {isFinite(pct) ? pct.toFixed(0) : 0}% · {p.avgSpeed > 0 && isFinite(p.avgSpeed) ? `${p.avgSpeed.toFixed(0)}mph` : "—"}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-chalk/5">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
@@ -543,7 +543,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: {
                 ))}
                 {(away || home) && (
                   <>
-                    <th className="px-2 py-1 text-center border-l border-white/5">R</th>
+                    <th className="px-2 py-1 text-center border-l border-chalk/5">R</th>
                     <th className="px-1.5 py-1 text-center">H</th>
                     <th className="px-1.5 py-1 text-center">E</th>
                   </>
@@ -551,10 +551,10 @@ function Scoreboard({ linescore, status, teams, gamePk }: {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-t border-white/5">
+              <tr className="border-t border-chalk/5">
                 <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-white">{awayAbbr}</span>
+                    <span className="text-xs font-bold text-chalk">{awayAbbr}</span>
                     <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{awayName.split(" ").slice(-1)[0]}</span>
                   </div>
                 </td>
@@ -565,16 +565,16 @@ function Scoreboard({ linescore, status, teams, gamePk }: {
               ))}
               {away && (
                 <>
-                  <td className="px-2 py-1.5 text-center font-bold text-white border-l border-white/5">{away.runs ?? 0}</td>
+                  <td className="px-2 py-1.5 text-center font-bold text-chalk border-l border-chalk/5">{away.runs ?? 0}</td>
                   <td className="px-1.5 py-1.5 text-center text-slate-300">{away.hits ?? 0}</td>
                   <td className="px-1.5 py-1.5 text-center text-slate-300">{away.errors ?? 0}</td>
                 </>
               )}
             </tr>
-            <tr className="border-t border-white/5">
+            <tr className="border-t border-chalk/5">
               <td className="py-1.5 pr-2 sticky left-0 bg-transparent">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white">{homeAbbr}</span>
+                  <span className="text-xs font-bold text-chalk">{homeAbbr}</span>
                   <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[100px]">{homeName.split(" ").slice(-1)[0]}</span>
                 </div>
               </td>
@@ -585,7 +585,7 @@ function Scoreboard({ linescore, status, teams, gamePk }: {
               ))}
               {home && (
                 <>
-                  <td className="px-2 py-1.5 text-center font-bold text-white border-l border-white/5">{home.runs ?? 0}</td>
+                  <td className="px-2 py-1.5 text-center font-bold text-chalk border-l border-chalk/5">{home.runs ?? 0}</td>
                   <td className="px-1.5 py-1.5 text-center text-slate-300">{home.hits ?? 0}</td>
                   <td className="px-1.5 py-1.5 text-center text-slate-300">{home.errors ?? 0}</td>
                 </>

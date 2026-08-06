@@ -52,7 +52,7 @@ const CHANGE_CONFIG: Record<string, { icon: LucideIcon; color: string; bg: strin
   pitching_change: { icon: Repeat, color: "text-mint", bg: "bg-mint/10 border-mint/30", label: "Pitching Change" },
   pinch_hit: { icon: Zap, color: "text-amber", bg: "bg-amber/10 border-amber/30", label: "Pinch Hit" },
   pinch_run: { icon: Zap, color: "text-cobalt", bg: "bg-cobalt/10 border-cobalt/30", label: "Pinch Run" },
-  defensive_sub: { icon: Users, color: "text-slate-400", bg: "bg-white/5 border-white/10", label: "Defensive Sub" },
+  defensive_sub: { icon: Users, color: "text-slate-400", bg: "bg-chalk/5 border-chalk/10", label: "Defensive Sub" },
   starting_lineup: { icon: Activity, color: "text-mint", bg: "bg-mint/10 border-mint/30", label: "Lineup" },
 };
 
@@ -74,7 +74,7 @@ export function LineupChanges({ gamePk }: { gamePk: number }) {
       <div className="glass rounded-2xl p-4">
         <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-cobalt" />
-          <h3 className="text-sm font-semibold text-white">Lineup & Changes</h3>
+          <h3 className="text-sm font-semibold text-chalk">Lineup & Changes</h3>
         </div>
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -90,7 +90,7 @@ export function LineupChanges({ gamePk }: { gamePk: number }) {
       <div className="glass rounded-2xl p-4">
         <div className="mb-2 flex items-center gap-2">
           <Users className="h-4 w-4 text-cobalt" />
-          <h3 className="text-sm font-semibold text-white">Lineup & Changes</h3>
+          <h3 className="text-sm font-semibold text-chalk">Lineup & Changes</h3>
         </div>
         <p className="text-xs text-slate-500">Lineup data not available for this game.</p>
       </div>
@@ -102,7 +102,7 @@ export function LineupChanges({ gamePk }: { gamePk: number }) {
   return (
     <div className="glass rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">
           <Users className="h-4 w-4 text-cobalt" />
           Lineup & Changes
         </h3>
@@ -118,15 +118,15 @@ export function LineupChanges({ gamePk }: { gamePk: number }) {
       {(data.currentAwayPitcher || data.currentHomePitcher) && (
         <div className="mb-3 grid grid-cols-2 gap-2">
           {data.currentAwayPitcher && (
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+            <div className="rounded-lg border border-chalk/5 bg-chalk/[0.02] p-2">
               <div className="text-[9px] uppercase tracking-wide text-slate-500">{data.awayTeam}</div>
-              <div className="text-xs font-semibold text-white">⚾ {data.currentAwayPitcher.name}</div>
+              <div className="text-xs font-semibold text-chalk">⚾ {data.currentAwayPitcher.name}</div>
             </div>
           )}
           {data.currentHomePitcher && (
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+            <div className="rounded-lg border border-chalk/5 bg-chalk/[0.02] p-2">
               <div className="text-[9px] uppercase tracking-wide text-slate-500">{data.homeTeam}</div>
-              <div className="text-xs font-semibold text-white">⚾ {data.currentHomePitcher.name}</div>
+              <div className="text-xs font-semibold text-chalk">⚾ {data.currentHomePitcher.name}</div>
             </div>
           )}
         </div>

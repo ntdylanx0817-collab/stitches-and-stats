@@ -247,10 +247,10 @@ export function LeaderboardsView() {
       {/* Filters bar */}
       <div className="glass rounded-2xl p-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-white">
+          <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
             <Filter className="h-4 w-4 text-cobalt drop-shadow-[0_0_6px_rgba(77,163,255,0.5)]" /> Statcast Leaderboards
           </h2>
-          <Badge variant="outline" className="border-white/10 text-[10px] text-slate-400">
+          <Badge variant="outline" className="border-chalk/10 text-[10px] text-slate-400">
             {data?.total ?? 0} players
           </Badge>
         </div>
@@ -259,18 +259,18 @@ export function LeaderboardsView() {
           {/* Type toggle */}
           <div>
             <Label className="text-[10px] uppercase tracking-wide text-slate-500">Type</Label>
-            <div className="mt-1 flex rounded-lg border border-white/5 bg-white/[0.02] p-0.5">
+            <div className="mt-1 flex rounded-lg border border-chalk/5 bg-chalk/[0.02] p-0.5">
               <button
                 onClick={() => setLbType("batter")}
                 className={cn("flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                  lbType === "batter" ? "bg-cobalt/20 text-cobalt" : "text-slate-400 hover:text-white")}
+                  lbType === "batter" ? "bg-cobalt/20 text-cobalt" : "text-slate-400 hover:text-chalk")}
               >
                 Batters
               </button>
               <button
                 onClick={() => setLbType("pitcher")}
                 className={cn("flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                  lbType === "pitcher" ? "bg-mint/20 text-mint" : "text-slate-400 hover:text-white")}
+                  lbType === "pitcher" ? "bg-mint/20 text-mint" : "text-slate-400 hover:text-chalk")}
               >
                 Pitchers
               </button>
@@ -281,7 +281,7 @@ export function LeaderboardsView() {
           <div>
             <Label className="text-[10px] uppercase tracking-wide text-slate-500">Season</Label>
             <Select value={String(lbYear)} onValueChange={(v) => setLbYear(Number(v))}>
-              <SelectTrigger className="mt-1 h-9 bg-white/[0.02] border-white/5">
+              <SelectTrigger className="mt-1 h-9 bg-chalk/[0.02] border-chalk/5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -311,7 +311,7 @@ export function LeaderboardsView() {
           <div>
             <Label className="text-[10px] uppercase tracking-wide text-slate-500">Team</Label>
             <Select value={lbTeam} onValueChange={setLbTeam}>
-              <SelectTrigger className="mt-1 h-9 bg-white/[0.02] border-white/5">
+              <SelectTrigger className="mt-1 h-9 bg-chalk/[0.02] border-chalk/5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
@@ -328,7 +328,7 @@ export function LeaderboardsView() {
           <div>
             <Label className="text-[10px] uppercase tracking-wide text-slate-500">Position</Label>
             <Select value={lbPosition || "all"} onValueChange={(v) => setLbPosition(v === "all" ? "" : v)}>
-              <SelectTrigger className="mt-1 h-9 bg-white/[0.02] border-white/5">
+              <SelectTrigger className="mt-1 h-9 bg-chalk/[0.02] border-chalk/5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -347,10 +347,10 @@ export function LeaderboardsView() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Filter by player name…"
-                className="h-9 rounded-lg border-white/5 bg-white/[0.02] pl-9"
+                className="h-9 rounded-lg border-chalk/5 bg-chalk/[0.02] pl-9"
               />
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-1.5">
+            <div className="flex items-center gap-2 rounded-lg border border-chalk/5 bg-chalk/[0.02] px-3 py-1.5">
               <Switch checked={lbShowAdvanced} onCheckedChange={setLbShowAdvanced} />
               <Label className="text-xs font-medium text-slate-300 cursor-pointer">
                 Statcast Columns
@@ -404,7 +404,7 @@ export function LeaderboardsView() {
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] overflow-x-auto scrollbar-thin">
             <table className="w-full text-xs num">
               <thead className="sticky top-0 z-20 bg-midnight/95 backdrop-blur">
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-chalk/10">
                   {visibleCols.map((col) => {
                     const isSortable = col.key !== "rank" && col.key !== "player_name";
                     const isSorted = sortKey === col.key && sortDir;
@@ -414,7 +414,7 @@ export function LeaderboardsView() {
                         style={{ minWidth: col.width ?? 60, textAlign: col.align ?? "right" }}
                         className={cn(
                           "px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide",
-                          isSortable ? "cursor-pointer hover:bg-white/5 select-none" : "",
+                          isSortable ? "cursor-pointer hover:bg-chalk/5 select-none" : "",
                           col.key === "player_name" && "sticky left-0 z-10 bg-midnight/95 backdrop-blur",
                           col.key === "rank" && "bg-midnight/95 backdrop-blur"
                         )}
@@ -457,7 +457,7 @@ export function LeaderboardsView() {
                             "px-2.5 py-2 whitespace-nowrap",
                             col.key === "player_name" && "sticky left-0 z-10 bg-midnight/95 backdrop-blur group-hover:bg-midnight-2/95",
                             col.key === "rank" && "bg-midnight/95 backdrop-blur group-hover:bg-midnight-2/95",
-                            col.key === "player_name" ? "text-white font-medium" : tone
+                            col.key === "player_name" ? "text-chalk font-medium" : tone
                           )}
                         >
                           {col.key === "rank" && (
@@ -483,7 +483,7 @@ export function LeaderboardsView() {
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">
-                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-[10px] font-bold text-white transition-transform duration-200 group-hover:scale-110 group-hover:shadow-[0_0_10px_rgba(230,126,34,0.5)]">
+                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-[10px] font-bold text-chalk transition-transform duration-200 group-hover:scale-110 group-hover:shadow-[0_0_10px_rgba(230,126,34,0.5)]">
                                 {String(row.player_name ?? "?").split(",").map((s: string) => s.trim()[0] ?? "").join("").slice(0, 2)}
                               </div>
                               <span className="truncate transition-colors group-hover:text-warning-track">{row.player_name ?? "—"}</span>

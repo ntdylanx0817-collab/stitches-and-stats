@@ -84,7 +84,7 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
         "rounded-xl border transition-colors",
         isSelected
           ? "border-cobalt/40 bg-cobalt/8"
-          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]",
+          : "border-chalk/5 bg-chalk/[0.02] hover:bg-chalk/[0.04]",
         isLatest && "ring-1 ring-mint/30"
       )}
     >
@@ -92,7 +92,7 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
         onClick={() => { onSelect?.(); setExpanded(!expanded); }}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/5 text-[10px] font-mono font-bold text-slate-400">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-chalk/5 text-[10px] font-mono font-bold text-slate-400">
           {index + 1}
         </div>
 
@@ -103,7 +103,7 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-white truncate">
+            <span className="text-sm font-semibold text-chalk truncate">
               {pitch.pitchName ?? pitch.pitchType ?? "Pitch"}
             </span>
             {pitch.isBarrel && (
@@ -131,7 +131,7 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
           </div>
           {startSpeed != null && (
             <div className="text-right min-w-[44px]">
-              <div className="text-sm font-bold text-white num">
+              <div className="text-sm font-bold text-chalk num">
                 {startSpeed}
               </div>
               <div className="text-[9px] text-slate-500 uppercase">MPH</div>
@@ -151,7 +151,7 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-white/5"
+            className="overflow-hidden border-t border-chalk/5"
           >
             <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
               {exitVelo != null && (
@@ -216,14 +216,14 @@ export function PitchLogEntry({ pitch, index, isSelected, onSelect, isLatest, on
 
 function Stat({ label, value, unit, tone = "default" }: { label: string; value: string; unit?: string; tone?: "default" | "cobalt" | "crimson" | "amber" | "mint" }) {
   const toneCls = {
-    default: "text-white",
+    default: "text-chalk",
     cobalt: "text-cobalt",
     crimson: "text-crimson",
     amber: "text-amber",
     mint: "text-mint",
   }[tone];
   return (
-    <div className="rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
+    <div className="rounded-lg border border-chalk/5 bg-chalk/[0.02] px-2.5 py-1.5">
       <div className="text-[9px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cn("text-sm font-bold num", toneCls)}>
         {value}

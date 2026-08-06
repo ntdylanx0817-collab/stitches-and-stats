@@ -44,7 +44,7 @@ export function PlayerAvatar({ playerId, size = 48, fallbackText, className }: P
         src={`https://midfield.mlb.com/mlb/photos/players/${playerId}/8x10/`}
         alt={fallbackText ?? `Player ${playerId}`}
         className={cn(
-          "h-full w-full object-cover rounded-lg border border-white/10 transition-opacity",
+          "h-full w-full object-cover rounded-lg border border-chalk/10 transition-opacity",
           loaded ? "opacity-100" : "opacity-0"
         )}
         style={{ width: size, height: size }}

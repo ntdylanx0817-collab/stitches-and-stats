@@ -95,7 +95,7 @@ export function GlobalPlayerSearch() {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKey}
           placeholder={placeholder}
-          className="h-10 rounded-full border-white/10 bg-white/[0.04] pl-10 pr-10 text-sm placeholder:text-slate-500 focus-visible:border-cobalt/50 focus-visible:ring-cobalt/20"
+          className="h-10 rounded-full border-chalk/10 bg-chalk/[0.04] pl-10 pr-10 text-sm placeholder:text-slate-500 focus-visible:border-cobalt/50 focus-visible:ring-cobalt/20"
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
@@ -103,7 +103,7 @@ export function GlobalPlayerSearch() {
         {!isLoading && q && (
           <button
             onClick={() => { setQ(""); setOpen(false); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-chalk"
           >
             <X className="h-4 w-4" />
           </button>
@@ -131,7 +131,7 @@ export function GlobalPlayerSearch() {
                   onClick={() => selectPlayer(p)}
                   onMouseEnter={() => setActiveIdx(i)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors group ${
-                    i === activeIdx ? "bg-cobalt/15 text-white" : "hover:bg-white/5"
+                    i === activeIdx ? "bg-cobalt/15 text-chalk" : "hover:bg-chalk/5"
                   }`}
                 >
                   <PlayerAvatar
@@ -141,7 +141,7 @@ export function GlobalPlayerSearch() {
                     className="rounded-full transition-transform duration-200 group-hover:scale-110"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-white">
+                    <div className="truncate text-sm font-semibold text-chalk">
                       {p.fullName}
                       {p.primaryNumber && (
                         <span className="ml-1.5 text-slate-500">#{p.primaryNumber}</span>

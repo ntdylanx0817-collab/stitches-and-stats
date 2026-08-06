@@ -14,7 +14,16 @@
   --color-midnight: #050a14;
   --color-midnight-2: #0a1322;
   --color-midnight-3: #0f1c30;
-  --color-chalk: #f8f9fa;
+  /* chalk and the muted slate scale are aliased (not literal) so they can
+     flip between themes — see :root/.dark below, and the chrome reset that
+     pins them back to their dark-mode values inside always-dark surfaces. */
+  --color-chalk: var(--chalk);
+  --color-slate-200: var(--slate-200);
+  --color-slate-300: var(--slate-300);
+  --color-slate-400: var(--slate-400);
+  --color-slate-500: var(--slate-500);
+  --color-slate-600: var(--slate-600);
+  --color-slate-700: var(--slate-700);
   --color-warning-track: #e67e22;
   --color-cobalt: #4DA3FF;
   --color-crimson: #FF3B5C;
@@ -76,6 +85,25 @@
   /* Stadium Day (light) theme — warm cream background */
   --background: #f5f0e8;
   --foreground: #1a1a2e;
+  /* --chalk mirrors --foreground rather than aliasing it: the design system
+     was built dark-mode-first, so most cards use text-chalk as "the ink that
+     reads against whatever surface it's on" the same way --foreground does —
+     but chalk needs to be independently resettable inside the always-dark
+     broadcast chrome (header, footer, ticker, modals) without dragging
+     --foreground's other consumers along, hence a second variable with the
+     same value rather than `var(--foreground)`.
+     The slate-* scale replaces Tailwind's own fixed gray palette, which
+     doesn't respond to theme at all: slate-300/400 are calibrated to read
+     against a dark navy card and are close to invisible against this cream
+     one. Values below are re-picked for contrast against #ffffff/#f5f0e8,
+     not a straight lightness inversion of Tailwind's dark-mode-tuned scale. */
+  --chalk: #1a1a2e;
+  --slate-200: #c7cad1;
+  --slate-300: #999da8;
+  --slate-400: #767b88;
+  --slate-500: #5c616e;
+  --slate-600: #454951;
+  --slate-700: #2d2f35;
   --card: #ffffff;
   --card-foreground: #1a1a2e;
   --popover: #ffffff;
@@ -112,6 +140,16 @@
   --bg-stitching-opacity: 0.12;
   --background: #050a14;
   --foreground: #f8f9fa;
+  /* Tailwind's own default slate hex values — restated here (not left
+     implicit) so dark mode's appearance is pinned exactly as it always was,
+     independent of whatever the light theme above picks. */
+  --chalk: #f8f9fa;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
   --card: #0a1322;
   --card-foreground: #f8f9fa;
   --popover: #0a1322;
@@ -141,6 +179,27 @@
   --sidebar-accent-foreground: #f8f9fa;
   --sidebar-border: rgba(248, 249, 250, 0.10);
   --sidebar-ring: #e67e22;
+}
+
+/* Broadcast chrome — header, footer, the score ticker, the sticky
+   mini-scoreboard, modals, and the player-search dropdown — is a fixed dark
+   surface by design, in both themes (an ESPN-style "always dark" bar rather
+   than a card that lives on the page). --chalk and the slate scale flip with
+   the page theme everywhere else, so anything inside one of these surfaces
+   needs those tokens pinned back to their dark-mode values, or light mode
+   would put dark ink on a background that never stopped being dark navy.
+   Scoped by inheritance: every descendant text-chalk/text-slate-* picks this
+   up automatically, no per-component dark: classes needed. */
+.card-broadcast,
+.glass-strong,
+[class*="bg-midnight"] {
+  --chalk: #f8f9fa;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
 }
 
 @layer base {
@@ -199,13 +258,21 @@
     letter-spacing: 0.02em;
   }
 
-  /* Glassmorphism with field grain texture overlay */
+  /* Glassmorphism with field grain texture overlay.
+     Tinted with --chalk rather than a literal white, since --chalk is the
+     one token that already flips per theme: a wash of near-white at 3%
+     reads as "slightly lighter than the page" on dark navy, and the same
+     wash of dark ink at 3% reads as "slightly recessed" on cream — both are
+     the same card treatment, just mixed toward whichever ink is legible on
+     the current background. Without this the card was invisible in light
+     mode: a 3% white tint and an 8% white border both vanish against a
+     near-white page. */
   .glass {
-    background: linear-gradient(180deg, rgba(248, 249, 250, 0.03), rgba(248, 249, 250, 0.01));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--chalk) 3%, transparent), color-mix(in srgb, var(--chalk) 1%, transparent));
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid rgba(248, 249, 250, 0.08);
-    box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(248, 249, 250, 0.03);
+    border: 1px solid color-mix(in srgb, var(--chalk) 8%, transparent);
+    box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 color-mix(in srgb, var(--chalk) 3%, transparent);
     position: relative;
   }
   .glass::before {
@@ -249,7 +316,7 @@
   }
   .glass-hover:hover {
     border-color: rgba(230, 126, 34, 0.30);
-    box-shadow: 0 8px 32px -8px rgba(230, 126, 34, 0.15), inset 0 1px 0 rgba(248, 249, 250, 0.06);
+    box-shadow: 0 8px 32px -8px rgba(230, 126, 34, 0.15), inset 0 1px 0 color-mix(in srgb, var(--chalk) 6%, transparent);
     transform: translateY(-1px);
   }
 
@@ -363,7 +430,7 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(248, 249, 250, 0.03), transparent);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--chalk) 3%, transparent), transparent);
     animation: sweep 3s infinite;
   }
   @keyframes sweep {
@@ -371,12 +438,12 @@
     100% { left: 100%; }
   }
 
-  /* Chalk-white 1px borders */
+  /* Hairline borders, mixed toward whichever ink reads on the current theme. */
   .border-chalk {
-    border-color: rgba(248, 249, 250, 0.10);
+    border-color: color-mix(in srgb, var(--chalk) 10%, transparent);
   }
   .border-chalk-strong {
-    border-color: rgba(248, 249, 250, 0.18);
+    border-color: color-mix(in srgb, var(--chalk) 18%, transparent);
   }
 
   /* Warning track orange glows */
@@ -404,7 +471,7 @@
 
   /* Mowed grass alternating row shading for tables */
   .row-mowed-grass:nth-child(even) {
-    background-color: rgba(248, 249, 250, 0.015);
+    background-color: color-mix(in srgb, var(--chalk) 1.5%, transparent);
   }
   .row-mowed-grass:nth-child(odd) {
     background-color: transparent;
@@ -415,8 +482,8 @@
 
   .bg-grid {
     background-image:
-      linear-gradient(rgba(248,249,250,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(248,249,250,0.025) 1px, transparent 1px);
+      linear-gradient(color-mix(in srgb, var(--chalk) 2.5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--chalk) 2.5%, transparent) 1px, transparent 1px);
     background-size: 24px 24px;
   }
   .bg-grid-fine {
@@ -467,10 +534,10 @@
     border-color: rgba(230, 126, 34, 0.40);
   }
   .border-subtle {
-    border-color: rgba(248, 249, 250, 0.15);
+    border-color: color-mix(in srgb, var(--chalk) 15%, transparent);
   }
   .border-faint {
-    border-color: rgba(248, 249, 250, 0.05);
+    border-color: color-mix(in srgb, var(--chalk) 5%, transparent);
   }
 
   /* Layered surface depth — deepest to nearest */
@@ -650,9 +717,9 @@
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(248, 249, 250, 0.02) 0%,
-    rgba(248, 249, 250, 0.06) 50%,
-    rgba(248, 249, 250, 0.02) 100%
+    color-mix(in srgb, var(--chalk) 2%, transparent) 0%,
+    color-mix(in srgb, var(--chalk) 8%, transparent) 50%,
+    color-mix(in srgb, var(--chalk) 2%, transparent) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite linear;

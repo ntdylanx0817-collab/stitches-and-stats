@@ -214,7 +214,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
             variant="outline"
             size="sm"
             onClick={() => setSelectedPlayer(null)}
-            className="border-chalk bg-midnight/40 hover:bg-white/5"
+            className="border-chalk bg-midnight/40 hover:bg-chalk/5"
           >
             <ArrowLeft className="mr-1 h-4 w-4" /> Close
           </Button>
@@ -428,7 +428,7 @@ function PercentileBar({ metric, index }: {
           className="absolute inset-y-0 left-0 rounded-full"
           style={{ background: `linear-gradient(90deg, ${toneColor}40, ${toneColor})`, boxShadow: `0 0 8px ${toneColor}80` }}
         />
-        <div className="absolute inset-y-0 left-1/2 w-px bg-white/20" />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-chalk/20" />
       </div>
     </motion.div>
   );

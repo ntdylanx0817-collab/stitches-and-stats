@@ -113,7 +113,7 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={onClose} className="border-chalk bg-midnight/40 hover:bg-white/5">
+          <Button variant="outline" size="sm" onClick={onClose} className="border-chalk bg-midnight/40 hover:bg-chalk/5">
             <ArrowLeft className="mr-1 h-4 w-4" /> Close
           </Button>
         </div>
@@ -169,7 +169,7 @@ export function TeamProfileView({ teamId, onClose }: { teamId: number; onClose: 
                   setSelectedPlayer({ id: p.id, name: p.name, type: p.position === "P" ? "pitcher" : "batter" });
                   setView("players");
                 }}
-                className="flex items-center gap-2 rounded-lg border border-chalk bg-midnight/30 p-1.5 hover:bg-white/5 transition-colors text-left"
+                className="flex items-center gap-2 rounded-lg border border-chalk bg-midnight/30 p-1.5 hover:bg-chalk/5 transition-colors text-left"
               >
                 <PlayerAvatar playerId={p.id} size={28} fallbackText={p.name} className="rounded-md shrink-0" />
                 <div className="min-w-0 flex-1">

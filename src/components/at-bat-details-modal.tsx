@@ -57,7 +57,7 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, on
             {onOpenInTab && (
               <button
                 onClick={onOpenInTab}
-                className="rounded-lg p-1.5 transition-colors hover:bg-white/5"
+                className="rounded-lg p-1.5 transition-colors hover:bg-chalk/5"
                 title="Open in Live At-Bat tab"
                 aria-label="Open in Live At-Bat tab"
               >
@@ -66,7 +66,7 @@ export function AtBatDetailsModal({ pitches, awayTeamId, homeTeamId, onClose, on
             )}
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 transition-colors hover:bg-white/5"
+              className="rounded-lg p-1.5 transition-colors hover:bg-chalk/5"
               aria-label="Close at-bat details"
             >
               <X className="h-5 w-5 text-slate-400" />

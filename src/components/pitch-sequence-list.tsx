@@ -37,7 +37,7 @@ export function PitchSequenceList({ pitches, selectedPitchId, onSelectPitch, cla
             onClick={() => onSelectPitch?.(p)}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors",
-              isSelected ? "border-cobalt/40 bg-cobalt/8" : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+              isSelected ? "border-cobalt/40 bg-cobalt/8" : "border-chalk/5 bg-chalk/[0.02] hover:bg-chalk/[0.04]"
             )}
           >
             <span

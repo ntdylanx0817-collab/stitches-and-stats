@@ -109,7 +109,7 @@ function StreakRow({ entry, onClick }: { entry: StreakEntry; onClick: () => void
       transition={{ delay: Math.min(entry.streak * 0.02, 0.3) }}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg border p-1.5 text-left transition-colors hover:bg-white/5",
+        "flex w-full items-center gap-2 rounded-lg border p-1.5 text-left transition-colors hover:bg-chalk/5",
         isWin ? "border-mint/15 bg-mint/5" : "border-crimson/15 bg-crimson/5"
       )}
     >

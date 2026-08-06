@@ -37,7 +37,7 @@ export function PitchLogSkeleton({ count = 6 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5"
+          className="flex items-center gap-3 rounded-xl border border-chalk/5 bg-chalk/[0.02] px-3 py-2.5"
         >
           <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
           <Skeleton className="h-2 w-1.5 shrink-0 rounded-full" />
@@ -89,7 +89,7 @@ export function StrikeZoneSkeleton() {
   return (
     <div className="flex flex-col items-center">
       <div className="relative aspect-square w-full max-w-[340px]">
-        <div className="absolute inset-0 rounded-lg border border-white/5 bg-white/[0.02]" />
+        <div className="absolute inset-0 rounded-lg border border-chalk/5 bg-chalk/[0.02]" />
         <div className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 rounded border border-dashed border-cobalt/30" />
         {/* Faux pitch dots */}
         {[
@@ -147,7 +147,7 @@ export function EmptyState({
         <Icon className="h-6 w-6 text-warning-track/70" />
       </div>
       <div className="relative">
-        <h3 className="mb-1 text-base font-semibold text-white">{title}</h3>
+        <h3 className="mb-1 text-base font-semibold text-chalk">{title}</h3>
         {description && (
           <p className="mx-auto max-w-md text-sm text-slate-400">{description}</p>
         )}
@@ -180,7 +180,7 @@ export function ErrorState({
         </svg>
       </div>
       <div>
-        <h3 className="mb-1 text-sm font-semibold text-white">{title}</h3>
+        <h3 className="mb-1 text-sm font-semibold text-chalk">{title}</h3>
         {description && <p className="mx-auto max-w-md text-xs text-slate-400">{description}</p>}
       </div>
       {onRetry && (

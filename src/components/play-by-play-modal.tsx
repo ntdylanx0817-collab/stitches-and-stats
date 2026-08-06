@@ -125,7 +125,7 @@ export function PlayByPlayModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 hover:bg-white/5 transition-colors"
+            className="rounded-lg p-1.5 hover:bg-chalk/5 transition-colors"
             aria-label="Close play-by-play"
           >
             <X className="h-5 w-5 text-slate-400" />

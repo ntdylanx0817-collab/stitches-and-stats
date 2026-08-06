@@ -165,7 +165,7 @@ export function SimulatorView() {
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
       {/* Header */}
       <div className="mb-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-chalk">
           <Swords className="h-5 w-5 text-crimson" />
           Matchup Simulator
         </h2>
@@ -314,7 +314,7 @@ function PlayerSelector({
   return (
     <div className="glass rounded-2xl p-4 relative z-10">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">
           {icon === "bat" ? (
             <TrendingUp className="h-4 w-4 text-cobalt" />
           ) : (
@@ -323,18 +323,18 @@ function PlayerSelector({
           {label}
         </h3>
         {selectedPlayer && (
-          <button onClick={onClear} className="text-slate-500 hover:text-white">
+          <button onClick={onClear} className="text-slate-500 hover:text-chalk">
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
       {selectedPlayer ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="rounded-xl border border-chalk/10 bg-chalk/[0.03] p-3">
           <div className="flex items-center gap-3">
             <PlayerAvatar playerId={selectedPlayer.player_id} size={48} fallbackText={selectedPlayer.player_name} className="rounded-full" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-bold text-white">{selectedPlayer.player_name}</div>
+              <div className="truncate text-sm font-bold text-chalk">{selectedPlayer.player_name}</div>
               <div className="mt-1 flex flex-wrap gap-2 text-[10px]">
                 {renderStats(selectedPlayer)}
               </div>
@@ -349,7 +349,7 @@ function PlayerSelector({
             onChange={(e) => onSearchChange(e.target.value)}
             onFocus={() => onDropdownClose()}
             placeholder={`Search for a ${label.toLowerCase()}…`}
-            className="h-10 rounded-lg border-white/10 bg-white/[0.03] pl-9"
+            className="h-10 rounded-lg border-chalk/10 bg-chalk/[0.03] pl-9"
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
@@ -367,9 +367,9 @@ function PlayerSelector({
                   <button
                     key={p.player_id}
                     onClick={() => onSelect(p)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                    className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-chalk/5 transition-colors"
                   >
-                    <span className="truncate text-sm font-medium text-white">{p.player_name}</span>
+                    <span className="truncate text-sm font-medium text-chalk">{p.player_name}</span>
                     <span className="flex shrink-0 gap-2 text-[10px] text-slate-500">
                       {icon === "bat" ? (
                         <><span>{fmtAvg(p.woba)}</span><span className="text-crimson">{p.home_run}HR</span></>
@@ -413,7 +413,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
           {/* Batter */}
           <div className="flex-1 text-center">
             <div className="text-[10px] uppercase tracking-wide text-slate-500">Batter</div>
-            <div className="text-lg font-bold text-white">{result.batterName}</div>
+            <div className="text-lg font-bold text-chalk">{result.batterName}</div>
             <div className="mt-1 text-xs text-slate-400">
               {result.batterStats.kPercent.toFixed(1)}% K · {result.batterStats.bbPercent.toFixed(1)}% BB · {fmtAvg(result.batterStats.battingAvg)} AVG
             </div>
@@ -428,7 +428,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
           {/* Pitcher */}
           <div className="flex-1 text-center">
             <div className="text-[10px] uppercase tracking-wide text-slate-500">Pitcher</div>
-            <div className="text-lg font-bold text-white">{result.pitcherName}</div>
+            <div className="text-lg font-bold text-chalk">{result.pitcherName}</div>
             <div className="mt-1 text-xs text-slate-400">
               {result.pitcherStats.era.toFixed(2)} ERA · {result.pitcherStats.kPercent.toFixed(1)}% K · {fmtAvg(result.pitcherStats.avg)} opp AVG
             </div>
@@ -454,7 +454,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
 
       {/* Outcome distribution */}
       <div className="glass rounded-2xl p-5">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-chalk">
           <Target className="h-4 w-4 text-crimson" />
           Outcome Distribution
           <span className="ml-auto text-[10px] font-normal text-slate-500">
@@ -465,7 +465,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
           {outcomeData.map((o) => (
             <div key={o.key} className="flex items-center gap-3">
               <div className="w-24 shrink-0 text-xs font-medium text-slate-300">{o.label}</div>
-              <div className="flex-1 h-6 overflow-hidden rounded-md bg-white/5 relative">
+              <div className="flex-1 h-6 overflow-hidden rounded-md bg-chalk/5 relative">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.max(o.prob * 100, 0.5)}%` }}
@@ -473,7 +473,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
                   className="h-full rounded-md flex items-center justify-end pr-2"
                   style={{ backgroundColor: o.color, boxShadow: `0 0 8px ${o.color}40` }}
                 >
-                  <span className="text-[10px] font-bold text-white">
+                  <span className="text-[10px] font-bold text-chalk">
                     {(o.prob * 100).toFixed(1)}%
                   </span>
                 </motion.div>
@@ -499,7 +499,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
         <Button
           onClick={onRerun}
           variant="outline"
-          className="border-white/10 bg-white/[0.02] hover:bg-white/5"
+          className="border-chalk/10 bg-chalk/[0.02] hover:bg-chalk/5"
         >
           <RefreshCw className="mr-2 h-4 w-4" />
           Rerun Simulation
@@ -511,7 +511,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
 
 function StatBox({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "cobalt" | "crimson" | "amber" | "mint" }) {
   const toneCls = {
-    default: "text-white",
+    default: "text-chalk",
     cobalt: "text-cobalt",
     crimson: "text-crimson",
     amber: "text-amber",

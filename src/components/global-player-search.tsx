@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useSavantStore } from "@/lib/store";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { cn } from "@/lib/utils";
 
 interface PlayerSearchResult {
   id: number;
@@ -20,7 +21,7 @@ interface PlayerSearchResult {
   currentAge?: number;
 }
 
-export function GlobalPlayerSearch() {
+export function GlobalPlayerSearch({ variant = "default" }: { variant?: "default" | "scouting" }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -86,7 +87,7 @@ export function GlobalPlayerSearch() {
   };
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
+    <div ref={containerRef} className={cn("relative w-full", variant === "default" && "max-w-md")}>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
@@ -95,7 +96,10 @@ export function GlobalPlayerSearch() {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKey}
           placeholder={placeholder}
-          className="h-10 rounded-full border-chalk/10 bg-chalk/[0.04] pl-10 pr-10 text-sm placeholder:text-slate-500 focus-visible:border-cobalt/50 focus-visible:ring-cobalt/20"
+          className={cn(
+            "border-chalk/10 bg-chalk/[0.04] pl-10 pr-10 text-sm placeholder:text-slate-500 focus-visible:border-cobalt/50 focus-visible:ring-cobalt/20",
+            variant === "scouting" ? "scorecard-cut h-12 border-chalk/20 bg-midnight/65 font-medium shadow-xl shadow-black/10" : "h-10 rounded-full"
+          )}
         />
         {isLoading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
@@ -117,7 +121,7 @@ export function GlobalPlayerSearch() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="glass-strong absolute z-50 mt-2 w-full overflow-hidden rounded-2xl p-1.5"
+            className={cn("glass-strong absolute z-50 mt-2 w-full overflow-hidden p-1.5", variant === "scouting" ? "scorecard-cut" : "rounded-2xl")}
           >
             <div className="max-h-[360px] overflow-y-auto scrollbar-thin">
               {players.map((p, i) => (
@@ -130,7 +134,7 @@ export function GlobalPlayerSearch() {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => selectPlayer(p)}
                   onMouseEnter={() => setActiveIdx(i)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors group ${
+                  className={`group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${variant === "scouting" ? "scorecard-cut" : "rounded-xl"} ${
                     i === activeIdx ? "bg-cobalt/15 text-chalk" : "hover:bg-chalk/5"
                   }`}
                 >
@@ -173,7 +177,7 @@ export function GlobalPlayerSearch() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="glass-strong absolute z-50 mt-2 w-full overflow-hidden rounded-2xl p-4 text-center"
+            className={cn("glass-strong absolute z-50 mt-2 w-full overflow-hidden p-4 text-center", variant === "scouting" ? "scorecard-cut" : "rounded-2xl")}
           >
             <div className="text-sm font-medium text-slate-300">No players found</div>
             <div className="mt-0.5 text-xs text-slate-500">

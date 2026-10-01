@@ -3,11 +3,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Radio, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useScored } from "@/hooks/use-scored";
 import { useSavantStore } from "@/lib/store";
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 interface TickerGame {
   gamePk: number;
@@ -171,7 +172,7 @@ function TickerGameCard({
   return (
     <button
       onClick={onClick}
-      className="group flex shrink-0 items-center gap-2.5 rounded-md border border-chalk bg-midnight-2/80 px-3 py-1.5 transition-all hover:border-warning-track/40 hover:bg-midnight-3/90 hover-lift"
+      className="scorecard-cut group flex shrink-0 items-center gap-2.5 border border-chalk bg-midnight-2/80 px-3 py-1.5 transition-all hover:border-heritage-red/45 hover:bg-midnight-3/90 hover-lift"
       title={`${g.away.name} @ ${g.home.name} — ${
         isLive
           ? `${g.inningState ?? ""} ${g.inning ?? ""}`
@@ -190,7 +191,7 @@ function TickerGameCard({
       </div>
 
       {/* Hover chevron */}
-      <ChevronRight className="h-3 w-3 text-slate-600 transition-colors group-hover:text-warning-track" />
+      <ChevronRight className="h-3 w-3 text-slate-600 transition-colors group-hover:text-heritage-red" />
     </button>
   );
 }
@@ -254,7 +255,7 @@ export function ScoreTicker() {
         className="sticky bottom-0 z-30 border-t border-chalk bg-midnight/95 backdrop-blur-md"
       >
         {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-warning-track/40 to-transparent" />
+        <div className="h-[2px] bg-gradient-to-r from-heritage-red via-heritage-red/60 to-transparent" />
 
         <div className="flex items-stretch">
           {/* Fixed left label — "LIVE MLB" or "MLB SCORES" */}
@@ -297,15 +298,15 @@ export function ScoreTicker() {
 function TickerLabel({ live }: { live: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-warning-track to-crimson">
-        <Radio className={cn("h-3.5 w-3.5 text-chalk", live && "animate-pulse")} fill="currentColor" />
+      <div className="scorecard-cut flex h-7 w-7 items-center justify-center border border-heritage-red/50 bg-scorebook text-heritage-red">
+        <BaseballMark size={19} className={cn(live && "animate-pulse")} />
       </div>
       <div className="flex flex-col leading-none">
         <span className="font-scoreboard text-[11px] font-bold uppercase tracking-wider text-chalk">
           {live ? "Live MLB" : "MLB Scores"}
         </span>
         <span className="hidden sm:inline text-[8px] font-scoreboard uppercase tracking-[0.2em] text-slate-500">
-          Cross-Game Ticker
+          Around the league
         </span>
       </div>
     </div>

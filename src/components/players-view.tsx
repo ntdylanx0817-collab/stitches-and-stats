@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  User, ArrowLeft, TrendingUp, Activity,
-  MapPin, Weight, Ruler, Calendar,
+  ArrowLeft, TrendingUp, Activity, Crosshair,
+  MapPin, Weight, Ruler, Calendar, Gauge, NotebookTabs,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { LeagueRanks } from "@/components/league-ranks";
 import { PitchMovement } from "@/components/pitch-movement";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { ExpectedVsActual } from "@/components/expected-vs-actual";
+import { BaseballFieldMark } from "@/components/ui/baseball-field-mark";
 import type { LeaderboardRow } from "@/lib/types";
 
 /** Accent colours a stat tile can use. */
@@ -84,16 +85,61 @@ export function PlayersView() {
   if (!selectedPlayer) {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
-        <div className="glass rounded-2xl p-10 text-center">
-          <User className="mx-auto mb-4 h-12 w-12 text-slate-500" />
-          <h2 className="font-scoreboard mb-2 text-xl font-bold text-chalk uppercase tracking-wide">Search for a player</h2>
-          <p className="mb-6 text-sm text-slate-400">
-            Search any active MLB player to see their complete Statcast profile — spray charts, pitch mix, percentiles, batted ball metrics, and more.
-          </p>
-          <div className="mx-auto max-w-md">
-            <GlobalPlayerSearch />
+        <section aria-labelledby="player-search-title" className="scorebook-panel min-h-[510px] px-6 py-10 sm:px-10 lg:px-14 lg:py-14">
+          <BaseballFieldMark
+            size={570}
+            className="pointer-events-none hidden text-warning-track/[0.075] lg:block"
+            style={{ position: "absolute", right: -72, top: -46 }}
+          />
+          <div className="relative grid items-center gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+            <div className="max-w-2xl">
+              <span className="editorial-kicker">Scouting desk</span>
+              <h1 id="player-search-title" className="font-scoreboard mt-5 max-w-xl text-4xl font-black uppercase leading-[0.96] tracking-[-0.035em] text-chalk sm:text-5xl lg:text-6xl">
+                Find the player behind the numbers.
+              </h1>
+              <p className="mt-5 max-w-xl text-sm leading-6 text-slate-400 sm:text-base">
+                Pull a complete MLB dossier with Statcast percentiles, pitch shapes, spray patterns, batted-ball quality, and game-by-game form.
+              </p>
+              <div className="mt-8 max-w-xl">
+                <label className="font-scoreboard mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                  Player name
+                </label>
+                <GlobalPlayerSearch variant="scouting" />
+                <p className="mt-2 text-[11px] text-slate-600">Try Shohei Ohtani, Aaron Judge, or your favorite active player.</p>
+              </div>
+            </div>
+
+            <div className="relative hidden min-h-[330px] lg:block" aria-hidden="true">
+              <div className="absolute inset-x-5 bottom-2 border-t border-chalk/10 pt-5">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { icon: Activity, label: "Percentiles", value: "League context" },
+                    { icon: Crosshair, label: "Pitch map", value: "Location & shape" },
+                    { icon: NotebookTabs, label: "Game log", value: "Recent form" },
+                  ].map(({ icon: Icon, label, value }, index) => (
+                    <motion.div
+                      key={label}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + index * 0.08 }}
+                      className="scorecard-cut border border-chalk/10 bg-midnight/55 p-3 backdrop-blur-sm"
+                    >
+                      <Icon className="mb-3 h-4 w-4 text-warning-track" />
+                      <div className="font-scoreboard text-xs font-bold uppercase text-chalk">{label}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-500">{value}</div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+              <div className="absolute right-10 top-2 scorecard-cut border border-chalk/10 bg-midnight/55 px-4 py-3 backdrop-blur-sm">
+                <div className="flex items-center gap-2 text-warning-track">
+                  <Gauge className="h-4 w-4" />
+                  <span className="font-scoreboard text-[10px] font-bold uppercase tracking-[0.16em]">Statcast powered</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     );
   }
@@ -119,7 +165,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-        <div className="glass rounded-2xl p-5 mb-4">
+        <div className="scorebook-panel mb-4 p-5">
           <div className="flex items-start gap-4">
             <Skeleton className="h-20 w-20 rounded-2xl" />
             <div className="flex-1 space-y-2">
@@ -175,19 +221,25 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6">
       {/* Hero header */}
-      <div className="card-broadcast rounded-2xl p-5 mb-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="card-broadcast scorecard-cut relative mb-4 overflow-hidden p-5 sm:p-6">
+        <BaseballFieldMark
+          size={310}
+          className="pointer-events-none text-warning-track/[0.055]"
+          style={{ position: "absolute", right: 36, top: -92 }}
+        />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="relative">
-              <PlayerAvatar playerId={p.id} size={80} fallbackText={p.fullName} className="rounded-xl" />
+              <PlayerAvatar playerId={p.id} size={80} fallbackText={p.fullName} className="scorecard-cut" />
               {p.primaryNumber && (
-                <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-midnight text-xs font-bold text-warning-track border border-warning-track/40">
+                <span className="home-plate-mark absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center border border-warning-track/40 bg-midnight pb-1 text-xs font-bold text-warning-track">
                   {p.primaryNumber}
                 </span>
               )}
             </div>
             <div>
-              <h1 className="font-scoreboard text-2xl font-bold text-chalk sm:text-3xl">{p.fullName}</h1>
+              <span className="editorial-kicker mb-2">Player dossier</span>
+              <h1 className="font-scoreboard text-3xl font-black uppercase leading-none tracking-tight text-chalk sm:text-4xl">{p.fullName}</h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                 {p.primaryPosition && (
                   <Badge variant="outline" className="border-warning-track/30 bg-warning-track/10 text-warning-track font-scoreboard">
@@ -214,7 +266,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
             variant="outline"
             size="sm"
             onClick={() => setSelectedPlayer(null)}
-            className="border-chalk bg-midnight/40 hover:bg-chalk/5"
+            className="scorecard-cut border-chalk bg-midnight/40 hover:bg-chalk/5"
           >
             <ArrowLeft className="mr-1 h-4 w-4" /> Close
           </Button>
@@ -224,7 +276,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
       {/* Season selector + Statcast disclaimer */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
         {data.totalPitches > 0 && (
-          <div className="flex-1 rounded-lg border border-warning-track/20 bg-warning-track/5 px-3 py-2 text-center text-[11px] text-slate-400">
+          <div className="scorecard-cut flex-1 border border-warning-track/20 bg-warning-track/5 px-3 py-2 text-center text-[11px] text-slate-400">
             <span className="font-scoreboard uppercase tracking-wide text-warning-track">{data.totalPitches.toLocaleString()} pitches analyzed</span>
             {" from "}
             <span className="font-bold text-chalk">{data.year}</span>
@@ -237,7 +289,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
             value={String(selectedYear ?? data.year)}
             onValueChange={(v) => setSelectedYear(Number(v))}
           >
-            <SelectTrigger className="w-[90px] h-8 bg-midnight/40 border-chalk font-scoreboard text-xs">
+          <SelectTrigger className="scorecard-cut h-8 w-[90px] border-chalk bg-midnight/40 font-scoreboard text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -261,7 +313,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
         {/* Left column (2/3) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Percentile Rankings */}
-          <div className="glass rounded-2xl p-4">
+          <div className="scorecard-cut border border-chalk bg-card/35 p-4">
             <h2 className="font-scoreboard mb-4 flex items-center gap-2 text-base font-bold text-chalk uppercase tracking-wide">
               <Activity className="h-5 w-5 text-warning-track" />
               Statcast Percentile Rankings
@@ -282,7 +334,7 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
 
           {/* Season Stats */}
           {stats && (
-            <div className="glass rounded-2xl p-4">
+            <div className="scorecard-cut border border-chalk bg-card/35 p-4">
               <h2 className="font-scoreboard mb-4 flex items-center gap-2 text-base font-bold text-chalk uppercase tracking-wide">
                 <TrendingUp className="h-5 w-5 text-mint" />
                 {data.year} Season Stats
@@ -367,7 +419,8 @@ function FullPlayerProfile({ playerId, type }: { playerId: number; type: "batter
           )}
 
           {/* Quick bio stats */}
-          <div className="glass rounded-2xl p-4">
+          <div className="scorecard-cut border border-chalk bg-card/35 p-4">
+            <span className="editorial-kicker mb-3">Clubhouse card</span>
             <h3 className="font-scoreboard mb-3 text-sm font-bold text-chalk uppercase tracking-wide">Bio</h3>
             <div className="space-y-1.5 text-xs">
               {p.birthDate && (
@@ -404,7 +457,7 @@ function PercentileBar({ metric, index }: {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.5), type: "spring", stiffness: 220, damping: 26 }}
       whileHover={{ y: -2, scale: 1.01, boxShadow: `0 12px 32px -12px ${toneColor}80` }}
-      className="rounded-xl border border-chalk bg-midnight/40 p-3 transition-colors hover:border-chalk-strong"
+      className="scorecard-cut border border-chalk bg-midnight/40 p-3 transition-colors hover:border-chalk-strong"
     >
       <div className="flex items-start justify-between mb-2">
         <div>
@@ -448,7 +501,7 @@ function StatCard({ label, value, tone = "default" }: { label: string; value: st
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className="rounded-xl border border-chalk bg-midnight/40 p-3 text-center hover-lift"
+      className="scorecard-cut border border-chalk bg-midnight/40 p-3 text-center hover-lift"
     >
       <div className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cn("font-scoreboard text-lg font-bold num", toneCls)}>{value}</div>

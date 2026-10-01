@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ErrorState, EmptyState } from "@/components/loading-states";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { BaseballFieldMark } from "@/components/ui/baseball-field-mark";
 import { cn } from "@/lib/utils";
 /** Batter inputs echoed back by /api/simulate. */
 interface SimBatterStats {
@@ -163,16 +164,34 @@ export function SimulatorView() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-      {/* Header */}
-      <div className="mb-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-chalk">
-          <Swords className="h-5 w-5 text-crimson" />
-          Matchup Simulator
-        </h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Pick a batter and a pitcher to simulate a matchup using {season} Statcast data · 10,000 Monte Carlo iterations
-        </p>
-      </div>
+      <section aria-labelledby="simulator-title" className="scorebook-panel relative mb-5 px-6 py-8 sm:px-8">
+        <BaseballFieldMark
+          size={320}
+          className="pointer-events-none text-warning-track/[0.06]"
+          style={{ position: "absolute", right: 24, top: -104 }}
+        />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="editorial-kicker">Matchup laboratory</span>
+            <h1 id="simulator-title" className="font-scoreboard mt-3 text-4xl font-black uppercase leading-none tracking-[-0.035em] text-chalk sm:text-5xl">
+              Run the matchup.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+              Choose the hitter and the arm. We&apos;ll model the plate appearance from their {season} Statcast profiles.
+            </p>
+          </div>
+          <div className="flex gap-5">
+            <div className="border-l border-chalk/15 pl-3">
+              <div className="broadcast-number text-2xl font-black text-chalk">10K</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">At-bats</div>
+            </div>
+            <div className="border-l border-chalk/15 pl-3">
+              <div className="broadcast-number text-2xl font-black text-chalk">{season}</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">Data season</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Batter selector */}
@@ -182,7 +201,7 @@ export function SimulatorView() {
           search={batterSearch}
           onSearchChange={(v) => { setBatterSearch(v); setBatterDropdownOpen(true); }}
           dropdownOpen={batterDropdownOpen}
-          onDropdownClose={() => setBatterDropdownOpen(false)}
+          onDropdownOpen={() => setBatterDropdownOpen(true)}
           filteredPlayers={filteredBatters}
           selectedPlayer={selectedBatter}
           onSelect={(p) => { setSelectedBatter(p); setBatterDropdownOpen(false); setBatterSearch(""); }}
@@ -205,7 +224,7 @@ export function SimulatorView() {
           search={pitcherSearch}
           onSearchChange={(v) => { setPitcherSearch(v); setPitcherDropdownOpen(true); }}
           dropdownOpen={pitcherDropdownOpen}
-          onDropdownClose={() => setPitcherDropdownOpen(false)}
+          onDropdownOpen={() => setPitcherDropdownOpen(true)}
           filteredPlayers={filteredPitchers}
           selectedPlayer={selectedPitcher}
           onSelect={(p) => { setSelectedPitcher(p); setPitcherDropdownOpen(false); setPitcherSearch(""); }}
@@ -227,7 +246,7 @@ export function SimulatorView() {
         <Button
           onClick={handleSimulate}
           disabled={!canSimulate || simLoading}
-          className="bg-gradient-to-r from-crimson to-cobalt text-white font-bold px-8 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="scorecard-cut border border-heritage-red/60 bg-heritage-red px-8 py-2.5 font-scoreboard font-bold uppercase tracking-wide text-white shadow-[4px_4px_0_rgba(213,74,67,0.2)] transition-transform hover:-translate-y-0.5 hover:bg-heritage-red/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {simLoading ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Simulating…</>
@@ -241,7 +260,7 @@ export function SimulatorView() {
       <AnimatePresence mode="wait">
         {simLoading && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="mt-6 glass rounded-2xl p-8">
+            <div className="scorecard-cut mt-6 border border-chalk bg-card/30 p-8">
               <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-cobalt" />
               <p className="text-center text-sm text-slate-400">Running 10,000 simulated at-bats…</p>
             </div>
@@ -272,7 +291,7 @@ export function SimulatorView() {
 
         {!simResult && !simLoading && !simError && canSimulate && (
           <motion.div key="ready" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-            <div className="glass rounded-2xl p-6 text-center text-sm text-slate-400">
+            <div className="scorecard-cut border border-chalk bg-card/30 p-6 text-center text-sm text-slate-400">
               <Swords className="mx-auto mb-2 h-6 w-6 text-slate-500" />
               Ready to simulate. Click "Simulate Matchup" above.
             </div>
@@ -295,7 +314,7 @@ export function SimulatorView() {
 
 // ===== Player Selector Component =====
 function PlayerSelector({
-  label, icon, search, onSearchChange, dropdownOpen, onDropdownClose,
+  label, icon, search, onSearchChange, dropdownOpen, onDropdownOpen,
   filteredPlayers, selectedPlayer, onSelect, onClear, isLoading, renderStats,
 }: {
   label: string;
@@ -303,7 +322,7 @@ function PlayerSelector({
   search: string;
   onSearchChange: (v: string) => void;
   dropdownOpen: boolean;
-  onDropdownClose: () => void;
+  onDropdownOpen: () => void;
   filteredPlayers: PlayerOption[];
   selectedPlayer: PlayerOption | null;
   onSelect: (p: PlayerOption) => void;
@@ -312,9 +331,12 @@ function PlayerSelector({
   renderStats: (p: PlayerOption) => React.ReactNode;
 }) {
   return (
-    <div className="glass rounded-2xl p-4 relative z-10">
+    <div className={cn(
+      "scorecard-cut relative z-10 border bg-card/35 p-4",
+      icon === "bat" ? "border-cobalt/25 border-t-cobalt" : "border-mint/25 border-t-mint"
+    )}>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">
+        <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
           {icon === "bat" ? (
             <TrendingUp className="h-4 w-4 text-cobalt" />
           ) : (
@@ -330,9 +352,9 @@ function PlayerSelector({
       </div>
 
       {selectedPlayer ? (
-        <div className="rounded-xl border border-chalk/10 bg-chalk/[0.03] p-3">
+        <div className="scorecard-cut border border-chalk/10 bg-chalk/[0.03] p-3">
           <div className="flex items-center gap-3">
-            <PlayerAvatar playerId={selectedPlayer.player_id} size={48} fallbackText={selectedPlayer.player_name} className="rounded-full" />
+            <PlayerAvatar playerId={selectedPlayer.player_id} size={48} fallbackText={selectedPlayer.player_name} className="scorecard-cut" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold text-chalk">{selectedPlayer.player_name}</div>
               <div className="mt-1 flex flex-wrap gap-2 text-[10px]">
@@ -347,9 +369,9 @@ function PlayerSelector({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            onFocus={() => onDropdownClose()}
+            onFocus={onDropdownOpen}
             placeholder={`Search for a ${label.toLowerCase()}…`}
-            className="h-10 rounded-lg border-chalk/10 bg-chalk/[0.03] pl-9"
+            className="scorecard-cut h-10 border-chalk/10 bg-chalk/[0.03] pl-9"
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
@@ -360,14 +382,14 @@ function PlayerSelector({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="glass-strong absolute left-0 right-0 z-[100] mt-2 max-h-[320px] w-full overflow-y-auto rounded-xl p-1.5 scrollbar-thin"
+                className="glass-strong scorecard-cut absolute left-0 right-0 z-[100] mt-2 max-h-[320px] w-full overflow-y-auto p-1.5 scrollbar-thin"
                 style={{ position: "absolute" }}
               >
                 {filteredPlayers.map((p) => (
                   <button
                     key={p.player_id}
                     onClick={() => onSelect(p)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left hover:bg-chalk/5 transition-colors"
+                    className="scorecard-cut flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-chalk/5"
                   >
                     <span className="truncate text-sm font-medium text-chalk">{p.player_name}</span>
                     <span className="flex shrink-0 gap-2 text-[10px] text-slate-500">
@@ -408,7 +430,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
   return (
     <div className="space-y-4">
       {/* Matchup header */}
-      <div className="glass rounded-2xl p-5">
+      <div className="scorecard-cut border border-chalk bg-card/30 p-5">
         <div className="flex items-center justify-between gap-4">
           {/* Batter */}
           <div className="flex-1 text-center">
@@ -436,7 +458,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
         </div>
 
         {/* Insight */}
-        <div className="mt-4 rounded-xl border border-cobalt/20 bg-cobalt/5 p-3">
+        <div className="scorecard-cut mt-4 border border-cobalt/20 bg-cobalt/5 p-3">
           <div className="flex items-start gap-2">
             <Activity className="mt-0.5 h-4 w-4 shrink-0 text-cobalt" />
             <p className="text-xs leading-relaxed text-slate-300">{result.matchupInsight}</p>
@@ -453,7 +475,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
       </div>
 
       {/* Outcome distribution */}
-      <div className="glass rounded-2xl p-5">
+      <div className="scorecard-cut border border-chalk bg-card/30 p-5">
         <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-chalk">
           <Target className="h-4 w-4 text-crimson" />
           Outcome Distribution
@@ -499,7 +521,7 @@ function SimulationResults({ result, onRerun }: { result: SimResult; onRerun: ()
         <Button
           onClick={onRerun}
           variant="outline"
-          className="border-chalk/10 bg-chalk/[0.02] hover:bg-chalk/5"
+          className="scorecard-cut border-chalk/10 bg-chalk/[0.02] hover:bg-chalk/5"
         >
           <RefreshCw className="mr-2 h-4 w-4" />
           Rerun Simulation
@@ -518,7 +540,7 @@ function StatBox({ label, value, tone = "default" }: { label: string; value: str
     mint: "text-mint",
   }[tone];
   return (
-    <div className="glass rounded-xl p-3 text-center">
+    <div className="scorecard-cut border border-chalk bg-card/30 p-3 text-center">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cn("text-2xl font-bold num", toneCls)}>{value}</div>
     </div>

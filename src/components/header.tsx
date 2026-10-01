@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
-  Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon, Target,
+  Activity, BarChart3, User, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon, Target,
   Sunrise, ChevronDown,
   type LucideIcon,
 } from "lucide-react";
@@ -12,6 +12,7 @@ import { GlobalPlayerSearch } from "@/components/global-player-search";
 import { useSavantStore, type ViewKey } from "@/lib/store";
 import { useSocket } from "@/components/socket-provider";
 import { cn } from "@/lib/utils";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 /** Never fires; `mounted` only needs to differ between server and client. */
 const noopSubscribe = () => () => {};
@@ -87,23 +88,22 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full">
       <div className="card-broadcast !overflow-visible border-b border-chalk">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-1.5 px-3 py-2.5 sm:gap-4 sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-1.5 px-3 py-2 sm:gap-4 sm:px-6">
           {/* Logo */}
           <button
             onClick={() => selectView("live")}
-            className="group flex shrink-0 items-center gap-2.5"
+            className="group flex shrink-0 items-center gap-2.5 text-left"
             aria-label="Stitches and Stats home"
           >
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-warning-track to-crimson shadow-lg shadow-warning-track/30 transition-transform group-hover:scale-105 group-active:scale-95">
-              <Zap className="h-5 w-5 text-chalk" fill="currentColor" />
-              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-live-dot rounded-full bg-mint ring-2 ring-midnight" />
+            <div className="scorecard-cut relative flex h-10 w-10 items-center justify-center border border-heritage-red/60 bg-scorebook text-heritage-red shadow-[3px_3px_0_rgba(213,74,67,0.22)] transition-transform group-hover:-rotate-3 group-active:scale-95">
+              <BaseballMark size={27} />
             </div>
-            <div className="hidden flex-col leading-none sm:flex">
-              <span className="font-scoreboard text-lg font-black tracking-wide text-chalk uppercase">
-                Stitches <span className="text-warning-track text-glow-warning">& Stats</span>
+            <div className="hidden flex-col sm:flex">
+              <span className="font-scoreboard text-[19px] font-black leading-[0.9] tracking-[0.035em] text-chalk uppercase">
+                Stitches <span className="text-heritage-red">& Stats</span>
               </span>
-              <span className="label-xs text-slate-500 font-scoreboard">
-                Pro Broadcast Analytics
+              <span className="mt-1 font-mono text-[7px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                The baseball data desk
               </span>
             </div>
           </button>
@@ -112,7 +112,7 @@ export function Header() {
               the flex row so it scrolls internally on very narrow viewports
               (below ~320px) instead of pushing the theme toggle or connection
               badge off-screen with no way to reach them. */}
-          <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-subtle bg-gradient-to-b from-midnight-2/70 to-midnight/70 p-0.5 scrollbar-thin">
+          <nav className="scorecard-cut flex min-w-0 items-center gap-0.5 overflow-x-auto border border-subtle bg-midnight/75 p-0.5 scrollbar-thin">
             {PRIMARY_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
@@ -122,14 +122,14 @@ export function Header() {
                   onClick={() => selectView(item.key)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    "relative flex min-h-9 shrink-0 items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
                     active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
                   {active && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40"
+                      className="absolute inset-0 rounded-sm bg-heritage-red/12 ring-1 ring-heritage-red/35"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
@@ -139,14 +139,14 @@ export function Header() {
                       // Warm halo rather than .icon-glow: the active label is
                       // chalk, so currentColor would give a white glow that
                       // vanishes against the pill. Orange reads as lit.
-                      active && "drop-shadow-[0_0_7px_rgba(230,126,34,0.85)]"
+                      active && "text-heritage-red drop-shadow-[0_0_7px_rgba(213,74,67,0.8)]"
                     )}
                   />
                   <span className="relative hidden md:inline">{item.label}</span>
                   {active && (
                     <motion.span
                       layoutId="nav-underline"
-                      className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track shadow-[0_0_8px_rgba(230,126,34,0.9)]"
+                      className="absolute bottom-0.5 left-2 right-2 h-0.5 bg-heritage-red shadow-[0_0_8px_rgba(213,74,67,0.75)]"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
@@ -163,19 +163,19 @@ export function Header() {
                 aria-haspopup="menu"
                 aria-controls="more-navigation-menu"
                 className={cn(
-                  "relative flex min-h-9 items-center gap-1 rounded-md px-2 py-1.5 text-xs font-scoreboard font-medium uppercase tracking-wide transition-colors sm:px-3",
+                  "relative flex min-h-9 items-center gap-1 rounded-sm px-2 py-1.5 text-xs font-scoreboard font-medium uppercase tracking-wide transition-colors sm:px-3",
                   moreActive || moreOpen ? "text-chalk" : "text-slate-400 hover:text-slate-200"
                 )}
               >
                 {moreActive && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40"
+                    className="absolute inset-0 rounded-sm bg-heritage-red/12 ring-1 ring-heritage-red/35"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
                 )}
                 {!moreActive && moreOpen && (
-                  <span className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40" />
+                  <span className="absolute inset-0 rounded-sm bg-heritage-red/12 ring-1 ring-heritage-red/35" />
                 )}
                 <span className="relative hidden md:inline">More</span>
                 <ChevronDown
@@ -187,7 +187,7 @@ export function Header() {
                 {moreActive && (
                   <motion.span
                     layoutId="nav-underline"
-                    className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track shadow-[0_0_8px_rgba(230,126,34,0.9)]"
+                    className="absolute bottom-0.5 left-2 right-2 h-0.5 bg-heritage-red shadow-[0_0_8px_rgba(213,74,67,0.75)]"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
                 )}
@@ -217,11 +217,11 @@ export function Header() {
                           className={cn(
                             "interactive-row flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-scoreboard uppercase tracking-wide transition-colors",
                             active
-                              ? "bg-warning-track/15 font-bold text-chalk"
+                              ? "bg-heritage-red/15 font-bold text-chalk"
                               : "text-slate-300 hover:bg-chalk/5 hover:text-chalk"
                           )}
                         >
-                          <Icon className={cn("h-4 w-4", active && "text-warning-track")} />
+                          <Icon className={cn("h-4 w-4", active && "text-heritage-red")} />
                           {item.label}
                         </button>
                       );
@@ -240,7 +240,7 @@ export function Header() {
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="flex shrink-0 items-center justify-center rounded-md border border-chalk bg-midnight/60 p-1.5 text-slate-400 hover:text-warning-track transition-colors"
+            className="scorecard-cut flex shrink-0 items-center justify-center border border-chalk bg-midnight/60 p-1.5 text-slate-400 transition-colors hover:border-heritage-red/50 hover:text-heritage-red"
             title={isDark ? "Stadium Day Mode" : "Night Game Mode"}
             aria-label={isDark ? "Switch to Stadium Day Mode" : "Switch to Night Game Mode"}
           >

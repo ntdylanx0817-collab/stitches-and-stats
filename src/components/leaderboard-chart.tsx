@@ -48,13 +48,19 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
 
   return (
     <div className={className}>
-      <div className="glass rounded-2xl p-4 mb-3">
-        <h3 className="font-scoreboard mb-3 flex items-center justify-between text-sm font-bold text-chalk uppercase tracking-wide">
-          <span>Top 10 — {sortKey.replace(/_/g, " ").replace(/p /, "").toUpperCase()}</span>
-          <span className="text-[10px] text-slate-500">{sortDir === "desc" ? "↓ Highest" : "↑ Lowest"}</span>
-        </h3>
+      <div className="scorecard-cut mb-3 border border-chalk bg-card/35 p-4 sm:p-5">
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <span className="editorial-kicker">Top ten</span>
+            <h3 className="mt-2 font-scoreboard text-xl font-black uppercase tracking-wide text-chalk">
+              {sortKey.replace(/_/g, " ").replace(/p /, "")}
+            </h3>
+          </div>
+          <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">{sortDir === "desc" ? "↓ Highest first" : "↑ Lowest first"}</span>
+        </div>
+        <div className="scorebook-rule mb-4" />
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {top10.map((row, i) => {
             const value = Number(row[sortKey]);
             const pct = (Math.abs(value) / maxValue) * 100;
@@ -91,7 +97,7 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
                     reads as "bad" everywhere else in the app. */}
                 <span
                   className={cn(
-                    "font-scoreboard w-5 shrink-0 text-center text-[10px] font-bold num",
+                    "broadcast-number w-7 shrink-0 text-center text-lg font-black leading-none",
                     i > 2 && "text-slate-600"
                   )}
                   style={i <= 2 ? { color: PODIUM_COLORS[i] } : undefined}
@@ -100,15 +106,15 @@ export function LeaderboardChart({ rows, sortKey, sortDir, isBatter: _isBatter, 
                 </span>
 
                 {/* Player name */}
-                <span className="w-28 shrink-0 truncate text-[11px] text-slate-300">{row.player_name ?? "—"}</span>
+                <span className="w-28 shrink-0 truncate font-scoreboard text-xs font-semibold uppercase tracking-wide text-slate-300 sm:w-36">{row.player_name ?? "—"}</span>
 
                 {/* Bar */}
-                <div className="flex-1 h-5 overflow-hidden rounded-md bg-midnight">
+                <div className="h-6 flex-1 overflow-hidden border border-chalk bg-midnight">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ delay: Math.min(i * 0.04, 0.4) + 0.1, duration: 0.5, ease: "easeOut" }}
-                    className="h-full rounded-md flex items-center justify-end pr-1.5"
+                    className="flex h-full items-center justify-end pr-1.5"
                     style={{
                       background: `linear-gradient(90deg, ${barColor}30, ${barColor}80)`,
                       boxShadow: `0 0 6px ${barColor}30`,

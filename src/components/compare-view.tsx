@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton, ListSkeleton, EmptyState, ErrorState } from "@/components/loading-states";
 import { SprayChart, type SprayPoint } from "@/components/spray-chart";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { BaseballFieldMark } from "@/components/ui/baseball-field-mark";
 import { cn } from "@/lib/utils";
 
 interface PlayerRow {
@@ -64,16 +65,35 @@ export function CompareView() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-      {/* Header */}
-      <div className="mb-5">
-        <h2 className="font-scoreboard flex items-center gap-2 text-xl font-bold text-chalk uppercase tracking-wide">
-          <GitCompare className="h-5 w-5 text-warning-track" />
-          Batter's Eye Comparison
-        </h2>
-        <p className="mt-0.5 text-xs text-slate-500 font-scoreboard uppercase tracking-wide">
-          Head-to-head stat comparison · side-by-side percentile battle
-        </p>
-      </div>
+      <section aria-labelledby="compare-title" className="scorebook-panel relative mb-5 px-6 py-8 sm:px-8">
+        <BaseballFieldMark
+          size={290}
+          className="pointer-events-none text-cobalt/[0.055]"
+          style={{ position: "absolute", right: 18, top: -92 }}
+        />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="editorial-kicker">Batter&apos;s eye</span>
+            <h1 id="compare-title" className="font-scoreboard mt-3 text-4xl font-black uppercase leading-none tracking-[-0.035em] text-chalk sm:text-5xl">
+              Settle the debate.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+              Put two hitters on the same card and compare production, quality of contact, plate discipline, and league percentiles.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="scorecard-cut border border-cobalt/25 bg-cobalt/10 px-4 py-3 text-center">
+              <div className="broadcast-number text-2xl font-black text-cobalt">01</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">Blue corner</div>
+            </div>
+            <GitCompare className="h-5 w-5 text-warning-track" />
+            <div className="scorecard-cut border border-crimson/25 bg-crimson/10 px-4 py-3 text-center">
+              <div className="broadcast-number text-2xl font-black text-crimson">02</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">Red corner</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PlayerSearchPanel
@@ -154,10 +174,10 @@ function PlayerSearchPanel({
   const accentColor = accent === "cobalt" ? "#4DA3FF" : "#FF3B5C";
 
   return (
-    <div className="glass rounded-xl p-4 relative z-10">
+    <div className="scorecard-cut relative z-10 border border-chalk bg-card/35 p-4" style={{ borderTopColor: accentColor, borderTopWidth: 3 }}>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-scoreboard flex items-center gap-2 text-sm font-bold text-chalk uppercase tracking-wide">
-          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: accentColor }} />
+          <span className="home-plate-mark h-3.5 w-3.5" style={{ backgroundColor: accentColor }} />
           {label}
         </h3>
         {selectedId && (
@@ -168,9 +188,9 @@ function PlayerSearchPanel({
       </div>
 
       {playerData?.player ? (
-        <div className="rounded-lg border border-chalk bg-midnight/40 p-4">
+        <div className="scorecard-cut border border-chalk bg-midnight/40 p-4">
           <div className="flex items-center gap-3">
-            <PlayerAvatar playerId={playerData.player.id} size={64} fallbackText={playerData.player.fullName} className="rounded-lg" />
+            <PlayerAvatar playerId={playerData.player.id} size={64} fallbackText={playerData.player.fullName} className="scorecard-cut" />
             <div className="min-w-0 flex-1">
               <div className="font-scoreboard text-lg font-bold text-chalk truncate">
                 {playerData.player.fullName}
@@ -200,7 +220,7 @@ function PlayerSearchPanel({
           )}
         </div>
       ) : isLoading ? (
-        <div className="rounded-lg border border-chalk bg-midnight/40 p-4">
+        <div className="scorecard-cut border border-chalk bg-midnight/40 p-4">
           <div className="flex items-center gap-3">
             <Skeleton className="h-16 w-16 rounded-lg" />
             <div className="flex-1 space-y-2">
@@ -217,7 +237,7 @@ function PlayerSearchPanel({
             onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
             onFocus={() => setDropdownOpen(true)}
             placeholder="Search batters…"
-            className="h-10 rounded-lg border-chalk bg-midnight/40 pl-9 font-scoreboard"
+            className="scorecard-cut h-10 border-chalk bg-midnight/40 pl-9 font-scoreboard"
           />
           <AnimatePresence>
             {dropdownOpen && filtered.length > 0 && (
@@ -225,13 +245,13 @@ function PlayerSearchPanel({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="glass-strong absolute left-0 right-0 z-[100] mt-2 max-h-[320px] overflow-y-auto rounded-lg p-1.5 scrollbar-thin"
+                className="glass-strong scorecard-cut absolute left-0 right-0 z-[100] mt-2 max-h-[320px] overflow-y-auto p-1.5 scrollbar-thin"
               >
                 {filtered.map((p) => (
                   <button
                     key={p.player_id}
                     onClick={() => { onSelect(p.player_id); setDropdownOpen(false); setSearch(""); }}
-                    className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left hover:bg-chalk/5 transition-colors"
+                    className="scorecard-cut flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-chalk/5"
                   >
                     <span className="truncate text-sm font-medium text-chalk">{p.player_name}</span>
                     <span className="flex shrink-0 gap-2 text-[10px] text-slate-500 font-scoreboard">
@@ -272,7 +292,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
 
   if (loading1 || loading2) {
     return (
-      <div className="mt-4 glass rounded-xl p-6">
+      <div className="scorecard-cut mt-4 border border-chalk bg-card/35 p-6">
         <ListSkeleton rows={6} marker="none" />
       </div>
     );
@@ -325,7 +345,7 @@ function ComparisonResults({ player1Id, player2Id }: { player1Id: number; player
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4 glass rounded-xl overflow-hidden"
+      className="scorecard-cut mt-4 overflow-hidden border border-chalk bg-card/30"
     >
       {/* VS Header */}
       <div className="grid grid-cols-2 border-b border-chalk">
@@ -439,7 +459,7 @@ function PercentileBattle({
         {matched.map((m) => {
           const p1Wins = m.p1 > m.p2;
           return (
-            <div key={m.label} className="rounded-lg border border-chalk bg-midnight/40 p-2.5">
+            <div key={m.label} className="scorecard-cut border border-chalk bg-midnight/40 p-2.5">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{m.label}</span>
                 <span className="font-scoreboard text-[9px] text-slate-600">PCTILE</span>
@@ -473,7 +493,7 @@ function PercentileBattle({
 
 function MiniStat({ label, value, tone }: { label: string; value: string; tone?: "warning" }) {
   return (
-    <div className="rounded-md border border-chalk bg-midnight/40 p-2 text-center">
+    <div className="scorecard-cut border border-chalk bg-midnight/40 p-2 text-center">
       <div className="font-scoreboard text-[9px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cn(
         "font-scoreboard text-lg font-bold num",

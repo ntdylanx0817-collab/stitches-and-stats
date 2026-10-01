@@ -22,6 +22,7 @@ import { cn, statcastSeasons } from "@/lib/utils";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
 import { LeaderboardChart } from "@/components/leaderboard-chart";
 import type { LeaderboardRow } from "@/lib/types";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 type SortDir = "asc" | "desc" | null;
 interface ColDef {
@@ -244,17 +245,48 @@ export function LeaderboardsView() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+      <section className="scorebook-panel mb-5 px-5 py-5 sm:px-7 sm:py-6" aria-labelledby="leaderboard-heading">
+        <BaseballMark
+          size={240}
+          className="pointer-events-none text-heritage-red/[0.06]"
+          style={{ position: "absolute", right: "-3rem", top: "-4.5rem" }}
+        />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+          <div>
+            <span className="editorial-kicker">Statcast register</span>
+            <h1 id="leaderboard-heading" className="mt-3 font-scoreboard text-4xl font-black uppercase leading-[0.9] tracking-[-0.025em] text-chalk sm:text-5xl">
+              League <span className="text-heritage-red">Leaders</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-slate-500">
+              The season&apos;s defining performances, ranked from traditional production to underlying contact quality.
+            </p>
+          </div>
+          <dl className="grid grid-cols-3 border-y border-chalk lg:min-w-[400px] lg:border">
+            {[
+              { label: "Season", value: data?.year ?? lbYear, tone: "text-chalk" },
+              { label: "Players", value: data?.total ?? 0, tone: "text-heritage-red" },
+              { label: "Register", value: lbType === "batter" ? "BAT" : "PIT", tone: lbType === "batter" ? "text-cobalt" : "text-mint" },
+            ].map((item, index) => (
+              <div key={item.label} className={cn("px-3 py-3 text-center sm:px-5", index > 0 && "border-l border-chalk")}>
+                <dd className={cn("broadcast-number text-3xl font-black uppercase leading-none", item.tone)}>{item.value}</dd>
+                <dt className="mt-1 font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">{item.label}</dt>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
       {/* Filters bar */}
-      <div className="glass rounded-2xl p-4 mb-4">
+      <div className="scorecard-cut mb-4 border border-chalk bg-card/35 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-scoreboard flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-chalk">
-            <Filter className="h-4 w-4 text-cobalt drop-shadow-[0_0_6px_rgba(77,163,255,0.5)]" /> Statcast Leaderboards
+            <Filter className="h-4 w-4 text-heritage-red" /> Build the board
           </h2>
           <Badge variant="outline" className="border-chalk/10 text-[10px] text-slate-400">
             {data?.total ?? 0} players
           </Badge>
         </div>
-        <div className="mb-3 h-px bg-gradient-to-r from-cobalt/40 via-cobalt/10 to-transparent" />
+        <div className="scorebook-rule mb-3" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Type toggle */}
           <div>
@@ -262,14 +294,14 @@ export function LeaderboardsView() {
             <div className="mt-1 flex rounded-lg border border-chalk/5 bg-chalk/[0.02] p-0.5">
               <button
                 onClick={() => setLbType("batter")}
-                className={cn("flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                  lbType === "batter" ? "bg-cobalt/20 text-cobalt" : "text-slate-400 hover:text-chalk")}
+                className={cn("flex-1 rounded-sm px-2 py-1.5 text-xs font-medium transition-colors",
+                  lbType === "batter" ? "bg-heritage-red/15 text-heritage-red" : "text-slate-400 hover:text-chalk")}
               >
                 Batters
               </button>
               <button
                 onClick={() => setLbType("pitcher")}
-                className={cn("flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                className={cn("flex-1 rounded-sm px-2 py-1.5 text-xs font-medium transition-colors",
                   lbType === "pitcher" ? "bg-mint/20 text-mint" : "text-slate-400 hover:text-chalk")}
               >
                 Pitchers
@@ -347,10 +379,10 @@ export function LeaderboardsView() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Filter by player name…"
-                className="h-9 rounded-lg border-chalk/5 bg-chalk/[0.02] pl-9"
+                className="scorecard-cut h-9 border-chalk/5 bg-chalk/[0.02] pl-9"
               />
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-chalk/5 bg-chalk/[0.02] px-3 py-1.5">
+            <div className="scorecard-cut flex items-center gap-2 border border-chalk/5 bg-chalk/[0.02] px-3 py-1.5">
               <Switch checked={lbShowAdvanced} onCheckedChange={setLbShowAdvanced} />
               <Label className="text-xs font-medium text-slate-300 cursor-pointer">
                 Statcast Columns
@@ -366,7 +398,7 @@ export function LeaderboardsView() {
       )}
 
       {/* Table */}
-      <div className="glass rounded-2xl overflow-hidden">
+      <div className="scorecard-cut overflow-hidden border border-chalk bg-card/25 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.8)]">
         {isLoading ? (
           <div className="p-3">
             <div className="space-y-1">
@@ -407,7 +439,7 @@ export function LeaderboardsView() {
                 {lbYear} MLB {lbType === "batter" ? "batting" : "pitching"} leaderboard. Select a player to open their profile.
               </caption>
               <thead className="sticky top-0 z-20 bg-midnight/95 backdrop-blur">
-                <tr className="border-b border-chalk/10">
+                <tr className="border-b-2 border-heritage-red/45">
                   {visibleCols.map((col) => {
                     const isSortable = col.key !== "rank" && col.key !== "player_name";
                     const isSorted = sortKey === col.key && sortDir;
@@ -487,32 +519,22 @@ export function LeaderboardsView() {
                           )}
                         >
                           {col.key === "rank" && (
-                            idx < 3 ? (
-                              // The podium gets the full badge — this column is
-                              // 40px, so the 28px chrome fits without shifting
-                              // the row (unlike the denser standings table).
-                              // Re-sorting changes the row key, so the medal
-                              // re-lands when a player moves onto the podium.
-                              <span
-                                className={cn(
-                                  "badge-medal animate-slide-in-medal",
-                                  idx === 0 ? "rank-badge-gold" : idx === 1 ? "rank-badge-silver" : "rank-badge-bronze"
-                                )}
-                                style={{ animationDelay: `${idx * 90}ms` }}
-                                aria-label={`Rank ${idx + 1}`}
-                              >
-                                {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
-                              </span>
-                            ) : (
-                              <span className="font-mono text-slate-500 inline-block transition-transform duration-200 group-hover:scale-110 group-hover:text-warning-track">{idx + 1}</span>
-                            )
+                            <span
+                              className={cn(
+                                "broadcast-number inline-block text-lg font-black leading-none transition-colors",
+                                idx === 0 ? "text-heritage-red" : idx < 3 ? "text-warning-track" : "text-slate-500 group-hover:text-heritage-red"
+                              )}
+                              aria-label={`Rank ${idx + 1}`}
+                            >
+                              {String(idx + 1).padStart(2, "0")}
+                            </span>
                           )}
                           {col.key === "player_name" && (
                             <div className="flex items-center gap-2 min-w-[160px]">
-                              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt/30 to-crimson/20 text-[10px] font-bold text-chalk transition-transform duration-200 group-hover:scale-110 group-hover:shadow-[0_0_10px_rgba(230,126,34,0.5)]">
+                              <div className="scorecard-cut flex h-7 w-7 shrink-0 items-center justify-center border border-heritage-red/30 bg-scorebook text-[9px] font-black text-heritage-red transition-transform duration-200 group-hover:-rotate-3">
                                 {String(row.player_name ?? "?").split(",").map((s: string) => s.trim()[0] ?? "").join("").slice(0, 2)}
                               </div>
-                              <span className="truncate transition-colors group-hover:text-warning-track">{row.player_name ?? "—"}</span>
+                              <span className="truncate font-semibold transition-colors group-hover:text-heritage-red">{row.player_name ?? "—"}</span>
                             </div>
                           )}
                           {col.key !== "rank" && col.key !== "player_name" && display}

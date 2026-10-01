@@ -25,6 +25,9 @@
   --color-slate-600: var(--slate-600);
   --color-slate-700: var(--slate-700);
   --color-warning-track: #e67e22;
+  --color-heritage-red: #d54a43;
+  --color-scorebook: #efe5d1;
+  --color-ink: #172033;
   --color-cobalt: #4DA3FF;
   --color-crimson: #FF3B5C;
   --color-mint: #3DDBA0;
@@ -125,6 +128,9 @@
   --chart-3: #3DDBA0;
   --chart-4: #FFB547;
   --chart-5: #FF3B5C;
+  --heritage-red: #c9413a;
+  --scorebook-paper: #efe5d1;
+  --scorebook-line: rgba(23, 32, 51, 0.10);
   --sidebar: #f5f0e8;
   --sidebar-foreground: #1a1a2e;
   --sidebar-primary: #e67e22;
@@ -171,6 +177,9 @@
   --chart-3: #3DDBA0;
   --chart-4: #FFB547;
   --chart-5: #FF3B5C;
+  --heritage-red: #e35b52;
+  --scorebook-paper: #121b2b;
+  --scorebook-line: rgba(248, 249, 250, 0.075);
   --sidebar: #050a14;
   --sidebar-foreground: #f8f9fa;
   --sidebar-primary: #e67e22;
@@ -265,6 +274,70 @@
     font-family: var(--font-scoreboard), 'Oswald', 'Arial Narrow', sans-serif;
     font-weight: 600;
     letter-spacing: 0.02em;
+  }
+
+  /* Modern scorebook surfaces. These use squared, opposing corners rather
+     than the same soft radius on every card, giving the app a recognizable
+     ticket/scorecard silhouette without sacrificing a visible focus ring. */
+  .scorebook-panel {
+    position: relative;
+    border: 1px solid color-mix(in srgb, var(--chalk) 14%, transparent);
+    border-radius: 3px 18px 3px 18px;
+    background-color: color-mix(in srgb, var(--scorebook-paper) 86%, transparent);
+    background-image:
+      linear-gradient(var(--scorebook-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--scorebook-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    box-shadow: 0 18px 45px -30px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+  }
+  .scorebook-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--heritage-red);
+    box-shadow: 2px 0 18px color-mix(in srgb, var(--heritage-red) 35%, transparent);
+    pointer-events: none;
+  }
+
+  .scorecard-cut {
+    border-radius: 2px 14px 2px 14px;
+  }
+
+  .editorial-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-scoreboard), 'Oswald', 'Arial Narrow', sans-serif;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--heritage-red);
+  }
+  .editorial-kicker::before {
+    content: "";
+    width: 1.75rem;
+    height: 2px;
+    background: currentColor;
+  }
+
+  .scorebook-rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--heritage-red) 0 4rem, color-mix(in srgb, var(--chalk) 14%, transparent) 4rem 100%);
+  }
+
+  .broadcast-number {
+    font-family: var(--font-scoreboard), 'Oswald', 'Arial Narrow', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.045em;
+  }
+
+  .home-plate-mark {
+    clip-path: polygon(12% 0, 88% 0, 100% 66%, 50% 100%, 0 66%);
   }
 
   /* Glassmorphism with field grain texture overlay.

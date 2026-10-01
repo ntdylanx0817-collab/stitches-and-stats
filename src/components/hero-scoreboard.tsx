@@ -12,6 +12,7 @@ import { PlayByPlayModal } from "@/components/play-by-play-modal";
 import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type { GameStatus, Linescore } from "@/lib/types";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 interface HeroScoreboardProps {
   gamePk: number;
@@ -103,11 +104,16 @@ export function HeroScoreboard({
       onClick={() => setExpanded(true)}
       whileHover={{ scale: 1.005 }}
       whileTap={{ scale: 0.995 }}
-      className="card-broadcast rounded-2xl overflow-hidden relative w-full text-left"
+      className="card-broadcast scorecard-cut relative w-full overflow-hidden text-left"
       style={{
         background: `linear-gradient(135deg, ${awayColor.primary}15, ${homeColor.primary}15)`,
       }}
-    >
+      >
+      <BaseballMark
+        size={210}
+        className="pointer-events-none text-chalk/[0.035]"
+        style={{ position: "absolute", right: "-4rem", bottom: "-5.5rem", zIndex: 1 }}
+      />
       {/* Run-scored wash, in the scoring team's colour. Sits above the card
           background but below the content, and never takes pointer events so
           it can't swallow the click that opens play-by-play. */}
@@ -144,16 +150,18 @@ export function HeroScoreboard({
 
       <div className="p-4 sm:p-5">
         {/* Top bar: status + inning */}
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="mb-4 flex items-center justify-between border-b border-chalk pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-[7px] font-bold uppercase tracking-[0.22em] text-slate-500">Game center</span>
+            <span className="h-3 w-px bg-slate-700" aria-hidden />
             {state === "Live" && (
-              <span className="flex items-center gap-1.5 rounded-md bg-mint/15 px-2 py-0.5">
+              <span className="scorecard-cut flex items-center gap-1.5 bg-mint/15 px-2 py-0.5">
                 <span className="h-1.5 w-1.5 animate-live-dot rounded-full bg-mint" />
                 <span className="font-scoreboard text-[10px] font-bold uppercase tracking-wide text-mint">LIVE</span>
               </span>
             )}
             {state === "Final" && (
-              <span className="font-scoreboard rounded-md bg-slate-700/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">FINAL</span>
+              <span className="scorecard-cut bg-slate-700/30 px-2 py-0.5 font-scoreboard text-[10px] font-bold uppercase tracking-wide text-slate-400">FINAL</span>
             )}
             {state === "Preview" && startTime && (
               <CountdownTimer gameDate={gameDate || new Date().toISOString()} className="rounded-md bg-warning-track/15 px-2 py-0.5" />
@@ -192,7 +200,7 @@ export function HeroScoreboard({
 
           {/* Center: VS + base runners */}
           <div className="flex flex-col items-center gap-2">
-            <div className="font-scoreboard label-xs text-slate-600">VS</div>
+            <div className="home-plate-mark flex h-8 w-8 items-center justify-center border border-chalk bg-chalk/5 font-mono text-[7px] font-black tracking-widest text-slate-500">VS</div>
             {state === "Live" ? (
               <OnBaseTrail
                 gamePk={gamePk}
@@ -315,4 +323,3 @@ function AnimatedScoreDisplay({ value }: { value: number }) {
   const display = useAnimatedValue(value, 0, 0.6);
   return <>{display}</>;
 }
-

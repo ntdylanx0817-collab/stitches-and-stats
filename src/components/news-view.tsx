@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton, ErrorState, EmptyState } from "@/components/loading-states";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 import { cn } from "@/lib/utils";
 
 interface NewsArticle {
@@ -104,89 +105,105 @@ export function NewsView() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-chalk">
-            <Newspaper className="h-5 w-5 text-cobalt" />
-            Baseball News
-          </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Aggregated from {sources.length} trustworthy sources · auto-refreshes every 60s
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="border-chalk/10 bg-chalk/[0.02] hover:bg-chalk/5"
-        >
-          <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isFetching && "animate-spin")} />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Source filter chips */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="mr-1 flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500">
-          <Filter className="h-3 w-3" /> Sources
-        </span>
-        <button
-          onClick={() => setSourceFilter("all")}
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-            sourceFilter === "all"
-              ? "border-cobalt/40 bg-cobalt/15 text-cobalt"
-              : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:text-chalk hover:bg-chalk/5"
-          )}
-        >
-          All Sources
-          {data && (
-            <span className="ml-1.5 text-[10px] text-slate-500">{data.articles.length}</span>
-          )}
-        </button>
-        {sources.map((s) => {
-          const active = sourceFilter === s.slug;
-          const count = sourceCounts.get(s.slug) ?? 0;
-          return (
-            <button
-              key={s.slug}
-              onClick={() => setSourceFilter(s.slug)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                active
-                  ? "border-chalk/30 bg-chalk/10 text-chalk"
-                  : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:text-chalk hover:bg-chalk/5"
-              )}
-            >
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: s.color }}
-              />
-              {s.name}
-              {count > 0 && <span className="text-[10px] text-slate-500">{count}</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search */}
-      <div className="mb-4 relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search articles by keyword…"
-          className="h-9 rounded-lg border-chalk/5 bg-chalk/[0.02] pl-9"
+      {/* Editorial masthead */}
+      <section aria-labelledby="news-title" className="scorebook-panel relative mb-4 px-5 py-6 sm:px-8 sm:py-8">
+        <BaseballMark
+          size={230}
+          className="pointer-events-none text-warning-track/[0.06]"
+          style={{ position: "absolute", right: -38, top: -66 }}
         />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="editorial-kicker">Clubhouse wire</span>
+            <h1 id="news-title" className="font-scoreboard mt-3 text-4xl font-black uppercase leading-none tracking-[-0.035em] text-chalk sm:text-5xl">
+              The Baseball Wire
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
+              The day&apos;s essential stories, analysis, and transactions from trusted baseball desks.
+            </p>
+          </div>
+          <div className="flex items-end gap-5 sm:justify-end">
+            <div className="border-l border-chalk/15 pl-3">
+              <div className="broadcast-number text-2xl font-black text-chalk">{data?.total ?? "—"}</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">Stories</div>
+            </div>
+            <div className="border-l border-chalk/15 pl-3">
+              <div className="broadcast-number text-2xl font-black text-chalk">{sources.length || "—"}</div>
+              <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-500">Sources</div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="scorecard-cut border-chalk/15 bg-midnight/45 hover:border-heritage-red/40 hover:bg-heritage-red/10"
+            >
+              <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isFetching && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <div className="scorecard-cut mb-4 border border-chalk bg-card/30 p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="mr-1 flex items-center gap-1 font-scoreboard text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            <Filter className="h-3 w-3" /> News desks
+          </span>
+          <button
+            type="button"
+            aria-pressed={sourceFilter === "all"}
+            onClick={() => setSourceFilter("all")}
+            className={cn(
+              "scorecard-cut border px-3 py-1 text-xs font-medium transition-colors",
+              sourceFilter === "all"
+                ? "border-heritage-red/50 bg-heritage-red/15 text-chalk"
+                : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:bg-chalk/5 hover:text-chalk"
+            )}
+          >
+            All desks
+            {data && <span className="ml-1.5 text-[10px] text-slate-500">{data.articles.length}</span>}
+          </button>
+          {sources.map((s) => {
+            const active = sourceFilter === s.slug;
+            const count = sourceCounts.get(s.slug) ?? 0;
+            return (
+              <button
+                type="button"
+                aria-pressed={active}
+                key={s.slug}
+                onClick={() => setSourceFilter(s.slug)}
+                className={cn(
+                  "scorecard-cut flex items-center gap-1.5 border px-3 py-1 text-xs font-medium transition-colors",
+                  active
+                    ? "border-chalk/30 bg-chalk/10 text-chalk"
+                    : "border-chalk/10 bg-chalk/[0.02] text-slate-400 hover:bg-chalk/5 hover:text-chalk"
+                )}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                {s.name}
+                {count > 0 && <span className="text-[10px] text-slate-500">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="scorebook-rule mb-3" />
+        <div className="relative max-w-lg">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search the wire by keyword…"
+            className="scorecard-cut h-10 border-chalk/10 bg-midnight/35 pl-9"
+          />
+        </div>
       </div>
 
       {/* Articles */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="glass rounded-xl p-4">
+            <div key={i} className={cn("scorecard-cut border border-chalk bg-card/30 p-4", i === 0 && "md:col-span-2 lg:row-span-2")}>
               <div className="mb-2 flex items-center gap-2">
                 <Skeleton className="h-2 w-12 rounded-full" />
                 <Skeleton className="h-2 w-16" />
@@ -214,7 +231,7 @@ export function NewsView() {
           }
         />
       ) : (
-        <ScrollArea className="h-[calc(100vh-340px)] min-h-[400px] pr-2">
+        <ScrollArea className="h-[calc(100vh-410px)] min-h-[460px] pr-2">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence initial={false}>
               {articles.map((article, idx) => {
@@ -230,10 +247,21 @@ export function NewsView() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ delay: Math.min(idx * 0.02, 0.3) }}
-                    className="glass-hover group flex flex-col rounded-xl border border-chalk/5 bg-chalk/[0.02] p-4 transition-all hover:border-chalk/15"
+                    className={cn(
+                      "scorecard-cut group relative flex min-h-[190px] flex-col overflow-hidden border border-chalk bg-card/30 p-4 transition-all hover:-translate-y-0.5 hover:border-heritage-red/40 hover:shadow-xl hover:shadow-black/15",
+                      idx === 0 && "min-h-[300px] md:col-span-2 md:p-6 lg:row-span-2 lg:min-h-[395px]"
+                    )}
                   >
+                    <span className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: article.sourceColor }} />
+                    {idx === 0 && (
+                      <BaseballMark
+                        size={260}
+                        className="pointer-events-none text-warning-track/[0.045]"
+                        style={{ position: "absolute", right: -52, bottom: -72 }}
+                      />
+                    )}
                     {/* Source + trust badge */}
-                    <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="relative mb-3 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <span
                           className="h-2 w-2 rounded-full"
@@ -246,7 +274,7 @@ export function NewsView() {
                       {trust && (
                         <span
                           className={cn(
-                            "rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                            "scorecard-cut border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
                             trust.color
                           )}
                         >
@@ -256,24 +284,28 @@ export function NewsView() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-chalk transition-colors group-hover:text-cobalt">
+                    {idx === 0 && <span className="editorial-kicker relative mb-4">Lead story</span>}
+                    <h2 className={cn(
+                      "relative mb-2 line-clamp-3 font-semibold leading-snug text-chalk transition-colors group-hover:text-heritage-red",
+                      idx === 0 ? "max-w-2xl text-2xl sm:text-3xl" : "text-sm"
+                    )}>
                       {article.title}
-                    </h3>
+                    </h2>
 
                     {/* Description */}
                     {article.description && (
-                      <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                      <p className={cn("relative mb-3 text-xs leading-relaxed text-slate-400", idx === 0 ? "max-w-2xl line-clamp-4 sm:text-sm sm:leading-6" : "line-clamp-2")}>
                         {article.description}
                       </p>
                     )}
 
                     {/* Footer */}
-                    <div className="mt-auto flex items-center justify-between text-[10px] text-slate-500">
+                    <div className="relative mt-auto flex items-center justify-between border-t border-chalk/10 pt-3 text-[10px] text-slate-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {timeAgo(article.publishedTimestamp)}
                       </span>
-                      <span className="flex items-center gap-0.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className={cn("flex items-center gap-0.5 text-slate-400 transition-opacity", idx === 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                         Read <ExternalLink className="h-3 w-3" />
                       </span>
                     </div>

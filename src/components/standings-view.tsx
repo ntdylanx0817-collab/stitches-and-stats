@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Trophy, Flame, Snowflake } from "lucide-react";
+import { Flame, Snowflake } from "lucide-react";
 
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { useSavantStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { CardSkeleton, ErrorState } from "@/components/loading-states";
+import { BaseballMark } from "@/components/ui/baseball-mark";
 
 interface TeamStanding {
   id: number;
@@ -39,6 +40,12 @@ interface StandingsData {
   divisions: DivisionStanding[];
   wildCard: { AL: TeamStanding[]; NL: TeamStanding[] };
   allTeams: TeamStanding[];
+}
+
+function shortDivisionName(name: string): string {
+  return name
+    .replace("American League", "AL")
+    .replace("National League", "NL");
 }
 
 export function StandingsView() {
@@ -82,18 +89,37 @@ export function StandingsView() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-scoreboard flex items-center gap-2 text-lg font-bold text-chalk uppercase tracking-wide">
-          <Trophy className="icon-trophy h-5 w-5" />
-          Standings
-        </h2>
-        <span className="font-scoreboard text-[10px] uppercase tracking-wide text-slate-500">{data.season} Season</span>
-      </div>
-      <div className="mb-4 h-px bg-gradient-to-r from-warning-track/40 via-warning-track/10 to-transparent" />
+      <section className="scorebook-panel mb-5 px-5 py-5 sm:px-7 sm:py-6" aria-labelledby="standings-heading">
+        <BaseballMark
+          size={230}
+          className="pointer-events-none text-heritage-red/[0.065]"
+          style={{ position: "absolute", right: "-3rem", top: "-4rem" }}
+        />
+        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <span className="editorial-kicker">Pennant race</span>
+            <h1 id="standings-heading" className="mt-3 font-scoreboard text-4xl font-black uppercase leading-[0.9] tracking-[-0.025em] text-chalk sm:text-5xl">
+              Clubhouse <span className="text-heritage-red">Board</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-slate-500">
+              Division races, wild-card pressure, and the road to October.
+            </p>
+          </div>
+          <div className="flex items-end gap-5 border-t border-chalk pt-3 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+            <div>
+              <div className="broadcast-number text-4xl font-black leading-none text-chalk">{data.season}</div>
+              <div className="mt-1 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">Season</div>
+            </div>
+            <div>
+              <div className="broadcast-number text-4xl font-black leading-none text-heritage-red">{data.divisions.length}</div>
+              <div className="mt-1 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500">Divisions</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Tab toggle */}
-      <div role="tablist" aria-label="Standings views" className="mb-4 flex max-w-full overflow-x-auto rounded-lg border border-chalk bg-midnight/40 p-0.5 w-fit scrollbar-thin">
+      <div role="tablist" aria-label="Standings views" className="scorecard-cut mb-5 flex w-fit max-w-full overflow-x-auto border border-chalk bg-midnight/40 p-0.5 scrollbar-thin">
         {([
           { key: "divisions", label: "Divisions" },
           { key: "wildcard", label: "Wild Card" },
@@ -107,8 +133,8 @@ export function StandingsView() {
             aria-controls={`standings-panel-${t.key}`}
             onClick={() => setTab(t.key)}
             className={cn(
-              "font-scoreboard min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
-              tab === t.key ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"
+              "font-scoreboard min-h-10 shrink-0 rounded-sm px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
+              tab === t.key ? "bg-heritage-red/15 text-heritage-red shadow-[inset_0_-2px_0_var(--heritage-red)]" : "text-slate-500 hover:text-chalk"
             )}
           >
             {t.label}
@@ -150,12 +176,18 @@ function DivisionCard({ division, index }: { division: DivisionStanding; index: 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.3) }}
-      className="glass glass-hover rounded-xl p-3"
+      className="scorecard-cut overflow-hidden border border-chalk bg-card/35 shadow-[0_16px_32px_-28px_rgba(0,0,0,0.8)]"
     >
-      <h3 className="font-scoreboard mb-2 text-xs font-bold text-chalk uppercase tracking-wide border-b border-chalk pb-1.5">
-        {division.division}
-      </h3>
-      <div className="space-y-0.5">
+      <div className="border-b border-chalk bg-chalk/[0.025] px-4 py-3">
+        <span className="font-mono text-[7px] font-bold uppercase tracking-[0.2em] text-heritage-red">Division {String(index + 1).padStart(2, "0")}</span>
+        <h3 className="mt-1 font-scoreboard text-lg font-black uppercase leading-none tracking-wide text-chalk">
+          {shortDivisionName(division.division)}
+        </h3>
+        <div className="mt-3 grid grid-cols-[1fr_auto_auto_auto] gap-3 font-mono text-[7px] font-bold uppercase tracking-[0.16em] text-slate-600">
+          <span>Club</span><span>Record</span><span>GB</span><span>Form</span>
+        </div>
+      </div>
+      <div className="px-2 py-2">
         {division.teams.map((t, i) => (
           <TeamRow key={t.id} team={t} rank={i + 1} isDivisionLeader={i === 0} />
         ))}
@@ -166,11 +198,12 @@ function DivisionCard({ division, index }: { division: DivisionStanding; index: 
 
 function WildCardCard({ title, teams, cutoff }: { title: string; teams: TeamStanding[]; cutoff: number }) {
   return (
-    <div className="glass rounded-xl p-3">
-      <h3 className="font-scoreboard mb-2 text-sm font-bold text-chalk uppercase tracking-wide border-b border-chalk pb-1.5">
-        {title}
-      </h3>
-      <div className="space-y-0.5">
+    <div className="scorecard-cut overflow-hidden border border-chalk bg-card/35">
+      <div className="border-b border-chalk bg-chalk/[0.025] px-4 py-3">
+        <span className="editorial-kicker">October watch</span>
+        <h3 className="mt-2 font-scoreboard text-xl font-black uppercase tracking-wide text-chalk">{title}</h3>
+      </div>
+      <div className="px-2 py-2">
         {teams.map((t, i) => (
           <TeamRow key={t.id} team={t} rank={i + 1} isInWildCard={i < cutoff} wildCardGB={t.wildCardGamesBack} />
         ))}
@@ -188,11 +221,12 @@ function PlayoffCard({ title, teams }: { title: string; teams: TeamStanding[] })
   const onBubble = nonLeaders.slice(3, 6);
 
   return (
-    <div className="glass rounded-xl p-4">
-      <h3 className="font-scoreboard mb-3 text-sm font-bold text-chalk uppercase tracking-wide border-b border-chalk pb-1.5">
-        {title}
-      </h3>
-      <div className="space-y-3">
+    <div className="scorecard-cut overflow-hidden border border-chalk bg-card/35">
+      <div className="border-b border-chalk bg-chalk/[0.025] px-4 py-3">
+        <span className="editorial-kicker">Projected field</span>
+        <h3 className="mt-2 font-scoreboard text-xl font-black uppercase tracking-wide text-chalk">{title}</h3>
+      </div>
+      <div className="space-y-4 px-3 py-3">
         <div>
           <div className="font-scoreboard text-[9px] uppercase tracking-wide text-mint mb-1">Division Leaders</div>
           {divisionLeaders.map((t, i) => (
@@ -250,25 +284,15 @@ function TeamRow({
         isInWildCard && "bg-cobalt/5"
       )}
     >
-      {/* Rank — the division podium gets a medal, everyone else a number.
-          Bare glyph rather than the .badge-medal chrome: that utility is 28px
-          and would push the top three rows out of line with the rest of a
-          table whose rank column is 16px. */}
-      {rank <= 3 ? (
-        <span
-          className="animate-slide-in-medal w-4 shrink-0 text-center text-[11px] leading-none"
-          aria-label={`Rank ${rank}`}
-        >
-          {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
-        </span>
-      ) : (
-        <span className={cn(
-          "font-scoreboard w-4 shrink-0 text-center text-[10px] font-bold num",
-          isDivisionLeader ? "text-mint" : isInWildCard ? "text-cobalt" : "text-slate-600"
-        )}>
-          {rank}
-        </span>
-      )}
+      <span
+        className={cn(
+          "broadcast-number w-6 shrink-0 text-center text-lg font-black leading-none",
+          rank === 1 ? "text-heritage-red" : isInWildCard ? "text-cobalt" : "text-slate-600"
+        )}
+        aria-label={`Rank ${rank}`}
+      >
+        {String(rank).padStart(2, "0")}
+      </span>
 
       {/* Team color dot */}
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: teamInk }} />
@@ -282,7 +306,7 @@ function TeamRow({
       </span>
 
       {/* Record */}
-      <span className="font-scoreboard text-xs text-chalk num shrink-0">{team.wins}-{team.losses}</span>
+      <span className="font-scoreboard shrink-0 text-xs text-chalk num">{team.wins}-{team.losses}</span>
 
       {/* PCT */}
       <span className="font-scoreboard text-[10px] text-slate-500 num hidden sm:inline">{team.pct}</span>

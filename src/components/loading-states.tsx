@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BaseballMark } from "@/components/ui/baseball-mark";
+import { BaseballFieldMark } from "@/components/ui/baseball-field-mark";
 
 /** Shimmer skeleton block for loading states */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
@@ -19,7 +19,7 @@ export function Skeleton({ className = "", style }: { className?: string; style?
 /** Card skeleton with multiple shimmer lines */
 export function CardSkeleton({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="glass rounded-2xl p-5">
+    <div className="scorecard-cut border border-chalk bg-card/30 p-5">
       <Skeleton className="mb-4 h-5 w-1/3" />
       <div className="space-y-2">
         {Array.from({ length: lines }).map((_, i) => (
@@ -129,25 +129,19 @@ export function EmptyState({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="glass relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl p-10 text-center"
+      className="scorebook-panel relative flex min-h-[280px] flex-col items-center justify-center gap-3 overflow-hidden p-10 text-center"
     >
-      {/* Oversized ball behind the copy. Faint enough to read as texture, and
-          it fills what is otherwise a large empty panel with something that
-          belongs to the sport. */}
-      {/* Positioned inline, not with `absolute`: `.glass > *` sets
-          `position: relative` on every direct child and ties with the utility
-          on specificity, which would drop this into flow above the copy
-          instead of behind it. */}
-      <BaseballMark
-        size={190}
+      <BaseballFieldMark
+        size={300}
         className="pointer-events-none text-warning-track/[0.07]"
-        style={{ position: "absolute", top: -32, right: -32 }}
+        style={{ position: "absolute", top: -72, right: -42 }}
       />
-      <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-warning-track/20 bg-warning-track/5">
+      <div className="home-plate-mark relative flex h-14 w-14 items-center justify-center border border-warning-track/25 bg-warning-track/10 pb-1">
         <Icon className="h-6 w-6 text-warning-track/70" />
       </div>
       <div className="relative">
-        <h3 className="mb-1 text-base font-semibold text-chalk">{title}</h3>
+        <span className="editorial-kicker mb-3">No play recorded</span>
+        <h3 className="font-scoreboard mb-1 text-lg font-bold uppercase text-chalk">{title}</h3>
         {description && (
           <p className="mx-auto max-w-md text-sm text-slate-400">{description}</p>
         )}
@@ -172,21 +166,22 @@ export function ErrorState({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-8 text-center"
+      className="scorecard-cut flex min-h-[240px] flex-col items-center justify-center gap-3 border border-crimson/20 bg-card/30 p-8 text-center"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-crimson/30 bg-crimson/15 shadow-lg shadow-crimson/20">
+      <div className="home-plate-mark flex h-12 w-12 items-center justify-center border border-crimson/30 bg-crimson/15 pb-1 shadow-lg shadow-crimson/20">
         <svg className="h-5 w-5 text-crimson" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
       <div>
-        <h3 className="mb-1 text-sm font-semibold text-chalk">{title}</h3>
+        <span className="editorial-kicker mb-3 text-crimson">Play under review</span>
+        <h3 className="font-scoreboard mb-1 text-base font-bold uppercase text-chalk">{title}</h3>
         {description && <p className="mx-auto max-w-md text-xs text-slate-400">{description}</p>}
       </div>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="rounded-lg border border-cobalt/30 bg-cobalt/10 px-3 py-1.5 text-xs font-medium text-cobalt transition-all duration-200 hover:scale-105 hover:border-cobalt/60 hover:bg-cobalt/20 hover:shadow-lg hover:shadow-cobalt/20 active:scale-95"
+          className="scorecard-cut border border-cobalt/30 bg-cobalt/10 px-3 py-1.5 text-xs font-medium text-cobalt transition-all duration-200 hover:-translate-y-0.5 hover:border-cobalt/60 hover:bg-cobalt/20 hover:shadow-lg hover:shadow-cobalt/20 active:translate-y-0"
         >
           Try again
         </button>

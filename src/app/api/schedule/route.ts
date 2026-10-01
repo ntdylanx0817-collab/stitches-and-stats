@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchedule, ymd } from "@/lib/mlb-api";
 import { errorResponse } from "@/lib/api-errors";
 import type { MLBGame } from "@/lib/types";
+import { dateParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 30;
 
 export async function GET(req: NextRequest) {
   const requestedDate = req.nextUrl.searchParams.get("date");
+  if (requestedDate !== null && dateParam(requestedDate) === null) {
+    return NextResponse.json({ error: "date must be a real date in YYYY-MM-DD format" }, { status: 400 });
+  }
   const today = requestedDate ?? ymd(new Date());
   const [y, m, d] = today.split("-").map(Number);
 

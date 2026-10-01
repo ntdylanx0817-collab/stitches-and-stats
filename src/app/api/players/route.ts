@@ -5,7 +5,8 @@ import { errorResponse } from "@/lib/api-errors";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get("q") ?? "";
+  const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
+  if (q.length > 80) return NextResponse.json({ error: "query is too long" }, { status: 400 });
   if (q.length < 2) return NextResponse.json({ players: [] });
   try {
     const players = await searchPlayers(q, 12);

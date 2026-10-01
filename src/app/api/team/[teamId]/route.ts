@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { assertAllOk, assertOk, errorResponse } from "@/lib/api-errors";
+import { integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -30,8 +31,8 @@ export async function GET(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   const { teamId: teamIdStr } = await params;
-  const teamId = Number(teamIdStr);
-  if (!Number.isInteger(teamId) || teamId <= 0) {
+  const teamId = integerParam(teamIdStr, { min: 1 });
+  if (teamId === null) {
     return NextResponse.json({ error: "invalid teamId", status: 400 }, { status: 400 });
   }
 

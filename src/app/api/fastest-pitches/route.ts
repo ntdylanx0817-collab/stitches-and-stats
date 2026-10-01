@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
 import { routeLogger } from "@/lib/logger";
+import { integerParam, numberParam } from "@/lib/api-params";
 
 const log = routeLogger("/api/fastest-pitches");
 
@@ -25,8 +26,11 @@ interface FastestPitch {
 }
 
 export async function GET(req: NextRequest) {
-  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 25, 100);
-  const minVel = Number(req.nextUrl.searchParams.get("minVel")) || 95;
+  const limit = integerParam(req.nextUrl.searchParams.get("limit"), { defaultValue: 25, min: 1, max: 100 });
+  const minVel = numberParam(req.nextUrl.searchParams.get("minVel"), { defaultValue: 95, min: 80, max: 110 });
+  if (limit === null || minVel === null) {
+    return NextResponse.json({ error: "limit must be 1-100 and minVel must be 80-110" }, { status: 400 });
+  }
   const season = new Date().getFullYear();
 
   // Only `minVel` and `season` affect the cached payload. `limit` is applied

@@ -3,6 +3,7 @@ import { errorResponse } from "@/lib/api-errors";
 import { fetchLiveFeed } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
 import type { LiveGameFeed } from "@/lib/types";
+import { integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -219,8 +220,8 @@ function extractLineup(feed: LiveGameFeed): LineupData | null {
 // argument typed for a [gamePk] segment that does not exist here, which
 // Next.js rejects when route types are checked.
 export async function GET(req: NextRequest) {
-  const gamePk = Number(req.nextUrl.searchParams.get("gamePk"));
-  if (!Number.isInteger(gamePk) || gamePk <= 0) {
+  const gamePk = integerParam(req.nextUrl.searchParams.get("gamePk"), { min: 1 });
+  if (gamePk === null) {
     return NextResponse.json({ error: "gamePk required", status: 400 }, { status: 400 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { routeLogger, serializeError } from "@/lib/logger";
+import { integerParam } from "@/lib/api-params";
 
 const log = routeLogger("/api/h2h");
 
@@ -34,11 +35,11 @@ interface H2HData {
 }
 
 export async function GET(req: NextRequest) {
-  const team1Id = Number(req.nextUrl.searchParams.get("team1Id"));
-  const team2Id = Number(req.nextUrl.searchParams.get("team2Id"));
+  const team1Id = integerParam(req.nextUrl.searchParams.get("team1Id"), { min: 1 });
+  const team2Id = integerParam(req.nextUrl.searchParams.get("team2Id"), { min: 1 });
 
-  if (!team1Id || !team2Id) {
-    return NextResponse.json({ error: "team1Id and team2Id required" }, { status: 400 });
+  if (team1Id === null || team2Id === null || team1Id === team2Id) {
+    return NextResponse.json({ error: "team1Id and team2Id must be distinct positive integers" }, { status: 400 });
   }
 
   const cacheKey = `h2h:${team1Id}:${team2Id}`;

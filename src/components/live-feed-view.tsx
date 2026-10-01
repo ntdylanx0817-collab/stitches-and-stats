@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, Clock,
@@ -34,6 +34,13 @@ const PITCH_LOG_LIMIT = 80;
 
 /** One inning row in the linescore. */
 type InningLine = Linescore["innings"][number];
+
+interface BroadcastMoment {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "run" | "homer" | "strikeout" | "barrel";
+}
 
 
 export function LiveFeedView() {
@@ -142,6 +149,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
   }, [mergedPitches, highLeverageOnly]);
 
   const latestPitch = displayPitches[0] ?? mergedPitches[0] ?? null;
+  const broadcastMoment = useBroadcastMoment(latestPitch, teams);
   const recentZonePitches = mergedPitches.slice(0, 30).reverse(); // oldest to newest for strike zone
   const szTop = latestPitch?.szTop ?? 3.5;
   const szBot = latestPitch?.szBot ?? 1.5;
@@ -208,6 +216,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
 
   return (
     <div>
+      <BroadcastMomentBanner moment={broadcastMoment} />
       {/* Sticky mini-scoreboard (appears on scroll) */}
       {teams?.away?.id && teams?.home?.id && (
         <StickyMiniScoreboard
@@ -390,7 +399,12 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             )}
           </div>
           {latestPitch ? (
-            <div>
+            <motion.div
+              key={`${latestPitch.atBatIndex}-${latestPitch.pitchNumber}`}
+              initial={{ opacity: 0.7, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            >
               <div className="mb-3 rounded-xl bg-chalk/[0.03] p-3 border border-chalk/5">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">
                   {latestPitch.inning > 0 ? `${latestPitch.halfInning === "top" ? "Top" : "Bottom"} ${latestPitch.inning}` : "Pre-game"}
@@ -424,7 +438,7 @@ function GameFeed({ gamePk }: { gamePk: number }) {
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
           ) : (
             <div className="flex h-40 items-center justify-center text-slate-400 text-sm">
               No pitches yet
@@ -483,6 +497,133 @@ function GameFeed({ gamePk }: { gamePk: number }) {
         />
       )}
     </AnimatePresence>
+    </div>
+  );
+}
+
+function useBroadcastMoment(
+  latestPitch: EnrichedPitch | null,
+  teams: { away?: FeedTeam; home?: FeedTeam } | null
+): BroadcastMoment | null {
+  const [moment, setMoment] = useState<BroadcastMoment | null>(null);
+  const previousPitchId = useRef<string | null>(null);
+  const previousScore = useRef({ away: 0, home: 0 });
+  const dismissTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (dismissTimer.current != null) window.clearTimeout(dismissTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (!latestPitch) return;
+
+    const id = `${latestPitch.atBatIndex}-${latestPitch.pitchNumber}`;
+    const awayScore = latestPitch.awayScore ?? 0;
+    const homeScore = latestPitch.homeScore ?? 0;
+
+    // Joining a game already in progress should not replay its latest event.
+    if (previousPitchId.current == null) {
+      previousPitchId.current = id;
+      previousScore.current = { away: awayScore, home: homeScore };
+      return;
+    }
+    if (previousPitchId.current === id) return;
+
+    const scoreChanged =
+      awayScore > previousScore.current.away || homeScore > previousScore.current.home;
+    previousPitchId.current = id;
+    previousScore.current = { away: awayScore, home: homeScore };
+
+    const result = [latestPitch.playResult, latestPitch.result, latestPitch.description]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const awayAbbr = teams?.away?.abbreviation ?? teams?.away?.name ?? "Away";
+    const homeAbbr = teams?.home?.abbreviation ?? teams?.home?.name ?? "Home";
+
+    let next: BroadcastMoment | null = null;
+    if (result.includes("home_run") || result.includes("home run")) {
+      next = {
+        id,
+        title: "Home Run",
+        detail: `${latestPitch.batterName} · ${awayAbbr} ${awayScore}, ${homeAbbr} ${homeScore}`,
+        tone: "homer",
+      };
+    } else if (scoreChanged) {
+      next = {
+        id,
+        title: "Run Scores",
+        detail: `${awayAbbr} ${awayScore}, ${homeAbbr} ${homeScore}`,
+        tone: "run",
+      };
+    } else if (result.includes("strikeout") || result.includes("strike out")) {
+      next = {
+        id,
+        title: "Strikeout",
+        detail: `${latestPitch.pitcherName} retires ${latestPitch.batterName}`,
+        tone: "strikeout",
+      };
+    } else if (latestPitch.isBarrel) {
+      const exitVelocity = latestPitch.exitVelocity != null
+        ? ` · ${Number(latestPitch.exitVelocity).toFixed(1)} mph`
+        : "";
+      next = {
+        id,
+        title: "Barrel",
+        detail: `${latestPitch.batterName}${exitVelocity}`,
+        tone: "barrel",
+      };
+    }
+
+    if (!next) return;
+    if (dismissTimer.current != null) window.clearTimeout(dismissTimer.current);
+    setMoment(next);
+    dismissTimer.current = window.setTimeout(() => {
+      setMoment(null);
+      dismissTimer.current = null;
+    }, 1_900);
+  }, [latestPitch, teams]);
+
+  return moment;
+}
+
+function BroadcastMomentBanner({ moment }: { moment: BroadcastMoment | null }) {
+  const tone = moment?.tone;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-24 z-30 flex justify-center px-4" aria-live="polite">
+      <AnimatePresence>
+        {moment && (
+          <motion.div
+            key={moment.id}
+            initial={{ opacity: 0, y: -12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            className={cn(
+              "card-broadcast min-w-64 overflow-hidden rounded-xl border px-5 py-3 text-center shadow-2xl",
+              tone === "homer" && "border-crimson/50 shadow-crimson/20",
+              tone === "run" && "border-warning-track/50 shadow-warning-track/20",
+              tone === "strikeout" && "border-cobalt/50 shadow-cobalt/20",
+              tone === "barrel" && "border-amber/50 shadow-amber/20"
+            )}
+          >
+            <motion.div
+              initial={{ letterSpacing: "0.22em" }}
+              animate={{ letterSpacing: "0.08em" }}
+              className={cn(
+                "font-scoreboard text-base font-black uppercase",
+                tone === "homer" && "text-crimson",
+                tone === "run" && "text-warning-track",
+                tone === "strikeout" && "text-cobalt",
+                tone === "barrel" && "text-amber"
+              )}
+            >
+              {moment.title}
+            </motion.div>
+            <div className="mt-0.5 text-xs text-slate-300">{moment.detail}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -606,4 +747,3 @@ function getOrdinal(n: number): string {
   if (n === 3) return "rd";
   return "th";
 }
-

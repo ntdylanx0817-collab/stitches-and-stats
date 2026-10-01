@@ -247,6 +247,15 @@
     background-repeat: repeat;
     opacity: var(--bg-stitching-opacity);
   }
+
+  /* Raw interactive elements outside the shared shadcn components still need
+     a consistent keyboard focus treatment. Keep it outside pointer focus so
+     mouse and touch interactions do not gain a persistent ring. */
+  :where(button, a, input, select, textarea, [role="button"]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
 }
 
 /* ============== Stadium Skin utilities ============== */
@@ -782,6 +791,13 @@
   animation: glow-breathe 3s ease-in-out infinite;
 }
 
+@keyframes baseball-load {
+  to { transform: rotate(360deg); }
+}
+.animate-baseball-load {
+  animation: baseball-load 1.8s linear infinite;
+}
+
 /* Looping decoration is the first thing to drop for motion-sensitive users.
    One-shot feedback (score flash, medal landing) is left alone: it conveys
    that something changed, and it stops on its own. */
@@ -791,6 +807,7 @@
   .animate-corner-glow,
   .animate-pulse-glow,
   .animate-live-dot,
+  .animate-baseball-load,
   .shimmer-sweep::after {
     animation: none;
   }

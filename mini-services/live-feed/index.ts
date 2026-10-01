@@ -466,7 +466,7 @@ const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
 })
 
 const io = new Server(httpServer, {
-  path: '/',
+  path: '/socket.io',
   cors: { origin: corsOriginCheck, methods: ['GET', 'POST'] },
   allowRequest,
   pingTimeout: 60000,
@@ -476,24 +476,47 @@ const io = new Server(httpServer, {
 io.on('connection', (socket) => {
   log(`Client connected: ${socket.id}`)
 
-  socket.on('subscribe:game', async ({ gamePk }: { gamePk: number }) => {
-    if (!gamePk) return
-    socket.join(`game:${gamePk}`)
-    if (!activeGameSubs.has(gamePk)) activeGameSubs.set(gamePk, new Set())
-    activeGameSubs.get(gamePk)!.add(socket.id)
-    log(`Socket ${socket.id} subscribed to game ${gamePk}`)
+  socket.on('subscribe:game', async (payload: unknown) => {
+    const gamePk = (payload as { gamePk?: unknown } | null)?.gamePk
+    if (!Number.isSafeInteger(gamePk) || (gamePk as number) <= 0 || (gamePk as number) > 10_000_000) {
+      socket.emit('subscription:error', { error: 'invalid gamePk' })
+      return
+    }
+
+    const numericGamePk = gamePk as number
+    const existing = activeGameSubs.get(numericGamePk)
+    if (existing?.has(socket.id)) return
+
+    let subscriptionCount = 0
+    for (const subscribers of activeGameSubs.values()) {
+      if (subscribers.has(socket.id)) subscriptionCount += 1
+    }
+    if (subscriptionCount >= 10) {
+      socket.emit('subscription:error', { error: 'subscription limit exceeded' })
+      return
+    }
+    if (!activeGameSubs.has(numericGamePk) && activeGameSubs.size >= 100) {
+      socket.emit('subscription:error', { error: 'service subscription capacity reached' })
+      return
+    }
+
+    const gamePkKey = numericGamePk
+    socket.join(`game:${gamePkKey}`)
+    if (!activeGameSubs.has(gamePkKey)) activeGameSubs.set(gamePkKey, new Set())
+    activeGameSubs.get(gamePkKey)!.add(socket.id)
+    log(`Socket ${socket.id} subscribed to game ${gamePkKey}`)
 
     // Send initial snapshot immediately
     try {
       const [feed, savant] = await Promise.all([
-        fetchLiveFeed(gamePk),
-        fetchSavantFeed(gamePk),
+        fetchLiveFeed(gamePkKey),
+        fetchSavantFeed(gamePkKey),
       ])
       if (feed) {
         const snapshot = extractFeedSnapshot(feed)
         const savantSnapshot = savant ? extractSavantSnapshot(savant) : null
         socket.emit('game:snapshot', {
-          gamePk,
+          gamePk: gamePkKey,
           status: snapshot.status,
           linescore: snapshot.linescore,
           teams: snapshot.teams,
@@ -507,21 +530,24 @@ io.on('connection', (socket) => {
         })
       }
     } catch (err) {
-      log(`Initial snapshot error for ${gamePk}: ${(err as Error).message}`)
+      log(`Initial snapshot error for ${gamePkKey}: ${(err as Error).message}`)
     }
 
     // Trigger immediate poll for this game
     setTimeout(() => pollLoop(), 100)
   })
 
-  socket.on('unsubscribe:game', ({ gamePk }: { gamePk: number }) => {
-    socket.leave(`game:${gamePk}`)
-    const subs = activeGameSubs.get(gamePk)
+  socket.on('unsubscribe:game', (payload: unknown) => {
+    const gamePk = (payload as { gamePk?: unknown } | null)?.gamePk
+    if (!Number.isSafeInteger(gamePk)) return
+    const numericGamePk = gamePk as number
+    socket.leave(`game:${numericGamePk}`)
+    const subs = activeGameSubs.get(numericGamePk)
     if (subs) {
       subs.delete(socket.id)
       if (subs.size === 0) {
-        activeGameSubs.delete(gamePk)
-        liveGames.delete(gamePk)
+        activeGameSubs.delete(numericGamePk)
+        liveGames.delete(numericGamePk)
       }
     }
   })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { assertOk, errorResponse } from "@/lib/api-errors";
+import { enumParam, integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -199,12 +200,12 @@ function parseCSVLine(line: string): string[] {
 }
 
 export async function GET(req: NextRequest) {
-  const playerId = Number(req.nextUrl.searchParams.get("playerId"));
-  const type = (req.nextUrl.searchParams.get("type") as "batter" | "pitcher") ?? "batter";
-  const season = Number(req.nextUrl.searchParams.get("season")) || new Date().getFullYear();
+  const playerId = integerParam(req.nextUrl.searchParams.get("playerId"), { min: 1 });
+  const type = enumParam(req.nextUrl.searchParams.get("type"), ["batter", "pitcher"] as const, "batter");
+  const season = integerParam(req.nextUrl.searchParams.get("season"), { defaultValue: new Date().getFullYear(), min: 2008, max: new Date().getFullYear() });
 
-  if (!playerId) {
-    return NextResponse.json({ error: "playerId required" }, { status: 400 });
+  if (playerId === null || type === null || season === null) {
+    return NextResponse.json({ error: "invalid playerId, type, or season" }, { status: 400 });
   }
 
   try {

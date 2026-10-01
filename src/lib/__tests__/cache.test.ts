@@ -107,6 +107,57 @@ describe("getOrSet", () => {
     ).rejects.toThrow();
     expect(getCached(key)).toBeNull();
   });
+
+  test("caches null as a real value", async () => {
+    const key = uniq("null");
+    let calls = 0;
+    const fn = async () => {
+      calls++;
+      return null;
+    };
+
+    expect(await getOrSet(key, 60_000, fn)).toBeNull();
+    expect(await getOrSet(key, 60_000, fn)).toBeNull();
+    expect(calls).toBe(1);
+  });
+
+  test("supports a TTL derived from the resolved value", async () => {
+    const key = uniq("dynamic-ttl");
+    await getOrSet(key, (value) => value.ttl, async () => ({ ttl: 5, data: "live" }));
+    expect(getCached<{ ttl: number; data: string }>(key)?.data).toBe("live");
+    await Bun.sleep(20);
+    expect(getCached(key)).toBeNull();
+  });
+
+  test("serves bounded stale data when a refresh fails", async () => {
+    const key = uniq("stale-fallback");
+    setCached(key, "last-known-good", 5);
+    await Bun.sleep(20);
+    let observed: unknown;
+
+    const value = await getOrSet<string>(
+      key,
+      60_000,
+      async () => { throw new Error("upstream unavailable"); },
+      { staleIfErrorMs: 60_000, onStale: (error) => { observed = error; } }
+    );
+
+    expect(value).toBe("last-known-good");
+    expect(observed).toBeInstanceOf(Error);
+  });
+
+  test("rejects when stale data is older than the fallback window", async () => {
+    const key = uniq("stale-too-old");
+    setCached(key, "too-old", 5);
+    await Bun.sleep(30);
+
+    await expect(getOrSet<string>(
+      key,
+      60_000,
+      async () => { throw new Error("still down"); },
+      { staleIfErrorMs: 5 }
+    )).rejects.toThrow("still down");
+  });
 });
 
 describe("eviction", () => {

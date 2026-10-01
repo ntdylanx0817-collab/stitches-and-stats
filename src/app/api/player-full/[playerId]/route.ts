@@ -3,6 +3,7 @@ import { fetchPlayer, fetchLeaderboard, computePercentiles } from "@/lib/mlb-api
 import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
 import type { LeaderboardRow } from "@/lib/types";
+import { enumParam, integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -79,13 +80,14 @@ export async function GET(
   { params }: { params: Promise<{ playerId: string }> }
 ) {
   const { playerId: playerIdStr } = await params;
-  const playerId = Number(playerIdStr);
-  if (!playerId) return NextResponse.json({ error: "invalid playerId" }, { status: 400 });
+  const playerId = integerParam(playerIdStr, { min: 1 });
+  if (playerId === null) return NextResponse.json({ error: "invalid playerId" }, { status: 400 });
 
-  const type = (req.nextUrl.searchParams.get("type") as "batter" | "pitcher") ?? "batter";
-  const requestedYear = req.nextUrl.searchParams.get("year")
-    ? Number(req.nextUrl.searchParams.get("year"))
-    : null;
+  const type = enumParam(req.nextUrl.searchParams.get("type"), ["batter", "pitcher"] as const, "batter");
+  const requestedYear = integerParam(req.nextUrl.searchParams.get("year"), { min: 2008, max: new Date().getFullYear() });
+  if (type === null || (req.nextUrl.searchParams.has("year") && requestedYear === null)) {
+    return NextResponse.json({ error: "invalid type or year" }, { status: 400 });
+  }
 
   const now = new Date();
   const month = now.getMonth();

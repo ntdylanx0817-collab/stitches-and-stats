@@ -403,6 +403,9 @@ export function LeaderboardsView() {
         ) : (
           <ScrollArea className="h-[calc(100vh-280px)] min-h-[400px] overflow-x-auto scrollbar-thin">
             <table className="w-full text-xs num">
+              <caption className="sr-only">
+                {lbYear} MLB {lbType === "batter" ? "batting" : "pitching"} leaderboard. Select a player to open their profile.
+              </caption>
               <thead className="sticky top-0 z-20 bg-midnight/95 backdrop-blur">
                 <tr className="border-b border-chalk/10">
                   {visibleCols.map((col) => {
@@ -411,23 +414,38 @@ export function LeaderboardsView() {
                     return (
                       <th
                         key={col.key}
+                        scope="col"
+                        aria-sort={
+                          isSorted === "asc" ? "ascending"
+                            : isSorted === "desc" ? "descending"
+                            : isSortable ? "none" : undefined
+                        }
                         style={{ minWidth: col.width ?? 60, textAlign: col.align ?? "right" }}
                         className={cn(
                           "px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide",
-                          isSortable ? "cursor-pointer hover:bg-chalk/5 select-none" : "",
                           col.key === "player_name" && "sticky left-0 z-10 bg-midnight/95 backdrop-blur",
                           col.key === "rank" && "bg-midnight/95 backdrop-blur"
                         )}
-                        onClick={isSortable ? () => handleSort(col.key) : undefined}
                       >
-                        <span className={cn("inline-flex items-center gap-1", col.align === "left" ? "" : "justify-end")}>
+                        <button
+                          type="button"
+                          disabled={!isSortable}
+                          onClick={isSortable ? () => handleSort(col.key) : undefined}
+                          className={cn(
+                            "inline-flex min-h-8 w-full items-center gap-1 rounded px-1",
+                            col.align === "left" ? "justify-start" : "justify-end",
+                            isSortable
+                              ? "cursor-pointer select-none hover:bg-chalk/5"
+                              : "cursor-default disabled:opacity-100"
+                          )}
+                        >
                           {col.short ?? col.label}
                           {isSortable && (
                             isSorted === "desc" ? <ArrowDown className="h-3 w-3 text-cobalt" />
                             : isSorted === "asc" ? <ArrowUp className="h-3 w-3 text-cobalt" />
                             : <ArrowUpDown className="h-3 w-3 text-slate-600" />
                           )}
-                        </span>
+                        </button>
                       </th>
                     );
                   })}
@@ -440,8 +458,16 @@ export function LeaderboardsView() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(idx * 0.005, 0.3) }}
-                    className="row-mowed-grass row-glow-hover border-b border-chalk cursor-pointer transition-colors group"
+                    tabIndex={0}
+                    aria-label={`Open profile for ${String(row.player_name ?? "player")}`}
+                    className="row-mowed-grass row-glow-hover border-b border-chalk cursor-pointer transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-warning-track"
                     onClick={() => openPlayer(row)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openPlayer(row);
+                      }
+                    }}
                   >
                     {visibleCols.map((col) => {
                       let val: number | string | undefined;

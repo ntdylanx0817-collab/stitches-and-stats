@@ -55,7 +55,7 @@ function isExpensive(pathname: string): boolean {
   return EXPENSIVE_ROUTES.some((route) => pathname.startsWith(route));
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   // Opt-out for local development or self-hosted single-user deployments.
   if (process.env.RATE_LIMIT_ENABLED === "false") return NextResponse.next();
 

@@ -83,7 +83,7 @@ The app will be available at `http://localhost:3000`.
 ### Production Build
 
 ```bash
-# Build the Next.js app (standalone output)
+# Build the Next.js app
 bun run build
 
 # Start the production server
@@ -94,7 +94,7 @@ cd mini-services/live-feed
 bun start
 ```
 
-The standalone build is output to `.next/standalone/` and can be deployed to any Node.js host (Vercel, Railway, Fly.io, a VPS, Docker, etc.).
+The production build is written to `.next/` and can run on Vercel or any Node.js host with `bun run start`.
 
 ## Project Structure
 
@@ -150,7 +150,7 @@ stitches-and-stats/
 ├── .gitignore
 ├── bunfig.toml                     # Pins the npm registry for bun installs
 ├── Caddyfile                       # Caddy reverse proxy config (reference)
-├── next.config.ts                  # Next.js config (standalone output)
+├── next.config.ts                  # Next.js production and security config
 ├── package.json
 └── README.md
 ```
@@ -205,7 +205,7 @@ stitches-and-stats/
 # Build
 bun run build
 
-# Run the Next.js standalone server
+# Run the Next.js production server
 bun run start
 
 # In a separate process, run the WS service

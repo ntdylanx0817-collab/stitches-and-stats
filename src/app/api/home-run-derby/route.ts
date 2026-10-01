@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
+import { integerParam, numberParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 120;
@@ -28,8 +29,11 @@ interface HomeRunEntry {
  * Returns home runs and hardest-hit balls sorted by exit velocity.
  */
 export async function GET(req: NextRequest) {
-  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 25, 100);
-  const minEV = Number(req.nextUrl.searchParams.get("minEV")) || 90;
+  const limit = integerParam(req.nextUrl.searchParams.get("limit"), { defaultValue: 25, min: 1, max: 100 });
+  const minEV = numberParam(req.nextUrl.searchParams.get("minEV"), { defaultValue: 90, min: 70, max: 125 });
+  if (limit === null || minEV === null) {
+    return NextResponse.json({ error: "limit must be 1-100 and minEV must be 70-125" }, { status: 400 });
+  }
   const season = new Date().getFullYear();
 
   const cacheKey = `hr-derby:${season}:${minEV}`;

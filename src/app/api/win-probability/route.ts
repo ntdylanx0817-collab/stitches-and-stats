@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLiveFeed } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
+import { integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -121,8 +122,8 @@ function calculateWinProbability(
 }
 
 export async function GET(req: NextRequest) {
-  const gamePk = Number(req.nextUrl.searchParams.get("gamePk"));
-  if (!gamePk) return NextResponse.json({ error: "gamePk required" }, { status: 400 });
+  const gamePk = integerParam(req.nextUrl.searchParams.get("gamePk"), { min: 1 });
+  if (gamePk === null) return NextResponse.json({ error: "gamePk must be a positive integer" }, { status: 400 });
 
   const cacheKey = `winprob:${gamePk}`;
   const data = await getOrSet(cacheKey, 15_000, async () => {

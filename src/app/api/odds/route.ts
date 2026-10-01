@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrSet } from "@/lib/cache";
 import { routeLogger, serializeError } from "@/lib/logger";
+import { integerParam } from "@/lib/api-params";
 
 const log = routeLogger("/api/odds");
 
@@ -51,12 +52,12 @@ interface GameOdds {
 const STATS_API = "https://statsapi.mlb.com/api";
 
 export async function GET(req: NextRequest) {
-  const gamePk = Number(req.nextUrl.searchParams.get("gamePk"));
-  const awayTeamId = Number(req.nextUrl.searchParams.get("awayTeamId"));
-  const homeTeamId = Number(req.nextUrl.searchParams.get("homeTeamId"));
+  const gamePk = integerParam(req.nextUrl.searchParams.get("gamePk"), { defaultValue: 0, min: 0 });
+  const awayTeamId = integerParam(req.nextUrl.searchParams.get("awayTeamId"), { min: 1 });
+  const homeTeamId = integerParam(req.nextUrl.searchParams.get("homeTeamId"), { min: 1 });
 
-  if (!awayTeamId || !homeTeamId) {
-    return NextResponse.json({ error: "awayTeamId and homeTeamId required" }, { status: 400 });
+  if (gamePk === null || awayTeamId === null || homeTeamId === null || awayTeamId === homeTeamId) {
+    return NextResponse.json({ error: "team IDs must be distinct positive integers and gamePk must be a positive integer" }, { status: 400 });
   }
 
   const cacheKey = `odds:${awayTeamId}:${homeTeamId}`;

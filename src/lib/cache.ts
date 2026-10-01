@@ -25,10 +25,9 @@ const MAX_ENTRIES = 1000;
 export function getCached<T>(key: string): T | null {
   const entry = store.get(key);
   if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    store.delete(key);
-    return null;
-  }
+  // Keep expired entries available for a bounded stale-if-error fallback.
+  // They are still cache misses here and are removed by normal cap eviction.
+  if (Date.now() > entry.expiresAt) return null;
   return entry.value as T;
 }
 
@@ -59,21 +58,46 @@ export function setCached<T>(key: string, value: T, ttlMs: number): void {
  * Concurrent calls with the same key share the same in-flight promise,
  * preventing thundering-herd bursts when the cache expires.
  */
-export function getOrSet<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
-  const cached = getCached<T>(key);
-  if (cached !== null) return Promise.resolve(cached);
+export interface CacheFallbackOptions {
+  /** Maximum time after expiry that a failed refresh may reuse the old value. */
+  staleIfErrorMs?: number;
+  /** Observability hook invoked when stale data is served. */
+  onStale?: (error: unknown) => void;
+}
+
+export function getOrSet<T>(
+  key: string,
+  ttlMs: number | ((value: T) => number),
+  fn: () => Promise<T>,
+  options: CacheFallbackOptions = {}
+): Promise<T> {
+  const now = Date.now();
+  const entry = store.get(key) as CacheEntry<T> | undefined;
+  // Check the entry itself instead of `getCached`: null is a legitimate cached
+  // result (for example an unknown player) and must not trigger another fetch.
+  if (entry && now <= entry.expiresAt) return Promise.resolve(entry.value);
+
+  const stale = entry && now <= entry.expiresAt + (options.staleIfErrorMs ?? 0)
+    ? entry.value
+    : undefined;
+  const hasStale = entry !== undefined && now <= entry.expiresAt + (options.staleIfErrorMs ?? 0);
 
   // Deduplicate concurrent in-flight requests
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
 
   const p = fn().then((v) => {
-    setCached(key, v, ttlMs);
+    const resolvedTtl = typeof ttlMs === "function" ? ttlMs(v) : ttlMs;
+    setCached(key, v, resolvedTtl);
     inflight.delete(key);
     return v;
   }).catch((err) => {
     // On error, remove from inflight so the next caller can retry
     inflight.delete(key);
+    if (hasStale) {
+      options.onStale?.(err);
+      return stale as T;
+    }
     throw err;
   });
   inflight.set(key, p);

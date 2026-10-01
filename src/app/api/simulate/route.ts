@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLeaderboard } from "@/lib/mlb-api";
 import { errorResponse } from "@/lib/api-errors";
+import { integerParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -78,13 +79,13 @@ export interface SimulationResult {
  */
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const batterId = Number(sp.get("batterId"));
-  const pitcherId = Number(sp.get("pitcherId"));
-  const iterations = Math.min(Number(sp.get("iterations")) || 10000, 50000);
+  const batterId = integerParam(sp.get("batterId"), { min: 1 });
+  const pitcherId = integerParam(sp.get("pitcherId"), { min: 1 });
+  const iterations = integerParam(sp.get("iterations"), { defaultValue: 10000, min: 100, max: 50000 });
 
-  if (!batterId || !pitcherId) {
+  if (batterId === null || pitcherId === null || iterations === null) {
     return NextResponse.json(
-      { error: "batterId and pitcherId are required" },
+      { error: "batterId and pitcherId must be positive integers; iterations must be 100-50000" },
       { status: 400 }
     );
   }

@@ -6,7 +6,7 @@ import {
   LeaderboardRow,
   MLBPlayer,
 } from "./types";
-import { getOrSet, getCached, setCached } from "./cache";
+import { getOrSet } from "./cache";
 import { assertOk } from "./api-errors";
 import { logger, serializeError } from "./logger";
 
@@ -18,12 +18,28 @@ const FIVE_MINUTES = 5 * 60_000;
 const ONE_HOUR = 60 * 60_000;
 const ONE_DAY = 24 * 60 * 60_000;
 
+function staleOnError(label: string, staleIfErrorMs: number) {
+  return {
+    staleIfErrorMs,
+    onStale: (error: unknown) => logger.warn("serving stale upstream data", {
+      upstream: label,
+      staleIfErrorMs,
+      ...serializeError(error),
+    }),
+  };
+}
+
 /** Format a Date as YYYY-MM-DD in America/Chicago (user tz). */
 export function ymd(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((candidate) => candidate.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 /**
@@ -42,26 +58,26 @@ export async function fetchSchedule(dateStr?: string): Promise<MLBSchedule> {
     });
     await assertOk(res, "schedule");
     return (await res.json()) as MLBSchedule;
-  });
+  }, staleOnError("schedule", 15 * ONE_MINUTE));
 }
 
 /** Get a single game's live feed (plays + linescore + game data). */
 export async function fetchLiveFeed(gamePk: number): Promise<LiveGameFeed> {
   const cacheKey = `live:${gamePk}`;
-  const cached = getCached<LiveGameFeed>(cacheKey);
-  if (cached) return cached;
-
-  const url = `${STATS_API}/v1.1/game/${gamePk}/feed/live`;
-  const res = await fetch(url, {
-    next: { revalidate: 10 },
-    signal: AbortSignal.timeout(10_000),
-  });
-  await assertOk(res, "live feed");
-  const data = (await res.json()) as LiveGameFeed;
-  const state = data.gameData?.status?.abstractGameState ?? "Final";
-  const ttl = state === "Live" ? ONE_MINUTE : ONE_HOUR;
-  setCached(cacheKey, data, ttl);
-  return data;
+  return getOrSet(
+    cacheKey,
+    (data) => data.gameData?.status?.abstractGameState === "Live" ? ONE_MINUTE : ONE_HOUR,
+    async () => {
+      const url = `${STATS_API}/v1.1/game/${gamePk}/feed/live`;
+      const res = await fetch(url, {
+        next: { revalidate: 10 },
+        signal: AbortSignal.timeout(10_000),
+      });
+      await assertOk(res, "live feed");
+      return (await res.json()) as LiveGameFeed;
+    },
+    staleOnError("live feed", 5 * ONE_MINUTE)
+  );
 }
 
 /**
@@ -83,7 +99,7 @@ export async function fetchSavantGameFeed(gamePk: number): Promise<SavantGameFee
     });
     await assertOk(res, "savant");
     return (await res.json()) as SavantGameFeed;
-  });
+  }, staleOnError("savant", 5 * ONE_MINUTE));
 }
 
 /** Combined "enriched" pitch list = MLB live feed pitch events + Statcast metrics. */
@@ -151,10 +167,21 @@ export async function fetchEnrichedPitches(gamePk: number): Promise<{
   teams: LiveGameFeed["gameData"]["teams"];
 }> {
   // Parallel fetch — both are cached.
-  const [feed, savant] = await Promise.all([
-    fetchLiveFeed(gamePk).catch(() => null),
-    fetchSavantGameFeed(gamePk).catch(() => null),
+  const [feedResult, savantResult] = await Promise.allSettled([
+    fetchLiveFeed(gamePk),
+    fetchSavantGameFeed(gamePk),
   ]);
+  if (feedResult.status === "rejected" && savantResult.status === "rejected") {
+    logger.error("all game data sources failed", {
+      gamePk,
+      mlb: serializeError(feedResult.reason),
+      savant: serializeError(savantResult.reason),
+    });
+    throw feedResult.reason;
+  }
+
+  const feed = feedResult.status === "fulfilled" ? feedResult.value : null;
+  const savant = savantResult.status === "fulfilled" ? savantResult.value : null;
 
   const pitches: EnrichedPitch[] = [];
 
@@ -330,7 +357,7 @@ export async function fetchLeaderboard(opts: {
       });
       return request(base);
     }
-  });
+  }, staleOnError("leaderboard", ONE_HOUR));
 }
 
 /**
@@ -433,7 +460,7 @@ export async function searchPlayers(query: string, limit = 12): Promise<MLBPlaye
     await assertOk(res, "players");
     const data = await res.json();
     return data.people as MLBPlayer[];
-  });
+  }, staleOnError("players", 7 * ONE_DAY));
   const q = query.toLowerCase();
   return all
     .filter((p) => p.fullName.toLowerCase().includes(q))
@@ -449,10 +476,14 @@ export async function fetchPlayer(playerId: number): Promise<MLBPlayer | null> {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return null;
+    if (res.status === 404) {
+      void res.body?.cancel().catch(() => {});
+      return null;
+    }
+    await assertOk(res, "player");
     const data = await res.json();
     return (data.people?.[0] as MLBPlayer) ?? null;
-  });
+  }, staleOnError("player", 7 * ONE_DAY));
 }
 
 /**

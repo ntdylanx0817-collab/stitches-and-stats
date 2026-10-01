@@ -93,7 +93,7 @@ export function StandingsView() {
       <div className="mb-4 h-px bg-gradient-to-r from-warning-track/40 via-warning-track/10 to-transparent" />
 
       {/* Tab toggle */}
-      <div className="mb-4 flex rounded-lg border border-chalk bg-midnight/40 p-0.5 w-fit">
+      <div role="tablist" aria-label="Standings views" className="mb-4 flex max-w-full overflow-x-auto rounded-lg border border-chalk bg-midnight/40 p-0.5 w-fit scrollbar-thin">
         {([
           { key: "divisions", label: "Divisions" },
           { key: "wildcard", label: "Wild Card" },
@@ -101,9 +101,13 @@ export function StandingsView() {
         ] as const).map((t) => (
           <button
             key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            aria-controls={`standings-panel-${t.key}`}
             onClick={() => setTab(t.key)}
             className={cn(
-              "font-scoreboard rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
+              "font-scoreboard min-h-10 shrink-0 rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors",
               tab === t.key ? "bg-warning-track/20 text-warning-track" : "text-slate-500 hover:text-chalk"
             )}
           >
@@ -114,7 +118,7 @@ export function StandingsView() {
 
       {/* Divisions view */}
       {tab === "divisions" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div id="standings-panel-divisions" role="tabpanel" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {data.divisions.map((div, i) => (
             <DivisionCard key={div.division} division={div} index={i} />
           ))}
@@ -123,7 +127,7 @@ export function StandingsView() {
 
       {/* Wild Card view */}
       {tab === "wildcard" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="standings-panel-wildcard" role="tabpanel" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <WildCardCard title="AL Wild Card" teams={data.wildCard.AL} cutoff={3} />
           <WildCardCard title="NL Wild Card" teams={data.wildCard.NL} cutoff={3} />
         </div>
@@ -131,7 +135,7 @@ export function StandingsView() {
 
       {/* Playoff picture */}
       {tab === "playoff" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="standings-panel-playoff" role="tabpanel" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PlayoffCard title="American League" teams={data.allTeams.filter(t => t.league === "American League")} />
           <PlayoffCard title="National League" teams={data.allTeams.filter(t => t.league === "National League")} />
         </div>

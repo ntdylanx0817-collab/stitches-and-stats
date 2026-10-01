@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchLeaderboard, computePercentiles } from "@/lib/mlb-api";
 import { errorResponse } from "@/lib/api-errors";
 import type { LeaderboardRow } from "@/lib/types";
+import { enumParam, integerParam, stringParam } from "@/lib/api-params";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
-  const type = (sp.get("type") as "batter" | "pitcher") ?? "batter";
-  const requestedYear = sp.get("year") ? Number(sp.get("year")) : null;
-  const min = sp.get("min") ? Number(sp.get("min")) : 50;
-  const position = sp.get("position") ?? "";
-  const team = sp.get("team") ?? "";
-  const gameType = sp.get("gameType") ?? "Regular";
-  const playerId = sp.get("playerId") ? Number(sp.get("playerId")) : null;
+  const type = enumParam(sp.get("type"), ["batter", "pitcher"] as const, "batter");
+  const requestedYear = integerParam(sp.get("year"), { min: 2008, max: new Date().getFullYear() });
+  const min = integerParam(sp.get("min"), { defaultValue: 50, min: 0, max: 1000 });
+  const position = stringParam(sp.get("position"), { maxLength: 3, pattern: /^[A-Za-z0-9]*$/ });
+  const team = stringParam(sp.get("team"), { maxLength: 40, pattern: /^[A-Za-z0-9 .'-]*$/ });
+  const gameType = enumParam(sp.get("gameType"), ["Regular", "Postseason", "Spring Training"] as const, "Regular");
+  const playerId = integerParam(sp.get("playerId"), { min: 1 });
+  if (type === null || min === null || position === null || team === null || gameType === null || (sp.has("year") && requestedYear === null) || (sp.has("playerId") && playerId === null)) {
+    return NextResponse.json({ error: "invalid leaderboard parameters" }, { status: 400 });
+  }
 
   try {
     // Determine the year to use — prefer the current ongoing MLB season.

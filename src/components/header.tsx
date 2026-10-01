@@ -1,11 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   Activity, BarChart3, User, Zap, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon, Target,
-  Sunrise,
+  Sunrise, ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
@@ -16,13 +16,18 @@ import { cn } from "@/lib/utils";
 /** Never fires; `mounted` only needs to differ between server and client. */
 const noopSubscribe = () => () => {};
 
-const NAV_ITEMS: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
+type NavItem = { key: ViewKey; label: string; icon: LucideIcon };
+
+const PRIMARY_NAV_ITEMS: NavItem[] = [
   { key: "live", label: "Live", icon: Activity },
   { key: "live-at-bat", label: "At-Bat", icon: Target },
   { key: "recap", label: "Recap", icon: Sunrise },
-  { key: "derby", label: "Derby", icon: Flame },
   { key: "standings", label: "Standings", icon: Trophy },
   { key: "players", label: "Players", icon: User },
+];
+
+const MORE_NAV_ITEMS: NavItem[] = [
+  { key: "derby", label: "Derby", icon: Flame },
   { key: "leaderboard", label: "Stats", icon: BarChart3 },
   { key: "compare", label: "Compare", icon: GitCompare },
   { key: "simulator", label: "Simulator", icon: Swords },
@@ -34,6 +39,33 @@ export function Header() {
   const setView = useSavantStore((s) => s.setView);
   const { connected } = useSocket();
   const { theme, setTheme } = useTheme();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreActive = MORE_NAV_ITEMS.some((item) => item.key === view);
+
+  useEffect(() => {
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!moreMenuRef.current?.contains(event.target as Node)) setMoreOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+        moreButtonRef.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  function selectView(nextView: ViewKey) {
+    setView(nextView);
+    setMoreOpen(false);
+  }
 
   // next-themes can only learn the theme from localStorage after mount, so
   // `theme` is undefined on the server and on the first client render. Reading
@@ -54,11 +86,11 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="card-broadcast border-b border-chalk">
+      <div className="card-broadcast !overflow-visible border-b border-chalk">
         <div className="mx-auto flex max-w-[1600px] items-center gap-1.5 px-3 py-2.5 sm:gap-4 sm:px-6">
           {/* Logo */}
           <button
-            onClick={() => setView("live")}
+            onClick={() => selectView("live")}
             className="group flex shrink-0 items-center gap-2.5"
             aria-label="Stitches and Stats home"
           >
@@ -81,16 +113,16 @@ export function Header() {
               (below ~320px) instead of pushing the theme toggle or connection
               badge off-screen with no way to reach them. */}
           <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-lg border border-subtle bg-gradient-to-b from-midnight-2/70 to-midnight/70 p-0.5 scrollbar-thin">
-            {NAV_ITEMS.map((item) => {
+            {PRIMARY_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
               return (
                 <button
                   key={item.key}
-                  onClick={() => setView(item.key)}
+                  onClick={() => selectView(item.key)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
+                    "relative flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",
                     active ? "font-bold text-chalk" : "font-medium text-slate-400 hover:text-slate-200"
                   )}
                 >
@@ -110,7 +142,7 @@ export function Header() {
                       active && "drop-shadow-[0_0_7px_rgba(230,126,34,0.85)]"
                     )}
                   />
-                  <span className="relative hidden xl:inline">{item.label}</span>
+                  <span className="relative hidden md:inline">{item.label}</span>
                   {active && (
                     <motion.span
                       layoutId="nav-underline"
@@ -121,6 +153,83 @@ export function Header() {
                 </button>
               );
             })}
+
+            <div ref={moreMenuRef} className="relative shrink-0">
+              <button
+                ref={moreButtonRef}
+                type="button"
+                onClick={() => setMoreOpen((open) => !open)}
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
+                aria-controls="more-navigation-menu"
+                className={cn(
+                  "relative flex min-h-9 items-center gap-1 rounded-md px-2 py-1.5 text-xs font-scoreboard font-medium uppercase tracking-wide transition-colors sm:px-3",
+                  moreActive || moreOpen ? "text-chalk" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                {moreActive && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  />
+                )}
+                {!moreActive && moreOpen && (
+                  <span className="absolute inset-0 rounded-md bg-gradient-to-r from-warning-track/25 to-warning-track/10 ring-1 ring-warning-track/40" />
+                )}
+                <span className="relative hidden md:inline">More</span>
+                <ChevronDown
+                  className={cn(
+                    "relative h-3.5 w-3.5 transition-transform duration-200",
+                    moreOpen && "rotate-180"
+                  )}
+                />
+                {moreActive && (
+                  <motion.span
+                    layoutId="nav-underline"
+                    className="absolute bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-warning-track shadow-[0_0_8px_rgba(230,126,34,0.9)]"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {moreOpen && (
+                  <motion.div
+                    id="more-navigation-menu"
+                    role="menu"
+                    aria-label="More sections"
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                    transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    className="glass-strong absolute right-0 top-[calc(100%+0.6rem)] z-50 grid w-48 gap-1 rounded-xl p-1.5 shadow-2xl"
+                  >
+                    {MORE_NAV_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      const active = view === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => selectView(item.key)}
+                          className={cn(
+                            "interactive-row flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-scoreboard uppercase tracking-wide transition-colors",
+                            active
+                              ? "bg-warning-track/15 font-bold text-chalk"
+                              : "text-slate-300 hover:bg-chalk/5 hover:text-chalk"
+                          )}
+                        >
+                          <Icon className={cn("h-4 w-4", active && "text-warning-track")} />
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </nav>
 
           {/* Search */}

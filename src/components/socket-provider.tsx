@@ -22,9 +22,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    // Vercel cannot host the persistent live-feed process. Deployments that
+    // do not have a WebSocket service explicitly enabled use the app's REST
+    // polling fallback instead of reconnecting forever to a missing server.
+    if (process.env.NEXT_PUBLIC_WS_ENABLED === "false") return;
+
     // IMPORTANT: per Caddy gateway rule, use relative path with XTransformPort
     const sock = io("/?XTransformPort=3003", {
-      path: "/",
+      path: "/socket.io",
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,

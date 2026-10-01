@@ -3,6 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
 import { routeLogger, serializeError } from "@/lib/logger";
+import { integerParam } from "@/lib/api-params";
 
 const log = routeLogger("/api/news");
 
@@ -263,7 +264,11 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
 
 export async function GET(req: NextRequest) {
   const sourceFilter = req.nextUrl.searchParams.get("source") ?? "all";
-  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit")) || 50, 200);
+  const limit = integerParam(req.nextUrl.searchParams.get("limit"), { defaultValue: 50, min: 1, max: 200 });
+  const validSources = new Set(["all", ...NEWS_SOURCES.map((source) => source.slug)]);
+  if (limit === null || !validSources.has(sourceFilter)) {
+    return NextResponse.json({ error: "invalid source or limit" }, { status: 400 });
+  }
 
   // Cache all sources for 60 seconds — articles refresh frequently but we don't
   // want to hammer the upstream feeds on every page load.

@@ -6,6 +6,7 @@ import type { GameSnapshot, LivePitchEvent } from "@/lib/types";
 
 
 interface SocketCtx {
+  enabled: boolean;
   connected: boolean;
   subscribeGame: (gamePk: number) => void;
   unsubscribeGame: (gamePk: number) => void;
@@ -16,6 +17,7 @@ interface SocketCtx {
 const Ctx = createContext<SocketCtx | null>(null);
 
 export function SocketProvider({ children }: { children: ReactNode }) {
+  const enabled = process.env.NEXT_PUBLIC_WS_ENABLED === "true";
   const socketRef = useRef<Socket | null>(null);
   const snapshotCbsRef = useRef<Set<(s: GameSnapshot) => void>>(new Set());
   const pitchCbsRef = useRef<Set<(p: LivePitchEvent) => void>>(new Set());
@@ -25,7 +27,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // Vercel cannot host the persistent live-feed process. Deployments that
     // do not have a WebSocket service explicitly enabled use the app's REST
     // polling fallback instead of reconnecting forever to a missing server.
-    if (process.env.NEXT_PUBLIC_WS_ENABLED === "false") return;
+    if (!enabled) return;
 
     // IMPORTANT: per Caddy gateway rule, use relative path with XTransformPort
     const sock = io("/?XTransformPort=3003", {
@@ -54,7 +56,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       sock.disconnect();
       socketRef.current = null;
     };
-  }, []);
+  }, [enabled]);
 
   const subscribeGame = useCallback((gamePk: number) => {
     socketRef.current?.emit("subscribe:game", { gamePk });
@@ -75,7 +77,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ connected, subscribeGame, unsubscribeGame, onSnapshot, onPitch }}>
+    <Ctx.Provider value={{ enabled, connected, subscribeGame, unsubscribeGame, onSnapshot, onPitch }}>
       {children}
     </Ctx.Provider>
   );

@@ -194,7 +194,7 @@ stitches-and-stats/
 
 1. Push this repo to GitHub
 2. Import the repo in Vercel
-3. No environment variables needed (all data is from public APIs)
+3. No environment variables needed (all data is from public APIs; live updates use REST polling)
 4. Deploy
 
 > **Note:** The WebSocket mini-service cannot run on Vercel (serverless). Deploy it separately to a host that supports persistent processes (Railway, Fly.io, Render, a VPS). The Next.js app will gracefully fall back to REST polling without it.
@@ -203,7 +203,7 @@ stitches-and-stats/
 
 ```bash
 # Build
-bun run build
+NEXT_PUBLIC_WS_ENABLED=true bun run build
 
 # Run the Next.js production server
 bun run start

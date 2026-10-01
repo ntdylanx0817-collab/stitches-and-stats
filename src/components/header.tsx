@@ -39,7 +39,7 @@ const MORE_NAV_ITEMS: NavItem[] = [
 export function Header() {
   const view = useSavantStore((s) => s.view);
   const setView = useSavantStore((s) => s.setView);
-  const { connected } = useSocket();
+  const { enabled: socketEnabled, connected } = useSocket();
   const { theme, setTheme } = useTheme();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -255,7 +255,7 @@ export function Header() {
               and tablet. */}
           <div
             className="hidden shrink-0 items-center gap-2 rounded-md border border-chalk bg-midnight/60 px-2.5 py-1.5 lg:flex"
-            title={connected ? "Connected — receiving live updates" : "Reconnecting to the live update server…"}
+            title={connected ? "Connected — receiving live updates" : socketEnabled ? "Reconnecting to the live update server…" : "Using REST polling for live updates"}
           >
             <span className={cn(
               "relative flex h-2 w-2",
@@ -263,15 +263,15 @@ export function Header() {
             )}>
               <span className={cn(
                 "absolute inline-flex h-full w-full rounded-full opacity-75",
-                connected ? "bg-mint animate-ping" : "bg-warning-track"
+                connected ? "bg-mint animate-ping" : socketEnabled ? "bg-warning-track" : "bg-cobalt"
               )} />
               <span className={cn(
                 "relative inline-flex h-2 w-2 rounded-full",
-                connected ? "bg-mint" : "bg-warning-track"
+                connected ? "bg-mint" : socketEnabled ? "bg-warning-track" : "bg-cobalt"
               )} />
             </span>
             <span className="hidden text-[10px] font-bold uppercase tracking-wide text-slate-400 font-scoreboard sm:inline">
-              {connected ? "Live" : "Reconnecting"}
+              {connected ? "Live" : socketEnabled ? "Reconnecting" : "Polling"}
             </span>
           </div>
         </div>

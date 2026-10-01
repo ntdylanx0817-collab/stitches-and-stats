@@ -48,7 +48,10 @@ const SZ_BOT_DEFAULT = 1.6;
 function zoneToSVG(zone: number, szTop: number, szBot: number) {
   const zoneLines = zoneLineToSVG(szTop, szBot);
   const zoneW = zoneLines.rightX - zoneLines.leftX;
-  const zoneH = zoneLines.topY - zoneLines.botY;
+  // SVG y-coordinates increase downward, so the lower edge has the larger
+  // number. Subtracting in the opposite order produces invalid negative
+  // rectangle heights and flips all three grid rows.
+  const zoneH = zoneLines.botY - zoneLines.topY;
   const colW = zoneW / 3;
   const rowH = zoneH / 3;
 
@@ -232,7 +235,7 @@ function ZoneHeatmap({
 }) {
   const zoneLines = zoneLineToSVG(szTop, szBot);
   const zoneW = zoneLines.rightX - zoneLines.leftX;
-  const zoneH = zoneLines.topY - zoneLines.botY;
+  const zoneH = zoneLines.botY - zoneLines.topY;
   const colW = zoneW / 3;
   const rowH = zoneH / 3;
 

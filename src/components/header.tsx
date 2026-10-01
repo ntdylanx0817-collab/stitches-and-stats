@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import {
   Activity, BarChart3, User, Newspaper, Swords, GitCompare, Flame, Trophy, Sun, Moon, Target,
-  Sunrise, ChevronDown,
+  Sunrise, ChevronDown, Crown,
   type LucideIcon,
 } from "lucide-react";
 import { GlobalPlayerSearch } from "@/components/global-player-search";
@@ -23,6 +23,7 @@ const PRIMARY_NAV_ITEMS: NavItem[] = [
   { key: "live", label: "Live", icon: Activity },
   { key: "live-at-bat", label: "At-Bat", icon: Target },
   { key: "recap", label: "Recap", icon: Sunrise },
+  { key: "postseason", label: "Postseason", icon: Crown },
   { key: "standings", label: "Standings", icon: Trophy },
   { key: "players", label: "Players", icon: User },
 ];
@@ -120,6 +121,7 @@ export function Header() {
                 <button
                   key={item.key}
                   onClick={() => selectView(item.key)}
+                  aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "relative flex min-h-9 shrink-0 items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs transition-colors font-scoreboard uppercase tracking-wide sm:px-3",

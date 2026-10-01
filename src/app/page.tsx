@@ -10,7 +10,7 @@ import { FunFactBanner } from "@/components/fun-fact-banner";
 import { ScoreTicker } from "@/components/score-ticker";
 import { BaseballMark } from "@/components/ui/baseball-mark";
 
-// The app is a single client-side shell with eleven substantial views. Static
+// The app is a single client-side shell with twelve substantial views. Static
 // imports made a visitor download every chart, table, simulator, and news
 // parser before seeing the default live screen. Keep the primary view eager;
 // fetch each secondary feature only when it is first opened.
@@ -20,6 +20,10 @@ const LiveAtBatView = dynamic(
 );
 const RecapView = dynamic(
   () => import("@/components/recap-view").then((module) => module.RecapView),
+  { loading: ViewLoading }
+);
+const PostseasonView = dynamic(
+  () => import("@/components/postseason-view").then((module) => module.PostseasonView),
   { loading: ViewLoading }
 );
 const PlayersView = dynamic(
@@ -94,6 +98,7 @@ export default function Home() {
             {view === "live" && <LiveFeedView />}
             {view === "live-at-bat" && <LiveAtBatView />}
             {view === "recap" && <RecapView />}
+            {view === "postseason" && <PostseasonView />}
             {view === "derby" && <DerbyTab />}
             {view === "standings" && <StandingsView />}
             {view === "team" && selectedTeamId && (

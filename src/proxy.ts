@@ -48,6 +48,9 @@ const EXPENSIVE_ROUTES = [
   // Fans out to five upstream calls (schedule, hitting, pitching,
   // transactions, standings) on a cache miss.
   "/api/recap",
+  // Fetches the schedule and standings, then hydrates every announced
+  // probable starter on a cold cache.
+  "/api/postseason",
   "/api/simulate",
 ];
 

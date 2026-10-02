@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchLiveFeed } from "@/lib/mlb-api";
 import { getOrSet } from "@/lib/cache";
 import { integerParam } from "@/lib/api-params";
+import { getHeadToHeadData } from "@/lib/h2h";
+import { errorResponse } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -125,8 +127,9 @@ export async function GET(req: NextRequest) {
   const gamePk = integerParam(req.nextUrl.searchParams.get("gamePk"), { min: 1 });
   if (gamePk === null) return NextResponse.json({ error: "gamePk must be a positive integer" }, { status: 400 });
 
-  const cacheKey = `winprob:${gamePk}`;
-  const data = await getOrSet(cacheKey, 15_000, async () => {
+  try {
+    const cacheKey = `winprob:${gamePk}`;
+    const data = await getOrSet(cacheKey, 15_000, async () => {
     const feed = await fetchLiveFeed(gamePk);
     if (!feed) return null;
 
@@ -141,24 +144,15 @@ export async function GET(req: NextRequest) {
     let h2hInsight = "";
     let preGameHomeWP = 54; // Default home advantage
 
-    try {
-      // Use our own H2H API
-      const h2hRes = await fetch(`${req.nextUrl.origin}/api/h2h?team1Id=${awayTeamId}&team2Id=${homeTeamId}`, {
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (h2hRes.ok) {
-        const h2hData = await h2hRes.json();
-        if (h2hData.recentGames && h2hData.recentGames.length > 0) {
-          // H2H adjustment: away team's win prob vs home team
-          // preGameWinProb is from away team's perspective
-          const awayPreGameWP = h2hData.preGameWinProb;
-          h2hAdjustment = (awayPreGameWP - 50) * 0.3; // Scale down H2H effect
-          preGameHomeWP = 54 - h2hAdjustment;
-          preGameHomeWP = Math.max(20, Math.min(80, preGameHomeWP));
-          h2hInsight = h2hData.insight;
-        }
+    if (awayTeamId > 0 && homeTeamId > 0 && awayTeamId !== homeTeamId) {
+      const h2hData = await getHeadToHeadData(awayTeamId, homeTeamId);
+      if (h2hData?.recentGames.length) {
+        // H2H adjustment: away team's win probability against the home team.
+        h2hAdjustment = (h2hData.preGameWinProb - 50) * 0.3;
+        preGameHomeWP = Math.max(20, Math.min(80, 54 - h2hAdjustment));
+        h2hInsight = h2hData.insight;
       }
-    } catch {}
+    }
 
     const points: WinProbPoint[] = [];
     let maxHomeWP = preGameHomeWP;
@@ -247,11 +241,14 @@ export async function GET(req: NextRequest) {
       preGameHomeWP,
       isPreGame: false,
     } as WinProbData;
-  });
+    });
 
-  if (!data) {
-    return NextResponse.json({ error: "Game data not available" }, { status: 404 });
+    if (!data) {
+      return NextResponse.json({ error: "Game data not available" }, { status: 404 });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return errorResponse(error);
   }
-
-  return NextResponse.json(data);
 }

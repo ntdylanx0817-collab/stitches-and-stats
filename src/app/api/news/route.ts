@@ -4,6 +4,7 @@ import { getOrSet } from "@/lib/cache";
 import { errorResponse } from "@/lib/api-errors";
 import { routeLogger, serializeError } from "@/lib/logger";
 import { integerParam } from "@/lib/api-params";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 const log = routeLogger("/api/news");
 
@@ -230,7 +231,7 @@ async function fetchFeed(source: NewsSource): Promise<NewsArticle[]> {
     return items
       .map((item): NewsArticle | null => {
         const title = rssText(item.title);
-        const link = rssHref(item.link);
+        const link = safeHttpUrl(rssHref(item.link));
         const description = rssText(item.description) || rssText(item.summary);
         const pubDate = item.pubDate ?? item.published ?? item["dc:date"] ?? "";
         const id = rssText(item.guid) || item.id || link || title;

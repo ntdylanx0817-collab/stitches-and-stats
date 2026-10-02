@@ -77,8 +77,8 @@ export function PostseasonView() {
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<PostseasonPayload>({
     queryKey: ["postseason", season],
-    queryFn: async () => {
-      const res = await fetch(`/api/postseason?season=${season}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/postseason?season=${season}`, { signal });
       if (!res.ok) throw new Error("postseason fetch failed");
       return res.json();
     },
@@ -96,14 +96,18 @@ export function PostseasonView() {
 
   const { data: lineup, isLoading: lineupLoading, error: lineupError } = useQuery<LineupData>({
     queryKey: ["postseason-lineup", selectedGame?.gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/lineup?gamePk=${selectedGame?.gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/lineup?gamePk=${selectedGame?.gamePk}`, { signal });
       if (!res.ok) throw new Error("lineups pending");
       return res.json();
     },
     enabled: !!selectedGame?.gamePk,
     staleTime: 15_000,
-    refetchInterval: selectedGame?.status.abstractGameState === "Live" ? 15_000 : 60_000,
+    refetchInterval: selectedGame?.status.abstractGameState === "Live"
+      ? 15_000
+      : selectedGame?.status.abstractGameState === "Final"
+        ? false
+        : 60_000,
     retry: false,
   });
 
@@ -313,6 +317,7 @@ function SeriesCard({ series, index, selectedGamePk, onSelectGame }: {
       transition={{ delay: reduceMotion ? 0 : Math.min(index * 0.05, 0.2) }}
       layout={!reduceMotion}
       onClick={() => nextGame && onSelectGame(nextGame.gamePk)}
+      aria-pressed={active}
       className={cn(
         "scorecard-cut relative w-full overflow-hidden border bg-midnight/45 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-chalk/25",
         active ? "border-heritage-red/60 shadow-lg shadow-heritage-red/10" : "border-chalk/10",
@@ -428,15 +433,15 @@ function GameCenter({
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-chalk px-4 pt-3 scrollbar-thin" role="tablist" aria-label="Game center sections">
-        <DetailTabButton active={tab === "preview"} onClick={() => onTabChange("preview")} icon={Activity}>Preview</DetailTabButton>
-        <DetailTabButton active={tab === "series"} onClick={() => onTabChange("series")} icon={CalendarRange}>Series</DetailTabButton>
-        <DetailTabButton active={tab === "roster"} onClick={() => onTabChange("roster")} icon={UsersRound}>Roster & health</DetailTabButton>
-        <DetailTabButton active={tab === "bullpen"} onClick={() => onTabChange("bullpen")} icon={Gauge}>Bullpen</DetailTabButton>
-        <DetailTabButton active={tab === "lineups"} onClick={() => onTabChange("lineups")} icon={BellRing}>Lineups & changes</DetailTabButton>
-        <DetailTabButton active={tab === "matchup"} onClick={() => onTabChange("matchup")} icon={Target}>Batter vs pitcher</DetailTabButton>
+        <DetailTabButton tab="preview" active={tab === "preview"} onClick={() => onTabChange("preview")} icon={Activity}>Preview</DetailTabButton>
+        <DetailTabButton tab="series" active={tab === "series"} onClick={() => onTabChange("series")} icon={CalendarRange}>Series</DetailTabButton>
+        <DetailTabButton tab="roster" active={tab === "roster"} onClick={() => onTabChange("roster")} icon={UsersRound}>Roster & health</DetailTabButton>
+        <DetailTabButton tab="bullpen" active={tab === "bullpen"} onClick={() => onTabChange("bullpen")} icon={Gauge}>Bullpen</DetailTabButton>
+        <DetailTabButton tab="lineups" active={tab === "lineups"} onClick={() => onTabChange("lineups")} icon={BellRing}>Lineups & changes</DetailTabButton>
+        <DetailTabButton tab="matchup" active={tab === "matchup"} onClick={() => onTabChange("matchup")} icon={Target}>Batter vs pitcher</DetailTabButton>
       </div>
 
-      <div className="overflow-hidden p-4 sm:p-5">
+      <div id="game-center-panel" role="tabpanel" aria-labelledby={`game-center-tab-${tab}`} className="overflow-hidden p-4 sm:p-5">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${game.gamePk}-${tab}`}
@@ -599,8 +604,8 @@ function SeriesSchedulePanel({ series, selectedGamePk, onSelectGame }: {
 function usePostseasonTeamIntel(teamId: number, season: number) {
   return useQuery<PostseasonTeamIntelPayload>({
     queryKey: ["postseason-team-intel", teamId, season],
-    queryFn: async () => {
-      const response = await fetch(`/api/postseason/team?teamId=${teamId}&season=${season}`);
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`/api/postseason/team?teamId=${teamId}&season=${season}`, { signal });
       if (!response.ok) throw new Error("team intel unavailable");
       return response.json();
     },
@@ -944,8 +949,8 @@ function RoundFilterButton({ active, onClick, children }: { active: boolean; onC
   return <button type="button" aria-pressed={active} onClick={onClick} className={cn("scorecard-cut shrink-0 border px-3 py-2 font-scoreboard text-[10px] font-bold uppercase tracking-wide transition-colors", active ? "border-heritage-red/50 bg-heritage-red/15 text-chalk" : "border-chalk/10 bg-card/25 text-slate-500 hover:text-chalk")}>{children}</button>;
 }
 
-function DetailTabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: LucideIcon; children: ReactNode }) {
-  return <button type="button" role="tab" aria-selected={active} onClick={onClick} className={cn("relative flex shrink-0 items-center gap-1.5 px-3 pb-3 font-scoreboard text-[10px] font-bold uppercase tracking-wide transition-colors", active ? "text-chalk" : "text-slate-500 hover:text-chalk")}><Icon className={cn("h-3.5 w-3.5", active && "text-heritage-red")} />{children}{active && <motion.span layoutId="game-center-tab" className="absolute inset-x-2 bottom-0 h-0.5 bg-heritage-red" />}</button>;
+function DetailTabButton({ tab, active, onClick, icon: Icon, children }: { tab: DetailTab; active: boolean; onClick: () => void; icon: LucideIcon; children: ReactNode }) {
+  return <button id={`game-center-tab-${tab}`} type="button" role="tab" aria-controls="game-center-panel" aria-selected={active} onClick={onClick} className={cn("relative flex shrink-0 items-center gap-1.5 px-3 pb-3 font-scoreboard text-[10px] font-bold uppercase tracking-wide transition-colors", active ? "text-chalk" : "text-slate-500 hover:text-chalk")}><Icon className={cn("h-3.5 w-3.5", active && "text-heritage-red")} />{children}{active && <motion.span layoutId="game-center-tab" className="absolute inset-x-2 bottom-0 h-0.5 bg-heritage-red" />}</button>;
 }
 
 function ChampionshipMoment({ series }: { series: PostseasonSeries }) {

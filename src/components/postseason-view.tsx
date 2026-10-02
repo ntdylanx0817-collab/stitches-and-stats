@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
@@ -73,6 +73,7 @@ export function PostseasonView() {
   const [detailTab, setDetailTab] = useState<DetailTab>("preview");
   const [selectedBatterId, setSelectedBatterId] = useState<number | null>(null);
   const season = new Date().getFullYear();
+  const reduceMotion = useReducedMotion();
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<PostseasonPayload>({
     queryKey: ["postseason", season],
@@ -117,6 +118,7 @@ export function PostseasonView() {
   const filteredSeries = data?.series.filter((series) => roundFilter === "all" || series.round === roundFilter) ?? [];
   const currentRound = data?.rounds.find((round) => data.series.some((series) => series.round === round.code && !series.isComplete))
     ?? data?.rounds.at(-1);
+  const completedWorldSeries = data?.series.find((series) => series.round === "W" && series.isComplete) ?? null;
 
   function selectGame(gamePk: number) {
     setSelectedGamePk(gamePk);
@@ -149,11 +151,14 @@ export function PostseasonView() {
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
       <section aria-labelledby="postseason-title" className="scorebook-panel relative mb-5 px-6 py-8 sm:px-8 lg:px-10">
-        <BaseballFieldMark
-          size={390}
-          className="pointer-events-none text-warning-track/[0.065]"
-          style={{ position: "absolute", right: 8, top: -132 }}
-        />
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 -top-[132px]"
+          animate={reduceMotion ? undefined : { rotate: [0, 2.5, 0], y: [0, 8, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <BaseballFieldMark size={390} className="text-warning-track/[0.065]" />
+        </motion.div>
         <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <span className="editorial-kicker">The road to the title</span>
@@ -171,6 +176,8 @@ export function PostseasonView() {
           </div>
         </div>
       </section>
+
+      {completedWorldSeries && <ChampionshipMoment series={completedWorldSeries} />}
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin" role="group" aria-label="Filter postseason bracket by round">
@@ -258,10 +265,16 @@ function BracketBoard({ series, selectedGamePk, onSelectGame }: {
         <div className={cn("grid gap-4", rounds.length === 1 ? "grid-cols-1" : "min-w-[1120px] grid-cols-4")}>
           {rounds.map((roundCode, roundIndex) => {
             const roundSeries = series.filter((item) => item.round === roundCode);
+            const hasCompletedSeries = roundSeries.some((item) => item.isComplete);
             const label = roundSeries[0]?.roundLabel ?? ({ F: "Wild Card Series", D: "Division Series", L: "League Championship", W: "World Series" } as const)[roundCode];
             return (
               <div key={roundCode} className="relative">
-                {roundIndex < rounds.length - 1 && <ChevronRight className="absolute -right-3 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-slate-700" />}
+                {roundIndex < rounds.length - 1 && (
+                  <div className={cn("postseason-advance-path absolute -right-4 top-1/2 z-10 w-4 -translate-y-1/2", hasCompletedSeries && "is-advanced")} aria-hidden="true">
+                    <span />
+                    <ChevronRight className="absolute -right-1 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  </div>
+                )}
                 <div className="mb-3 border-b border-chalk/10 pb-2">
                   <div className="font-scoreboard text-xs font-bold uppercase tracking-[0.14em] text-heritage-red">{label}</div>
                   <div className="mt-0.5 text-[10px] text-slate-600">{roundSeries.length} series</div>
@@ -288,26 +301,35 @@ function SeriesCard({ series, index, selectedGamePk, onSelectGame }: {
   selectedGamePk: number | null;
   onSelectGame: (gamePk: number) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   const nextGame = series.games.find((game) => game.status.abstractGameState !== "Final") ?? series.games.at(-1);
   const active = !!nextGame && nextGame.gamePk === selectedGamePk;
+  const live = series.games.some((game) => game.status.abstractGameState === "Live");
   return (
     <motion.button
       type="button"
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.05, 0.2) }}
+      transition={{ delay: reduceMotion ? 0 : Math.min(index * 0.05, 0.2) }}
+      layout={!reduceMotion}
       onClick={() => nextGame && onSelectGame(nextGame.gamePk)}
       className={cn(
-        "scorecard-cut w-full border bg-midnight/45 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-chalk/25",
-        active ? "border-heritage-red/60 shadow-lg shadow-heritage-red/10" : "border-chalk/10"
+        "scorecard-cut relative w-full overflow-hidden border bg-midnight/45 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-chalk/25",
+        active ? "border-heritage-red/60 shadow-lg shadow-heritage-red/10" : "border-chalk/10",
+        live && "animate-border-pulse border-crimson/50",
+        series.isComplete && "postseason-series-complete"
       )}
     >
+      {active && <motion.span layoutId="selected-series-edge" className="absolute inset-y-0 left-0 w-0.5 bg-heritage-red" />}
       <div className="mb-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600">
         <span>{series.league}</span>
-        <span>{series.isComplete ? "Final" : `Best of ${series.winsNeeded * 2 - 1}`}</span>
+        <span className={cn("flex items-center gap-1", live && "text-crimson")}>
+          {live && <span className="h-1.5 w-1.5 rounded-full bg-crimson animate-live-dot" />}
+          {live ? "Live" : series.isComplete ? "Final" : `Best of ${series.winsNeeded * 2 - 1}`}
+        </span>
       </div>
-      <BracketTeam team={series.teamA} wins={series.teamAWins} winsNeeded={series.winsNeeded} />
-      <BracketTeam team={series.teamB} wins={series.teamBWins} winsNeeded={series.winsNeeded} />
+      <BracketTeam team={series.teamA} wins={series.teamAWins} winsNeeded={series.winsNeeded} advanced={series.isComplete && series.teamAWins > series.teamBWins} />
+      <BracketTeam team={series.teamB} wins={series.teamBWins} winsNeeded={series.winsNeeded} advanced={series.isComplete && series.teamBWins > series.teamAWins} />
       {series.projection && !series.isComplete && (
         <div className="mt-2 border-t border-chalk/10 pt-2 text-[10px] text-slate-500">
           <Sparkles className="mr-1 inline h-3 w-3 text-warning-track" />
@@ -323,14 +345,16 @@ function SeriesCard({ series, index, selectedGamePk, onSelectGame }: {
   );
 }
 
-function BracketTeam({ team, wins, winsNeeded }: { team: PostseasonTeam; wins: number; winsNeeded: number }) {
+function BracketTeam({ team, wins, winsNeeded, advanced = false }: { team: PostseasonTeam; wins: number; winsNeeded: number; advanced?: boolean }) {
   const color = getDisplayTeamColor(team.id);
   return (
     <div className="flex items-center gap-2 border-t border-chalk/5 py-2 first:border-0">
       <span className="home-plate-mark flex h-7 w-7 shrink-0 items-center justify-center pb-1 font-scoreboard text-[9px] font-black text-white" style={{ backgroundColor: color }}>
         {team.abbreviation.slice(0, 3)}
       </span>
-      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-chalk">{team.name}</span>
+      <span className={cn("min-w-0 flex-1 truncate text-xs font-semibold text-chalk", advanced && "text-mint")}>
+        {team.name}{advanced && <Crown className="ml-1 inline h-3 w-3 text-warning-track" aria-label="Series winner" />}
+      </span>
       <div className="flex gap-1" aria-label={`${wins} wins, ${winsNeeded} needed`}>
         {Array.from({ length: winsNeeded }).map((_, i) => (
           <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: i < wins ? color : "rgba(148,163,184,0.18)" }} />
@@ -359,6 +383,7 @@ function GameCenter({
   season: number;
   onSelectGame: (gamePk: number) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   const live = game.status.abstractGameState === "Live";
   const final = game.status.abstractGameState === "Final";
   return (
@@ -411,21 +436,31 @@ function GameCenter({
         <DetailTabButton active={tab === "matchup"} onClick={() => onTabChange("matchup")} icon={Target}>Batter vs pitcher</DetailTabButton>
       </div>
 
-      <div className="p-4 sm:p-5">
-        {tab === "preview" && <PreviewPanel game={game} series={series} />}
-        {tab === "series" && <SeriesSchedulePanel series={series} selectedGamePk={game.gamePk} onSelectGame={onSelectGame} />}
-        {tab === "roster" && <TeamIntelPanel series={series} season={season} mode="roster" />}
-        {tab === "bullpen" && <TeamIntelPanel series={series} season={season} mode="bullpen" />}
-        {tab === "lineups" && <LineupPanel game={game} lineup={lineup} loading={lineupLoading} unavailable={lineupError} />}
-        {tab === "matchup" && (
-          <MatchupPanel
-            batters={batters}
-            selectedBatter={selectedBatter}
-            onSelectBatter={onSelectBatter}
-            opposingPitcher={opposingPitcher}
-            lineupsPending={lineupLoading || lineupError}
-          />
-        )}
+      <div className="overflow-hidden p-4 sm:p-5">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`${game.gamePk}-${tab}`}
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
+          >
+            {tab === "preview" && <PreviewPanel game={game} series={series} />}
+            {tab === "series" && <SeriesSchedulePanel series={series} selectedGamePk={game.gamePk} onSelectGame={onSelectGame} />}
+            {tab === "roster" && <TeamIntelPanel series={series} season={season} mode="roster" />}
+            {tab === "bullpen" && <TeamIntelPanel series={series} season={season} mode="bullpen" />}
+            {tab === "lineups" && <LineupPanel game={game} lineup={lineup} loading={lineupLoading} unavailable={lineupError} />}
+            {tab === "matchup" && (
+              <MatchupPanel
+                batters={batters}
+                selectedBatter={selectedBatter}
+                onSelectBatter={onSelectBatter}
+                opposingPitcher={opposingPitcher}
+                lineupsPending={lineupLoading || lineupError}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -876,15 +911,18 @@ function LineupCard({ title, players, color }: { title: string; players: LineupP
 
 function GameTeam({ team, score, side, align }: { team: PostseasonTeam; score: number | null; side: string; align: "left" | "right" }) {
   const color = getDisplayTeamColor(team.id);
+  const reduceMotion = useReducedMotion();
   return (
     <div className={cn("flex min-w-0 items-center gap-3", align === "right" ? "flex-row-reverse text-right" : "text-left")}>
       <span className="home-plate-mark flex h-12 w-12 shrink-0 items-center justify-center pb-1 font-scoreboard text-xs font-black text-white sm:h-14 sm:w-14" style={{ backgroundColor: color }}>{team.abbreviation}</span>
       <div className="min-w-0">
         <div className="font-scoreboard text-[9px] uppercase tracking-[0.16em] text-slate-600">{side}</div>
-        <div className="truncate font-scoreboard text-lg font-black uppercase text-chalk sm:text-2xl">{team.name}</div>
-        <div className="text-[10px] text-slate-500">{team.wins}-{team.losses} · {team.runDifferential > 0 ? "+" : ""}{team.runDifferential} RD</div>
+        <div className="font-scoreboard text-lg font-black uppercase text-chalk sm:text-2xl"><span className="sm:hidden">{team.abbreviation}</span><span className="hidden truncate sm:block">{team.name}</span></div>
+        <div className="hidden text-[10px] text-slate-500 sm:block">{team.wins}-{team.losses} · {team.runDifferential > 0 ? "+" : ""}{team.runDifferential} RD</div>
       </div>
-      {score != null && <span className="broadcast-number text-4xl font-black text-chalk">{score}</span>}
+      <AnimatePresence mode="popLayout" initial={false}>
+        {score != null && <motion.span key={score} initial={reduceMotion ? false : { opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0, y: 5 }} className="broadcast-number text-4xl font-black text-chalk">{score}</motion.span>}
+      </AnimatePresence>
     </div>
   );
 }
@@ -907,7 +945,40 @@ function RoundFilterButton({ active, onClick, children }: { active: boolean; onC
 }
 
 function DetailTabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: LucideIcon; children: ReactNode }) {
-  return <button type="button" role="tab" aria-selected={active} onClick={onClick} className={cn("relative flex shrink-0 items-center gap-1.5 px-3 pb-3 font-scoreboard text-[10px] font-bold uppercase tracking-wide transition-colors", active ? "text-chalk" : "text-slate-500 hover:text-chalk")}><Icon className={cn("h-3.5 w-3.5", active && "text-heritage-red")} />{children}{active && <span className="absolute inset-x-2 bottom-0 h-0.5 bg-heritage-red" />}</button>;
+  return <button type="button" role="tab" aria-selected={active} onClick={onClick} className={cn("relative flex shrink-0 items-center gap-1.5 px-3 pb-3 font-scoreboard text-[10px] font-bold uppercase tracking-wide transition-colors", active ? "text-chalk" : "text-slate-500 hover:text-chalk")}><Icon className={cn("h-3.5 w-3.5", active && "text-heritage-red")} />{children}{active && <motion.span layoutId="game-center-tab" className="absolute inset-x-2 bottom-0 h-0.5 bg-heritage-red" />}</button>;
+}
+
+function ChampionshipMoment({ series }: { series: PostseasonSeries }) {
+  const reduceMotion = useReducedMotion();
+  const champion = series.teamAWins > series.teamBWins ? series.teamA : series.teamB;
+  const color = getDisplayTeamColor(champion.id);
+  const particles = Array.from({ length: 18 });
+  return (
+    <motion.section
+      aria-label={`${champion.name} World Series champions`}
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="championship-moment scorecard-cut relative mb-5 overflow-hidden border border-warning-track/40 px-5 py-6 sm:px-8"
+      style={{ "--champion-color": color } as CSSProperties}
+    >
+      <div className="championship-confetti pointer-events-none absolute inset-0" aria-hidden="true">
+        {particles.map((_, index) => <span key={index} style={{ left: `${(index * 37) % 100}%`, animationDelay: `${index * 55}ms` }} />)}
+      </div>
+      <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          <div className="championship-trophy flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-warning-track/40 bg-warning-track/10">
+            <Trophy className="h-8 w-8 text-warning-track" />
+          </div>
+          <div>
+            <span className="editorial-kicker">World Series champions</span>
+            <h2 className="font-scoreboard mt-2 text-2xl font-black uppercase text-chalk sm:text-4xl">{champion.name} finish the climb.</h2>
+            <p className="mt-1 text-xs text-slate-400">World Series won {Math.max(series.teamAWins, series.teamBWins)}–{Math.min(series.teamAWins, series.teamBWins)}</p>
+          </div>
+        </div>
+        <span className="home-plate-mark flex h-20 w-20 items-center justify-center pb-2 font-scoreboard text-xl font-black text-white" style={{ backgroundColor: color }}>{champion.abbreviation}</span>
+      </div>
+    </motion.section>
+  );
 }
 
 function formatGameTime(value: string): string {

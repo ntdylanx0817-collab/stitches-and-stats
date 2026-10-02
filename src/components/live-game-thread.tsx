@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Activity, Target, TrendingUp, Radio,
@@ -10,7 +9,7 @@ import {
 import { BaseballMark } from "@/components/ui/baseball-mark";
 import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
-import type { EnrichedPitch, GameFeedResponse } from "@/lib/types";
+import type { EnrichedPitch } from "@/lib/types";
 
 interface PlayData {
   atBatIndex: number;
@@ -44,19 +43,8 @@ interface CommentaryEntry {
   timestamp: string;
 }
 
-export function LiveGameThread({ gamePk }: { gamePk: number }) {
-  const { data, isLoading } = useQuery<GameFeedResponse>({
-    queryKey: ["game-thread", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
-      if (!res.ok) throw new Error("failed");
-      return res.json();
-    },
-    refetchInterval: 10_000,
-    staleTime: 5_000,
-  });
-
-  const commentary = generateCommentary(data?.pitches ?? []);
+export function LiveGameThread({ pitches, isLoading = false }: { pitches: EnrichedPitch[]; isLoading?: boolean }) {
+  const commentary = generateCommentary(pitches);
 
   if (isLoading && commentary.length === 0) {
     return (
@@ -145,7 +133,13 @@ function generateCommentary(pitches: EnrichedPitch[]): CommentaryEntry[] {
 
   // Group pitches by at-bat
   const playMap = new Map<number, PlayData>();
-  for (const p of pitches) {
+  // The shared live feed is newest-first, while the API response this widget
+  // previously fetched was chronological. Sort explicitly so each play's
+  // final pitch remains the source of its result and description.
+  const chronologicalPitches = [...pitches].sort(
+    (a, b) => a.atBatIndex - b.atBatIndex || a.pitchNumber - b.pitchNumber
+  );
+  for (const p of chronologicalPitches) {
     const idx = p.atBatIndex;
     if (!playMap.has(idx)) {
       playMap.set(idx, {

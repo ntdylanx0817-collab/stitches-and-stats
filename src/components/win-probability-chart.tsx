@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
+import { supplementalPollInterval } from "@/lib/polling";
 
 interface WinProbPoint {
   playIndex: number;
@@ -38,15 +39,15 @@ const CHART_W = 800;
 const CHART_H = 200;
 const CHART_PAD = 40;
 
-export function WinProbabilityChart({ gamePk }: { gamePk: number }) {
+export function WinProbabilityChart({ gamePk, abstractState }: { gamePk: number; abstractState?: string }) {
   const { data, isLoading, error } = useQuery<WinProbData>({
     queryKey: ["win-prob", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/win-probability?gamePk=${gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/win-probability?gamePk=${gamePk}`, { signal });
       if (!res.ok) throw new Error("win prob fetch failed");
       return res.json();
     },
-    refetchInterval: 15_000,
+    refetchInterval: supplementalPollInterval(abstractState),
     staleTime: 10_000,
     retry: 1,
   });

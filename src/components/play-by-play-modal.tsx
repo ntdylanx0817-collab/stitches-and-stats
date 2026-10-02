@@ -9,6 +9,7 @@ import { BaseballMark } from "@/components/ui/baseball-mark";
 import { Portal } from "@/components/ui/portal";
 import { getDisplayTeamColor, getTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
+import { playByPlayPollInterval } from "@/lib/polling";
 import type { EnrichedPitch, GameFeedResponse, GameStatus, Linescore } from "@/lib/types";
 
 /** One inning row in the linescore. */
@@ -68,12 +69,15 @@ export function PlayByPlayModal({
 }: PlayByPlayModalProps) {
   const { data, isLoading } = useQuery<GameFeedResponse>({
     queryKey: ["game-feed-rest", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/game/${gamePk}`, { signal });
       if (!res.ok) throw new Error("failed");
       return res.json();
     },
-    refetchInterval: 10_000,
+    refetchInterval: (query) => {
+      const gameState = status?.abstractGameState ?? query.state.data?.status?.abstractGameState;
+      return playByPlayPollInterval(gameState);
+    },
     staleTime: 5_000,
   });
 

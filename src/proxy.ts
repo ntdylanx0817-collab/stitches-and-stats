@@ -42,6 +42,10 @@ const expensiveLimiter = new RateLimiter({
 
 const EXPENSIVE_ROUTES = [
   "/api/fastest-pitches",
+  // Builds two full leaderboards on a cold cache.
+  "/api/fun-fact",
+  // Fetches two team records plus up to four seasons of schedules.
+  "/api/h2h",
   "/api/home-run-derby",
   "/api/leaderboard",
   "/api/player-zones",
@@ -52,6 +56,8 @@ const EXPENSIVE_ROUTES = [
   // probable starter on a cold cache.
   "/api/postseason",
   "/api/simulate",
+  // Hydrates a live feed and, on a cold cache, the shared H2H model above.
+  "/api/win-probability",
 ];
 
 function isExpensive(pathname: string): boolean {

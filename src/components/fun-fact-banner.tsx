@@ -30,8 +30,8 @@ export function FunFactBanner() {
   const [paused, setPaused] = useState(false);
   const { data, isLoading, refetch } = useQuery<{ fact: FunFact | null }>({
     queryKey: ["fun-fact"],
-    queryFn: async () => {
-      const res = await fetch("/api/fun-fact");
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/fun-fact", { signal });
       if (!res.ok) throw new Error("failed");
       return res.json();
     },
@@ -86,6 +86,7 @@ export function FunFactBanner() {
             </AnimatePresence>
             <button
               onClick={() => refetch()}
+              aria-label="Show another baseball fact"
               className="shrink-0 rounded-md p-1.5 text-slate-500 hover:text-warning-track transition-colors"
               title="New fact"
             >
@@ -93,6 +94,7 @@ export function FunFactBanner() {
             </button>
             <button
               onClick={() => setDismissed(true)}
+              aria-label="Dismiss baseball fact"
               className="shrink-0 rounded-md p-1.5 text-slate-500 hover:text-chalk transition-colors"
               title="Dismiss"
             >

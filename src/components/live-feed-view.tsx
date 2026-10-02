@@ -265,10 +265,10 @@ function GameFeed({ gamePk }: { gamePk: number }) {
             Shown here instead, right under the score, on narrow screens only;
             hidden lg:block below keeps the desktop column layout unchanged. */}
         <div className="lg:hidden">
-          <LiveGameThread gamePk={gamePk} />
+          <LiveGameThread pitches={mergedPitches} isLoading={isLoadingInitial} />
         </div>
-        <WinProbabilityChart gamePk={gamePk} />
-        <LineupChanges gamePk={gamePk} />
+        <WinProbabilityChart gamePk={gamePk} abstractState={status?.abstractGameState} />
+        <LineupChanges gamePk={gamePk} abstractState={status?.abstractGameState} />
         <StreakTracker />
         {teams?.away?.id && <BullpenStatus teamId={teams.away.id} teamName={teams.away.abbreviation ?? teams.away.name} />}
         {teams?.home?.id && <BullpenStatus teamId={teams.home.id} teamName={teams.home.abbreviation ?? teams.home.name} />}
@@ -383,9 +383,9 @@ function GameFeed({ gamePk }: { gamePk: number }) {
           Hidden below lg since the mobile copy above already covers it. */}
       <div className="lg:col-span-4 space-y-4">
         <div className="hidden lg:block">
-          <LiveGameThread gamePk={gamePk} />
+          <LiveGameThread pitches={mergedPitches} isLoading={isLoadingInitial} />
         </div>
-        <WPALeaderboard gamePk={gamePk} />
+        <WPALeaderboard gamePk={gamePk} pitches={mergedPitches} abstractState={status?.abstractGameState} />
         <div className="glass rounded-2xl p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-chalk">

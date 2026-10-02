@@ -1,33 +1,15 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import type { GameStatus, Linescore } from "@/lib/types";
+import type { Linescore } from "@/lib/types";
 
 interface OnBaseTrailProps {
-  gamePk: number;
+  linescore: Linescore | null;
   awayTeamColor: string;
   homeTeamColor: string;
   isTopInning: boolean;
 }
 
-export function OnBaseTrail({ gamePk, awayTeamColor, homeTeamColor, isTopInning }: OnBaseTrailProps) {
-  const { data } = useQuery<{
-    linescore: Linescore | null;
-    status: GameStatus | null;
-  }>({
-    queryKey: ["base-runners", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
-      if (!res.ok) throw new Error("failed");
-      return res.json();
-    },
-    refetchInterval: 5_000,
-    staleTime: 3_000,
-  });
-
-  const linescore = data?.linescore;
+export function OnBaseTrail({ linescore, awayTeamColor, homeTeamColor, isTopInning }: OnBaseTrailProps) {
   const outs = linescore?.outs ?? 0;
   const balls = linescore?.balls ?? 0;
   const strikes = linescore?.strikes ?? 0;

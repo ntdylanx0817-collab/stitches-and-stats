@@ -53,8 +53,8 @@ export function StandingsView() {
 
   const { data, isLoading, error, refetch } = useQuery<StandingsData>({
     queryKey: ["standings"],
-    queryFn: async () => {
-      const res = await fetch("/api/standings");
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/standings", { signal });
       if (!res.ok) throw new Error("standings fetch failed");
       return res.json();
     },
@@ -127,6 +127,7 @@ export function StandingsView() {
         ] as const).map((t) => (
           <button
             key={t.key}
+            id={`standings-tab-${t.key}`}
             type="button"
             role="tab"
             aria-selected={tab === t.key}
@@ -144,7 +145,7 @@ export function StandingsView() {
 
       {/* Divisions view */}
       {tab === "divisions" && (
-        <div id="standings-panel-divisions" role="tabpanel" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div id="standings-panel-divisions" role="tabpanel" aria-labelledby="standings-tab-divisions" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {data.divisions.map((div, i) => (
             <DivisionCard key={div.division} division={div} index={i} />
           ))}
@@ -153,7 +154,7 @@ export function StandingsView() {
 
       {/* Wild Card view */}
       {tab === "wildcard" && (
-        <div id="standings-panel-wildcard" role="tabpanel" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="standings-panel-wildcard" role="tabpanel" aria-labelledby="standings-tab-wildcard" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <WildCardCard title="AL Wild Card" teams={data.wildCard.AL} cutoff={3} />
           <WildCardCard title="NL Wild Card" teams={data.wildCard.NL} cutoff={3} />
         </div>
@@ -161,7 +162,7 @@ export function StandingsView() {
 
       {/* Playoff picture */}
       {tab === "playoff" && (
-        <div id="standings-panel-playoff" role="tabpanel" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="standings-panel-playoff" role="tabpanel" aria-labelledby="standings-tab-playoff" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PlayoffCard title="American League" teams={data.allTeams.filter(t => t.league === "American League")} />
           <PlayoffCard title="National League" teams={data.allTeams.filter(t => t.league === "National League")} />
         </div>

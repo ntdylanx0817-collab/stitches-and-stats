@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Trophy, Skull } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supplementalPollInterval } from "@/lib/polling";
 import type { EnrichedPitch } from "@/lib/types";
 
 interface WinProbPoint {
@@ -36,30 +37,27 @@ interface WPAData {
   goats: WPAEntry[];
 }
 
-export function WPALeaderboard({ gamePk }: { gamePk: number }) {
+export function WPALeaderboard({
+  gamePk,
+  pitches,
+  abstractState,
+}: {
+  gamePk: number;
+  pitches: EnrichedPitch[];
+  abstractState?: string;
+}) {
   const { data: wpData, isLoading } = useQuery<WinProbData>({
     queryKey: ["win-prob", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/win-probability?gamePk=${gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/win-probability?gamePk=${gamePk}`, { signal });
       if (!res.ok) throw new Error("wp fetch failed");
       return res.json();
     },
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    refetchInterval: supplementalPollInterval(abstractState),
   });
 
-  const { data: gameData } = useQuery<{ pitches: EnrichedPitch[] }>({
-    queryKey: ["game-wpa", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
-      if (!res.ok) throw new Error("game fetch failed");
-      return res.json();
-    },
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-
-  const wpaData = computeWPA(wpData, gameData?.pitches ?? []);
+  const wpaData = computeWPA(wpData, pitches);
 
   if (isLoading || !wpData || wpData.points.length < 2) {
     return null;

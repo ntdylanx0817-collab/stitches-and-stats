@@ -1,13 +1,13 @@
 # Stitches and Stats — Real-Time Statcast Baseball Analytics
 
-An immersive, production-grade baseball analytics platform inspired by [MLB's Baseball Savant](https://baseballsavant.mlb.com/), redesigned with a modern, ultra-clean dark-mode aesthetic. Built with Next.js 16, TypeScript, and real-time WebSocket pitch tracking.
+An immersive baseball analytics and fan companion inspired by [MLB's Baseball Savant](https://baseballsavant.mlb.com/). It combines live pitch tracking, postseason intelligence, daily recaps, standings, player research, simulations, and baseball news in a responsive stadium-broadcast interface. Built with Next.js 16 and TypeScript.
 
 [![CI](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/ntdylanx0817-collab/stitches-and-stats/actions/workflows/ci.yml) ![Stitches and Stats](https://img.shields.io/badge/Next.js-16-black) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
 ### Live 'Savant' Gamefeed
-- **Real-time pitch-by-pitch tracking** via WebSocket (with REST polling fallback every 5s)
+- **Real-time pitch-by-pitch tracking** via WebSocket, with an adaptive REST fallback that stops once a game is final
 - **High-fidelity SVG strike zone** showing every pitch colored by type (4-Seam, Sinker, Slider, Curveball, Cutter, Sweeper, Changeup), with glow rings on the latest pitch, click-to-select, hover tooltips, and a 3×3 sub-zone grid
 - **Pitch log** with expandable cards showing 11+ Statcast metrics per pitch (Exit Velocity, Launch Angle, Hit Distance, xBA, Spin Rate, Bat Speed, Break X/Z, Induced Vertical Break, Extension, Plate Time, Plate Location, Zone)
 - **At-Bat Details modal** (Gameday-style) — open the full at-bat from any pitch log entry: batter/pitcher matchup cards, a live balls/strikes/outs count, every pitch numbered on the strike zone, and the full pitch-by-pitch sequence with type, velocity, and result. Updates live as new pitches arrive.
@@ -27,11 +27,25 @@ An immersive, production-grade baseball analytics platform inspired by [MLB's Ba
 - Percentiles computed live from the leaderboard (always current)
 
 ### Advanced Statcast Search & Leaderboards
-- **Multi-filter bar**: Batter/Pitcher toggle, Season (2015–2025), Min PA/BF slider, Team (all 30 MLB), Position, name search, Statcast columns toggle
+- **Multi-filter bar**: Batter/Pitcher toggle, every Statcast season from 2015 through the current year, Min PA/BF slider, Team (all 30 MLB), Position, name search, Statcast columns toggle
 - **Sortable table** with sticky header + sticky player-name column; click any column header to sort asc/desc/none
 - **Tone-colored values**: elite=mint, good=cobalt, poor=crimson
 - **Lazy-load pagination**: 50 rows at a time with "Load more" overlay
 - Click any row to navigate to that player's percentile profile
+
+### Postseason Command Center
+- **Complete Wild Card-to-World Series bracket** with live, clinch, elimination, and advancement states
+- **Pitcher-adjusted game and series projections** with transparent probability factors
+- **Full series schedules**, official lineups, late-change tracking, and batter-vs-pitcher views
+- **Active roster, injured-list, and bullpen workload intelligence** sourced from official MLB feeds
+- **Responsive bracket motion and championship presentation**, with reduced-motion support
+
+### Fan Companion
+- **Daily recap desk** with top hitters, pitchers, game summaries, and injury transactions
+- **Division, Wild Card, and playoff-picture standings**
+- **Score ticker, win-probability charts, WPA leaders, H2H context, streaks, and lineup changes**
+- **News wire** from curated baseball feeds with trust labels and sanitized outbound links
+- **Matchup simulator, player comparison, fastest pitches, and home-run derby views**
 
 ## Tech Stack
 
@@ -54,7 +68,7 @@ An immersive, production-grade baseball analytics platform inspired by [MLB's Ba
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/stitches-and-stats.git
+git clone https://github.com/ntdylanx0817-collab/stitches-and-stats.git
 cd stitches-and-stats
 
 # Install dependencies
@@ -107,11 +121,15 @@ stitches-and-stats/
 │   │   │   ├── game/[gamePk]/      # Enriched pitch data (MLB + Statcast)
 │   │   │   ├── savant/[gamePk]/    # Raw Statcast game feed
 │   │   │   ├── leaderboard/        # Season leaderboards (batters/pitchers)
+│   │   │   ├── postseason/         # Bracket, projections, roster and bullpen data
+│   │   │   ├── recap/              # Daily slate recap
+│   │   │   ├── standings/          # Division and Wild Card races
+│   │   │   ├── news/               # Sanitized curated RSS feeds
 │   │   │   ├── players/            # Player search
 │   │   │   └── player/[playerId]/  # Player bio + stats + percentiles
 │   │   ├── globals.css             # Dark theme + glassmorphism utilities
-│   │   ├── layout.tsx              # Root layout (forces dark mode)
-│   │   └── page.tsx                # Main page (view switching)
+│   │   ├── layout.tsx              # Root layout, fonts, providers and metadata
+│   │   └── page.tsx                # Lazy-loaded application shell
 │   ├── components/
 │   │   ├── header.tsx              # Sticky nav + WS status indicator
 │   │   ├── footer.tsx
@@ -131,13 +149,15 @@ stitches-and-stats/
 │   │   ├── cache.ts                # In-memory TTL cache with LRU + dedup
 │   │   ├── api-errors.ts           # Shared API error shape + status mapping
 │   │   ├── logger.ts               # Structured JSON logger
-│   │   ├── rate-limit.ts           # Sliding-window limiter (see middleware)
+│   │   ├── rate-limit.ts           # Sliding-window limiter (used by proxy)
+│   │   ├── postseason.ts           # Series model and bullpen assessment
+│   │   ├── h2h.ts                  # Shared cached head-to-head model
 │   │   ├── store.ts                # Zustand store (view, game, filters)
 │   │   ├── types.ts                # TypeScript types
 │   │   ├── utils.ts                # cn() + season helpers
 │   │   └── __tests__/              # bun test suites
 │   ├── hooks/
-│   └── middleware.ts               # Rate limiting for /api/*
+│   └── proxy.ts                    # Rate limiting for /api/*
 ├── mini-services/
 │   └── live-feed/                  # Socket.io WebSocket service (port 3003)
 │       ├── index.ts                # Service entry point
@@ -174,7 +194,7 @@ stitches-and-stats/
 ### Real-Time Updates
 
 - **WebSocket service** (port 3003): Polls MLB + Savant APIs every 8 seconds for each subscribed game. Emits `game:snapshot` (full state) and `game:pitch` (granular new-pitch event) to subscribed clients.
-- **Client**: Subscribes via `socket.io-client` through the Caddy gateway (`/?XTransformPort=3003`). Falls back to REST polling (5s interval) if the WS service is unavailable.
+- **Client**: Subscribes via `socket.io-client` through the Caddy gateway (`/?XTransformPort=3003`). Falls back to REST polling if the WS service is unavailable, and stops polling preview/final game feeds when there is nothing live to update.
 - **Reconnection**: Infinite attempts with exponential backoff (1s → 10s max).
 
 ### Caching Strategy
@@ -185,6 +205,8 @@ stitches-and-stats/
 - **Leaderboards**: 5 minute TTL
 - **Player search registry**: 1 day TTL
 - **Player bios**: 1 day TTL
+- **Postseason bracket**: 1 minute TTL
+- **Postseason roster/bullpen intelligence**: 5 minute TTL
 - **LRU eviction** at 1000 entries
 - **Concurrent request deduplication**: Multiple callers requesting the same cache key share a single in-flight promise
 
@@ -241,12 +263,12 @@ This project is for educational/demonstration purposes and is not affiliated wit
 - **Tests**: `npm test` runs the suite via `bun test` (built into Bun — no extra dependency, and it reads TypeScript directly). Covers the cache's TTL/eviction/deduplication behaviour, API error mapping, and the logger
 - **Typecheck**: `npm run typecheck` covers all three TypeScript projects — the app, the tests (which need Bun's globals), and the live-feed service
 - **Structured logging**: `src/lib/logger.ts` emits JSON lines in production and pretty output in development; set `LOG_LEVEL` to `debug`/`info`/`warn`/`error`/`silent`
-- **Rate limiting**: `src/middleware.ts` throttles `/api/*` with a sliding window — 120 req/min generally, 20 req/min for the endpoints that pull large Statcast CSVs. Tune with `RATE_LIMIT_*` (see `.env.example`). **This is a soft cap:** counters live in process memory, so on serverless each instance has its own and the effective limit multiplies by instance count. Use a shared store if you need a real guarantee
+- **Rate limiting**: `src/proxy.ts` throttles `/api/*` with a sliding window — 120 req/min generally, 20 req/min for fan-out or large Statcast endpoints. Tune with `RATE_LIMIT_*` (see `.env.example`). **This is a soft cap:** counters live in process memory, so on serverless each instance has its own and the effective limit multiplies by instance count. Use a shared store if you need a real guarantee
 - **Error boundary**: Catches render errors so a single broken component doesn't crash the app
 - **Loading states**: Shimmer skeletons for all async views
 - **Empty/error states**: Graceful handling for API failures, missing data, and preview games
 - **Fetch timeouts**: All upstream API calls have 8–15s `AbortSignal.timeout` to prevent hangs
-- **Mobile responsive**: All 3 views work on mobile (single-column layout, icon-only nav)
+- **Mobile responsive**: All primary views work from compact phone layouts through wide desktop dashboards
 - **Accessibility**: Semantic HTML, ARIA labels, keyboard navigation, screen-reader support
 
 ## License

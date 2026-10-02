@@ -203,10 +203,10 @@ export function HeroScoreboard({
             <div className="home-plate-mark flex h-8 w-8 items-center justify-center border border-chalk bg-chalk/5 font-mono text-[7px] font-black tracking-widest text-slate-500">VS</div>
             {state === "Live" ? (
               <OnBaseTrail
-                gamePk={gamePk}
+                linescore={linescore}
                 awayTeamColor={awayInk}
                 homeTeamColor={homeInk}
-                isTopInning={true}
+                isTopInning={linescore?.isTopInning ?? true}
               />
             ) : odds ? (
               <div className="flex flex-col items-center gap-1 py-1">

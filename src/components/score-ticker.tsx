@@ -202,8 +202,8 @@ export function ScoreTicker() {
 
   const { data, isLoading, error } = useQuery<TickerResponse>({
     queryKey: ["score-ticker"],
-    queryFn: async () => {
-      const res = await fetch("/api/score-ticker");
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/score-ticker", { signal });
       if (!res.ok) throw new Error("ticker fetch failed");
       return res.json();
     },

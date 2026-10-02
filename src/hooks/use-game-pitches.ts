@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSocket, type GameSnapshot } from "@/components/socket-provider";
+import { gameFeedPollInterval } from "@/lib/polling";
 import type {
   EnrichedPitch, LivePitchEvent, Linescore, GameStatus, FeedTeam, StatcastPitch,
 } from "@/lib/types";
@@ -222,12 +223,12 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
     };
   }, [gamePk, subscribeGame, unsubscribeGame, onSnapshot, onPitch]);
 
-  // Fallback: fetch via REST when the socket can't carry us. Preview games are
-  // fetched once — there's nothing to poll for until first pitch.
+  // Fallback: fetch via REST when the socket can't carry us. Preview and final
+  // games are fetched once because neither can produce live pitch changes.
   const { data: restData, isLoading: restLoading, dataUpdatedAt: restUpdatedAt } = useQuery<GameFeedRest>({
     queryKey: ["game-feed-rest", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/game/${gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/game/${gamePk}`, { signal });
       if (!res.ok) throw new Error("feed failed");
       return res.json();
     },
@@ -235,9 +236,7 @@ export function useGamePitches(gamePk: number): GamePitchFeed {
     // TanStack passes the Query object; read query.state.data to avoid a TDZ.
     refetchInterval: (query) => {
       const data = query.state?.data;
-      if (data?.status?.abstractGameState === "Preview") return false;
-      if (connected && snapshot) return false;
-      return 5_000;
+      return gameFeedPollInterval(data?.status?.abstractGameState, connected && !!snapshot);
     },
     retry: 2,
   });

@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/loading-states";
 import { cn } from "@/lib/utils";
+import { supplementalPollInterval } from "@/lib/polling";
 
 interface LineupPlayer {
   id: number;
@@ -56,15 +57,15 @@ const CHANGE_CONFIG: Record<string, { icon: LucideIcon; color: string; bg: strin
   starting_lineup: { icon: Activity, color: "text-mint", bg: "bg-mint/10 border-mint/30", label: "Lineup" },
 };
 
-export function LineupChanges({ gamePk }: { gamePk: number }) {
+export function LineupChanges({ gamePk, abstractState }: { gamePk: number; abstractState?: string }) {
   const { data, isLoading, error } = useQuery<LineupData>({
     queryKey: ["lineup", gamePk],
-    queryFn: async () => {
-      const res = await fetch(`/api/lineup?gamePk=${gamePk}`);
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/lineup?gamePk=${gamePk}`, { signal });
       if (!res.ok) throw new Error("lineup fetch failed");
       return res.json();
     },
-    refetchInterval: 15_000, // Refresh every 15s for live updates
+    refetchInterval: supplementalPollInterval(abstractState),
     staleTime: 10_000,
     retry: 1,
   });

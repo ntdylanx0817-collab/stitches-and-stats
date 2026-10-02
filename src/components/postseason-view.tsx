@@ -5,24 +5,32 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Activity,
+  AlertTriangle,
   BellRing,
   CalendarDays,
+  CalendarRange,
+  CheckCircle2,
   ChevronRight,
   CircleAlert,
   Clock3,
   Crown,
+  Gauge,
+  HeartPulse,
+  MapPin,
   Radio,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   Target,
   Trophy,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BaseballFieldMark } from "@/components/ui/baseball-field-mark";
 import { ErrorState, Skeleton } from "@/components/loading-states";
 import { MatchupStrikeZone } from "@/components/matchup-strike-zone";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { getDisplayTeamColor } from "@/lib/team-colors";
 import { cn } from "@/lib/utils";
 import type {
@@ -31,6 +39,7 @@ import type {
   PostseasonRoundCode,
   PostseasonSeries,
   PostseasonTeam,
+  PostseasonTeamIntelPayload,
 } from "@/lib/postseason";
 
 interface LineupPlayer {
@@ -56,7 +65,7 @@ interface LineupData {
   lastUpdated: number;
 }
 
-type DetailTab = "preview" | "lineups" | "matchup";
+type DetailTab = "preview" | "series" | "roster" | "bullpen" | "lineups" | "matchup";
 
 export function PostseasonView() {
   const [roundFilter, setRoundFilter] = useState<"all" | PostseasonRoundCode>("all");
@@ -206,6 +215,8 @@ export function PostseasonView() {
                 selectedBatter={selectedBatter}
                 onSelectBatter={setSelectedBatterId}
                 opposingPitcher={opposingPitcher}
+                season={data.season}
+                onSelectGame={selectGame}
               />
             ) : null}
 
@@ -303,6 +314,11 @@ function SeriesCard({ series, index, selectedGamePk, onSelectGame }: {
           {series.projection.favoredTeamName} {Math.max(series.projection.teamAWinProbability, series.projection.teamBWinProbability)}% to advance
         </div>
       )}
+      {series.scenario.isEliminationGame && (
+        <div className="mt-2 flex items-center gap-1 border-t border-warning-track/15 pt-2 font-scoreboard text-[9px] font-bold uppercase tracking-wide text-warning-track">
+          <CircleAlert className="h-3 w-3" /> {series.scenario.headline}
+        </div>
+      )}
     </motion.button>
   );
 }
@@ -327,7 +343,7 @@ function BracketTeam({ team, wins, winsNeeded }: { team: PostseasonTeam; wins: n
 
 function GameCenter({
   game, series, tab, onTabChange, lineup, lineupLoading, lineupError,
-  batters, selectedBatter, onSelectBatter, opposingPitcher,
+  batters, selectedBatter, onSelectBatter, opposingPitcher, season, onSelectGame,
 }: {
   game: PostseasonGame;
   series: PostseasonSeries;
@@ -340,6 +356,8 @@ function GameCenter({
   selectedBatter: LineupPlayer | null;
   onSelectBatter: (id: number) => void;
   opposingPitcher: PostseasonGame["away"]["probablePitcher"];
+  season: number;
+  onSelectGame: (gamePk: number) => void;
 }) {
   const live = game.status.abstractGameState === "Live";
   const final = game.status.abstractGameState === "Final";
@@ -354,9 +372,9 @@ function GameCenter({
               {series.league} {series.roundLabel} · Game {game.gameNumber}
             </h2>
           </div>
-          <div className={cn("scorecard-cut flex items-center gap-2 border px-3 py-1.5 font-scoreboard text-[10px] font-bold uppercase tracking-wide", live ? "border-crimson/40 bg-crimson/10 text-crimson" : "border-chalk/15 bg-midnight/40 text-slate-400")}>
+          <div className={cn("scorecard-cut flex items-center gap-2 border px-3 py-1.5 font-scoreboard text-[10px] font-bold uppercase tracking-wide", live ? "border-crimson/40 bg-crimson/10 text-crimson" : series.scenario.isEliminationGame ? "border-warning-track/35 bg-warning-track/10 text-warning-track" : "border-chalk/15 bg-midnight/40 text-slate-400")}>
             {live ? <Radio className="h-3.5 w-3.5 animate-pulse" /> : final ? <ShieldCheck className="h-3.5 w-3.5 text-mint" /> : <Clock3 className="h-3.5 w-3.5" />}
-            {game.status.detailedState}
+            {series.scenario.isEliminationGame && !live && !final ? "Elimination game" : game.status.detailedState}
           </div>
         </div>
 
@@ -386,12 +404,18 @@ function GameCenter({
 
       <div className="flex gap-1 overflow-x-auto border-b border-chalk px-4 pt-3 scrollbar-thin" role="tablist" aria-label="Game center sections">
         <DetailTabButton active={tab === "preview"} onClick={() => onTabChange("preview")} icon={Activity}>Preview</DetailTabButton>
+        <DetailTabButton active={tab === "series"} onClick={() => onTabChange("series")} icon={CalendarRange}>Series</DetailTabButton>
+        <DetailTabButton active={tab === "roster"} onClick={() => onTabChange("roster")} icon={UsersRound}>Roster & health</DetailTabButton>
+        <DetailTabButton active={tab === "bullpen"} onClick={() => onTabChange("bullpen")} icon={Gauge}>Bullpen</DetailTabButton>
         <DetailTabButton active={tab === "lineups"} onClick={() => onTabChange("lineups")} icon={BellRing}>Lineups & changes</DetailTabButton>
         <DetailTabButton active={tab === "matchup"} onClick={() => onTabChange("matchup")} icon={Target}>Batter vs pitcher</DetailTabButton>
       </div>
 
       <div className="p-4 sm:p-5">
         {tab === "preview" && <PreviewPanel game={game} series={series} />}
+        {tab === "series" && <SeriesSchedulePanel series={series} selectedGamePk={game.gamePk} onSelectGame={onSelectGame} />}
+        {tab === "roster" && <TeamIntelPanel series={series} season={season} mode="roster" />}
+        {tab === "bullpen" && <TeamIntelPanel series={series} season={season} mode="bullpen" />}
         {tab === "lineups" && <LineupPanel game={game} lineup={lineup} loading={lineupLoading} unavailable={lineupError} />}
         {tab === "matchup" && (
           <MatchupPanel
@@ -410,6 +434,7 @@ function GameCenter({
 function PreviewPanel({ game, series }: { game: PostseasonGame; series: PostseasonSeries }) {
   return (
     <div className="space-y-4">
+      <SeriesSituation series={series} />
       <div className="grid gap-3 sm:grid-cols-2">
         <PitcherCard label={`${game.away.team.abbreviation} probable`} pitcher={game.away.probablePitcher} color={getDisplayTeamColor(game.away.team.id)} />
         <PitcherCard label={`${game.home.team.abbreviation} probable`} pitcher={game.home.probablePitcher} color={getDisplayTeamColor(game.home.team.id)} />
@@ -439,6 +464,268 @@ function PreviewPanel({ game, series }: { game: PostseasonGame; series: Postseas
       )}
     </div>
   );
+}
+
+function SeriesSituation({ series }: { series: PostseasonSeries }) {
+  return (
+    <div className={cn(
+      "scorecard-cut border p-4",
+      series.scenario.isEliminationGame ? "border-warning-track/30 bg-warning-track/5" : "border-chalk bg-midnight/35"
+    )}>
+      <div className="flex items-start gap-3">
+        {series.scenario.isEliminationGame
+          ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-track" />
+          : <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-mint" />}
+        <div className="min-w-0 flex-1">
+          <div className="font-scoreboard text-xs font-bold uppercase tracking-wide text-chalk">{series.scenario.headline}</div>
+          <p className="mt-1 text-xs leading-5 text-slate-400">{series.scenario.detail}</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <ScenarioTeam team={series.teamA} status={series.scenario.teamAStatus} />
+            <ScenarioTeam team={series.teamB} status={series.scenario.teamBStatus} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScenarioTeam({ team, status }: { team: PostseasonTeam; status: string }) {
+  return (
+    <div className="flex items-center gap-2 border-l-2 bg-midnight/30 px-2.5 py-2" style={{ borderColor: getDisplayTeamColor(team.id) }}>
+      <span className="font-scoreboard text-[10px] font-black text-chalk">{team.abbreviation}</span>
+      <span className="ml-auto text-[10px] text-slate-400">{status}</span>
+    </div>
+  );
+}
+
+function SeriesSchedulePanel({ series, selectedGamePk, onSelectGame }: {
+  series: PostseasonSeries;
+  selectedGamePk: number;
+  onSelectGame: (gamePk: number) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <SeriesSituation series={series} />
+      <div className="scorecard-cut overflow-hidden border border-chalk bg-midnight/30">
+        <div className="flex items-center justify-between border-b border-chalk px-4 py-3">
+          <div>
+            <div className="font-scoreboard text-sm font-bold uppercase tracking-wide text-chalk">Full series schedule</div>
+            <div className="mt-0.5 text-[10px] text-slate-500">Best of {series.winsNeeded * 2 - 1} · first to {series.winsNeeded}</div>
+          </div>
+          <CalendarRange className="h-4 w-4 text-cobalt" />
+        </div>
+        <div className="divide-y divide-chalk/10">
+          {series.games.map((seriesGame) => {
+            const final = seriesGame.status.abstractGameState === "Final";
+            const live = seriesGame.status.abstractGameState === "Live";
+            return (
+              <button
+                key={seriesGame.gamePk}
+                type="button"
+                onClick={() => onSelectGame(seriesGame.gamePk)}
+                aria-current={seriesGame.gamePk === selectedGamePk ? "true" : undefined}
+                className={cn(
+                  "grid w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-chalk/5 sm:grid-cols-[80px_1fr_auto] sm:items-center",
+                  seriesGame.gamePk === selectedGamePk && "bg-heritage-red/8"
+                )}
+              >
+                <div>
+                  <div className="font-scoreboard text-xs font-black uppercase text-chalk">Game {seriesGame.gameNumber}</div>
+                  <div className={cn("mt-0.5 font-scoreboard text-[9px] font-bold uppercase", live ? "text-crimson" : final ? "text-mint" : "text-slate-500")}>
+                    {seriesGame.status.detailedState}
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                    <span>{seriesGame.away.team.abbreviation}</span>
+                    {final && <span className="broadcast-number text-base text-chalk">{seriesGame.away.score}</span>}
+                    <span className="text-slate-600">at</span>
+                    <span>{seriesGame.home.team.abbreviation}</span>
+                    {final && <span className="broadcast-number text-base text-chalk">{seriesGame.home.score}</span>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                    <span>{formatGameTime(seriesGame.gameDate)}</span>
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {seriesGame.venue}</span>
+                  </div>
+                </div>
+                <div className="text-left text-[10px] leading-4 text-slate-500 sm:text-right">
+                  <div>{seriesGame.away.probablePitcher?.name ?? "Away starter TBD"}</div>
+                  <div>{seriesGame.home.probablePitcher?.name ?? "Home starter TBD"}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function usePostseasonTeamIntel(teamId: number, season: number) {
+  return useQuery<PostseasonTeamIntelPayload>({
+    queryKey: ["postseason-team-intel", teamId, season],
+    queryFn: async () => {
+      const response = await fetch(`/api/postseason/team?teamId=${teamId}&season=${season}`);
+      if (!response.ok) throw new Error("team intel unavailable");
+      return response.json();
+    },
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+}
+
+function TeamIntelPanel({ series, season, mode }: {
+  series: PostseasonSeries;
+  season: number;
+  mode: "roster" | "bullpen";
+}) {
+  const teamAQuery = usePostseasonTeamIntel(series.teamA.id, season);
+  const teamBQuery = usePostseasonTeamIntel(series.teamB.id, season);
+  const loading = teamAQuery.isLoading || teamBQuery.isLoading;
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[0, 1].map((index) => <Skeleton key={index} className="h-80 w-full scorecard-cut" />)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TeamIntelCard team={series.teamA} data={teamAQuery.data} failed={teamAQuery.isError} mode={mode} />
+        <TeamIntelCard team={series.teamB} data={teamBQuery.data} failed={teamBQuery.isError} mode={mode} />
+      </div>
+      {mode === "bullpen" && (
+        <div className="scorecard-cut flex items-start gap-2 border border-chalk bg-midnight/30 p-3 text-[10px] leading-5 text-slate-500">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cobalt" />
+          {teamAQuery.data?.note ?? teamBQuery.data?.note ?? "Availability is estimated from recent official box-score workload, not an official club designation."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeamIntelCard({ team, data, failed, mode }: {
+  team: PostseasonTeam;
+  data?: PostseasonTeamIntelPayload;
+  failed: boolean;
+  mode: "roster" | "bullpen";
+}) {
+  const color = getDisplayTeamColor(team.id);
+  if (failed || !data) {
+    return (
+      <div className="scorebook-panel flex min-h-64 flex-col items-center justify-center p-6 text-center">
+        <CircleAlert className="mb-3 h-6 w-6 text-warning-track" />
+        <div className="font-scoreboard text-sm font-bold uppercase text-chalk">{team.name} intel unavailable</div>
+        <p className="mt-1 text-xs text-slate-500">MLB may still be publishing this club&apos;s postseason data.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="scorecard-cut overflow-hidden border border-chalk bg-midnight/30">
+      <div className="border-b border-chalk px-4 py-3" style={{ borderLeft: `3px solid ${color}` }}>
+        <div className="font-scoreboard text-sm font-black uppercase text-chalk">{team.name}</div>
+        <div className="mt-0.5 text-[9px] uppercase tracking-wide text-slate-600">
+          {mode === "roster" ? `${data.roster.length} active players · health ledger` : `${data.bullpen.length} relief arms · through ${formatShortDate(data.asOfDate)}`}
+        </div>
+      </div>
+      {mode === "roster" ? <RosterHealthContent data={data} /> : <BullpenContent data={data} />}
+    </div>
+  );
+}
+
+function RosterHealthContent({ data }: { data: PostseasonTeamIntelPayload }) {
+  const groupOrder = ["Pitcher", "Catcher", "Infielder", "Outfielder", "Other"];
+  const groups = groupOrder
+    .map((group) => ({ group, players: data.roster.filter((player) => player.positionType === group) }))
+    .filter((group) => group.players.length > 0);
+  return (
+    <div>
+      <div className="border-b border-chalk/10 p-3">
+        <div className="mb-2 flex items-center gap-2 font-scoreboard text-[10px] font-bold uppercase tracking-wide text-slate-400">
+          <HeartPulse className="h-3.5 w-3.5 text-crimson" /> Health updates
+        </div>
+        {data.healthUpdates.length > 0 ? (
+          <div className="space-y-1.5">
+            {data.healthUpdates.slice(0, 5).map((update) => (
+              <div key={update.id} className="flex items-start gap-2 border-l-2 border-chalk/15 bg-card/20 px-2.5 py-2 text-[10px] leading-4">
+                {update.status === "Activated"
+                  ? <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint" />
+                  : <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-track" />}
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-300">{update.playerName} · {update.status} ({update.listLabel})</div>
+                  <div className="text-slate-600">{formatShortDate(update.date)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-[10px] text-slate-600">No recent injured-list moves reported.</p>}
+      </div>
+      <div className="max-h-[520px] overflow-y-auto p-3 scrollbar-thin">
+        {groups.map(({ group, players }) => (
+          <div key={group} className="mb-4 last:mb-0">
+            <div className="font-scoreboard mb-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-600">{group}s · {players.length}</div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {players.map((player) => (
+                <div key={player.id} className="flex items-center gap-2 border border-chalk/10 bg-card/20 p-2">
+                  <PlayerAvatar playerId={player.id} size={26} fallbackText={player.name} className="shrink-0 rounded-sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[11px] font-semibold text-slate-300">{player.name}</div>
+                    <div className="font-scoreboard text-[8px] uppercase text-slate-600">#{player.number || "—"} · {player.position} · B/T {player.bats}/{player.throws}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {data.roster.length === 0 && <p className="py-10 text-center text-xs text-slate-500">Active roster has not been published.</p>}
+      </div>
+    </div>
+  );
+}
+
+function BullpenContent({ data }: { data: PostseasonTeamIntelPayload }) {
+  return (
+    <div className="divide-y divide-chalk/10">
+      {data.bullpen.map((arm) => (
+        <div key={arm.id} className="grid grid-cols-[1fr_auto] gap-3 p-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <PlayerAvatar playerId={arm.id} size={32} fallbackText={arm.name} className="shrink-0 rounded-sm" />
+            <div className="min-w-0">
+              <div className="truncate text-xs font-semibold text-chalk">{arm.name}</div>
+              <div className="mt-0.5 font-scoreboard text-[8px] uppercase tracking-wide text-slate-600">
+                {arm.hand}HP · {arm.role} · {arm.era?.toFixed(2) ?? "—"} ERA{arm.saves ? ` · ${arm.saves} SV` : ""}{arm.holds ? ` · ${arm.holds} HLD` : ""}
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <AvailabilityBadge value={arm.availability} />
+            <div className="mt-1 text-[9px] text-slate-600">{arm.availabilityReason}</div>
+          </div>
+          <div className="col-span-2 grid grid-cols-3 gap-2 border-t border-chalk/5 pt-2">
+            <TinyMetric label="Last outing" value={`${arm.pitchesLastGame} P`} />
+            <TinyMetric label="Last 2 days" value={`${arm.pitchesLast2Days} P`} />
+            <TinyMetric label="Last 3 days" value={`${arm.appearancesLast3Days} G`} />
+          </div>
+        </div>
+      ))}
+      {data.bullpen.length === 0 && <p className="p-10 text-center text-xs text-slate-500">Bullpen data has not been published.</p>}
+    </div>
+  );
+}
+
+function AvailabilityBadge({ value }: { value: "Fresh" | "Monitor" | "Limited" }) {
+  return (
+    <span className={cn(
+      "scorecard-cut inline-flex border px-2 py-1 font-scoreboard text-[8px] font-bold uppercase tracking-wide",
+      value === "Fresh" ? "border-mint/25 bg-mint/10 text-mint" : value === "Monitor" ? "border-warning-track/25 bg-warning-track/10 text-warning-track" : "border-crimson/25 bg-crimson/10 text-crimson"
+    )}>{value}</span>
+  );
+}
+
+function TinyMetric({ label, value }: { label: string; value: string }) {
+  return <div><div className="font-scoreboard text-[7px] uppercase tracking-wide text-slate-600">{label}</div><div className="broadcast-number text-sm font-bold text-slate-300">{value}</div></div>;
 }
 
 function LineupPanel({ game, lineup, loading, unavailable }: { game: PostseasonGame; lineup?: LineupData; loading: boolean; unavailable: boolean }) {
@@ -626,6 +913,11 @@ function DetailTabButton({ active, onClick, icon: Icon, children }: { active: bo
 function formatGameTime(value: string): string {
   if (!value) return "Time TBD";
   return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function formatShortDate(value: string): string {
+  if (!value) return "Date TBD";
+  return new Date(`${value}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function PostseasonLoading() {

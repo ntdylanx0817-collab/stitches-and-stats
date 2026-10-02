@@ -5,6 +5,7 @@ import { getOrSet } from "@/lib/cache";
 import { fetchStandings, type TeamStanding } from "@/lib/standings";
 import {
   POSTSEASON_ROUNDS,
+  buildSeriesScenario,
   predictPostseasonGame,
   roundFor,
   seriesWinProbability,
@@ -252,6 +253,7 @@ export async function GET(req: NextRequest) {
           isComplete,
           games,
           projection,
+          scenario: buildSeriesScenario(teamA.name, teamB.name, teamAWins, teamBWins, winsNeeded),
         };
       });
 

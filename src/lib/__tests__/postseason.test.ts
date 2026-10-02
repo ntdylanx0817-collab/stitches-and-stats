@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  assessBullpenAvailability,
+  buildSeriesScenario,
   predictPostseasonGame,
   seriesWinProbability,
   type PostseasonTeam,
@@ -16,6 +18,63 @@ const team = (overrides: Partial<PostseasonTeam>): PostseasonTeam => ({
   runDifferential: 0,
   league: "American League",
   ...overrides,
+});
+
+describe("buildSeriesScenario", () => {
+  test("marks a winner-take-all game as elimination for both clubs", () => {
+    const scenario = buildSeriesScenario("Yankees", "Dodgers", 3, 3, 4);
+    expect(scenario.headline).toBe("Winner advances");
+    expect(scenario.isEliminationGame).toBe(true);
+    expect(scenario.teamAStatus).toBe("Win and advance");
+    expect(scenario.teamBStatus).toBe("Win and advance");
+  });
+
+  test("explains a clinch chance and must-win game", () => {
+    const scenario = buildSeriesScenario("Yankees", "Dodgers", 2, 1, 3);
+    expect(scenario.headline).toBe("Yankees can clinch");
+    expect(scenario.teamAStatus).toBe("1 win to advance");
+    expect(scenario.teamBStatus).toBe("Must win next");
+    expect(scenario.isEliminationGame).toBe(true);
+  });
+
+  test("reports the winner of a completed series", () => {
+    const scenario = buildSeriesScenario("Yankees", "Dodgers", 4, 2, 4);
+    expect(scenario.headline).toBe("Yankees advance");
+    expect(scenario.teamAStatus).toBe("Advanced");
+    expect(scenario.teamBStatus).toBe("Eliminated");
+    expect(scenario.isEliminationGame).toBe(false);
+  });
+});
+
+describe("assessBullpenAvailability", () => {
+  test("flags a heavily used arm as limited", () => {
+    expect(assessBullpenAvailability({
+      pitchesLastGame: 24,
+      pitchesLast2Days: 41,
+      appearancesLast3Days: 2,
+      daysSinceLastAppearance: 0,
+    }).availability).toBe("Limited");
+  });
+
+  test("marks a reliever who worked yesterday for monitoring", () => {
+    expect(assessBullpenAvailability({
+      pitchesLastGame: 12,
+      pitchesLast2Days: 12,
+      appearancesLast3Days: 1,
+      daysSinceLastAppearance: 1,
+    }).availability).toBe("Monitor");
+  });
+
+  test("treats an unused arm as fresh without claiming team confirmation", () => {
+    const result = assessBullpenAvailability({
+      pitchesLastGame: 0,
+      pitchesLast2Days: 0,
+      appearancesLast3Days: 0,
+      daysSinceLastAppearance: null,
+    });
+    expect(result.availability).toBe("Fresh");
+    expect(result.reason).toContain("three-day window");
+  });
 });
 
 const pitcher = (overrides: Partial<PostseasonPitcher>): PostseasonPitcher => ({

@@ -74,6 +74,14 @@ export interface SeriesProjection {
   summary: string;
 }
 
+export interface SeriesScenario {
+  headline: string;
+  detail: string;
+  teamAStatus: string;
+  teamBStatus: string;
+  isEliminationGame: boolean;
+}
+
 export interface PostseasonSeries {
   id: string;
   round: PostseasonRoundCode;
@@ -87,6 +95,58 @@ export interface PostseasonSeries {
   isComplete: boolean;
   games: PostseasonGame[];
   projection: SeriesProjection | null;
+  scenario: SeriesScenario;
+}
+
+export interface PostseasonRosterPlayer {
+  id: number;
+  name: string;
+  number: string;
+  position: string;
+  positionType: string;
+  status: string;
+  bats: string;
+  throws: string;
+}
+
+export interface PostseasonHealthUpdate {
+  id: string;
+  playerId: number | null;
+  playerName: string;
+  date: string;
+  status: "Out" | "Activated" | "Transferred";
+  listLabel: string;
+  description: string;
+}
+
+export type BullpenAvailability = "Fresh" | "Monitor" | "Limited";
+
+export interface PostseasonBullpenArm {
+  id: number;
+  name: string;
+  hand: string;
+  role: string;
+  era: number | null;
+  saves: number;
+  holds: number;
+  gamesPitched: number;
+  pitchesLastGame: number;
+  pitchesLast2Days: number;
+  appearancesLast3Days: number;
+  lastPitched: string | null;
+  availability: BullpenAvailability;
+  availabilityReason: string;
+}
+
+export interface PostseasonTeamIntelPayload {
+  teamId: number;
+  season: number;
+  asOfDate: string;
+  generatedAt: number;
+  roster: PostseasonRosterPlayer[];
+  healthUpdates: PostseasonHealthUpdate[];
+  bullpen: PostseasonBullpenArm[];
+  note: string;
 }
 
 export interface PostseasonPayload {
@@ -192,6 +252,89 @@ export function seriesWinProbability(
   };
 
   return solve(teamAWins, teamBWins);
+}
+
+export function buildSeriesScenario(
+  teamAName: string,
+  teamBName: string,
+  teamAWins: number,
+  teamBWins: number,
+  winsNeeded: number
+): SeriesScenario {
+  if (teamAWins >= winsNeeded || teamBWins >= winsNeeded) {
+    const winner = teamAWins > teamBWins ? teamAName : teamBName;
+    const loser = teamAWins > teamBWins ? teamBName : teamAName;
+    return {
+      headline: `${winner} advance`,
+      detail: `${winner} won the series ${Math.max(teamAWins, teamBWins)}-${Math.min(teamAWins, teamBWins)}. ${loser} is eliminated.`,
+      teamAStatus: teamAWins > teamBWins ? "Advanced" : "Eliminated",
+      teamBStatus: teamBWins > teamAWins ? "Advanced" : "Eliminated",
+      isEliminationGame: false,
+    };
+  }
+
+  const aNeeds = winsNeeded - teamAWins;
+  const bNeeds = winsNeeded - teamBWins;
+  if (aNeeds === 1 && bNeeds === 1) {
+    return {
+      headline: "Winner advances",
+      detail: `The next game decides the series. The winner moves on and the loser is eliminated.`,
+      teamAStatus: "Win and advance",
+      teamBStatus: "Win and advance",
+      isEliminationGame: true,
+    };
+  }
+  if (aNeeds === 1 || bNeeds === 1) {
+    const leader = aNeeds === 1 ? teamAName : teamBName;
+    const trailing = aNeeds === 1 ? teamBName : teamAName;
+    return {
+      headline: `${leader} can clinch`,
+      detail: `${leader} advances with one more win. ${trailing} must win the next game to extend the series.`,
+      teamAStatus: aNeeds === 1 ? "1 win to advance" : "Must win next",
+      teamBStatus: bNeeds === 1 ? "1 win to advance" : "Must win next",
+      isEliminationGame: true,
+    };
+  }
+
+  return {
+    headline: teamAWins === teamBWins ? "Series level" : `${teamAWins > teamBWins ? teamAName : teamBName} leads`,
+    detail: `${teamAName} needs ${aNeeds} ${aNeeds === 1 ? "win" : "wins"} to advance; ${teamBName} needs ${bNeeds}.`,
+    teamAStatus: `${aNeeds} ${aNeeds === 1 ? "win" : "wins"} to advance`,
+    teamBStatus: `${bNeeds} ${bNeeds === 1 ? "win" : "wins"} to advance`,
+    isEliminationGame: false,
+  };
+}
+
+export function assessBullpenAvailability(input: {
+  pitchesLastGame: number;
+  pitchesLast2Days: number;
+  appearancesLast3Days: number;
+  daysSinceLastAppearance: number | null;
+}): { availability: BullpenAvailability; reason: string } {
+  const { pitchesLastGame, pitchesLast2Days, appearancesLast3Days, daysSinceLastAppearance } = input;
+  if (
+    pitchesLast2Days >= 35
+    || (daysSinceLastAppearance === 0 && pitchesLastGame >= 25)
+    || (daysSinceLastAppearance !== null && daysSinceLastAppearance <= 1 && appearancesLast3Days >= 2)
+  ) {
+    return { availability: "Limited", reason: `${pitchesLast2Days} pitches over the last two days` };
+  }
+  if (
+    pitchesLast2Days >= 20
+    || (daysSinceLastAppearance !== null && daysSinceLastAppearance <= 1)
+    || appearancesLast3Days >= 2
+  ) {
+    return {
+      availability: "Monitor",
+      reason: daysSinceLastAppearance === 0
+        ? `${pitchesLastGame} pitches in the latest game`
+        : `${appearancesLast3Days} appearances in the last three days`,
+    };
+  }
+  return {
+    availability: "Fresh",
+    reason: daysSinceLastAppearance === null ? "No workload in the three-day window" : `${daysSinceLastAppearance} days of rest`,
+  };
 }
 
 export function roundFor(code: string): (typeof POSTSEASON_ROUNDS)[number] | undefined {
